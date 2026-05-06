@@ -1,0 +1,17 @@
+{
+  "name": "factorio-clone",
+  "version": "1.0.0",
+  "description": "Factorio style 2D game with Phaser 3 and Vite",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.80.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

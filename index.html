@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Factory Automation Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: all;
+        }
+        .build-btn {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #333;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #ccc;
+            font-size: 10px;
+        }
+        .build-btn:hover {
+            background: #444;
+            transform: translateY(-2px);
+        }
+        .build-btn.active {
+            border-color: #ffff00;
+            background: #555;
+            color: #fff;
+        }
+        .icon {
+            width: 30px;
+            height: 30px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+        }
+        #btn-miner .icon { background: #ef4444; }
+        #btn-conveyor .icon { background: #3b82f6; }
+
+        #info-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px black;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <div id="info-layer">
+        <h2 style="margin: 0;">Factory & Defense</h2>
+        <p style="margin: 5px 0; font-size: 14px; opacity: 0.8;">R: 회전 | 휠: 줌 | 마우스 중간 버튼: 이동</p>
+    </div>
+
+    <div id="ui-overlay">
+        <button id="btn-miner" class="build-btn active">
+            <div class="icon"></div>
+            채굴기
+        </button>
+        <button id="btn-conveyor" class="build-btn">
+            <div class="icon"></div>
+            컨베이어
+        </button>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
