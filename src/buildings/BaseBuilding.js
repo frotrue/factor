@@ -6,17 +6,48 @@ export default class BaseBuilding {
         this.scene = scene;
         this.x = x;
         this.y = y;
-        this.gridX = x;
-        this.gridY = y;
         this.type = type;
-        this.rotation = config.rotation || 0; // 0:R, 1:D, 2:L, 3:U
-        this.gridSize = CONFIG.GRID_SIZE;
+        this.rotation = config.rotation || 0;
 
-        // 시각적 요소 (Phaser Container)
-        this.container = scene.add.container(x, y);
-        this.container.setDepth(10);
+        const bConfig = CONFIG.BUILDINGS[type] || {};
+        const w = bConfig.WIDTH || 1;
+        const h = bConfig.HEIGHT || 1;
 
-        this.initGraphics(config.color || 0xcccccc);
+        // 컨테이너 생성 및 픽셀 보정
+        this.container = scene.add.container(x + (w * CONFIG.GRID_SIZE) / 2, y + (h * CONFIG.GRID_SIZE) / 2);
+        
+        // 기본 도형 (상속받는 클래스에서 오버라이드 가능)
+        this.graphics = scene.add.graphics();
+        this.graphics.fillStyle(config.color || 0xaaaaaa, 1);
+        this.graphics.fillRect(-(w * CONFIG.GRID_SIZE)/2, -(h * CONFIG.GRID_SIZE)/2, w * CONFIG.GRID_SIZE, h * CONFIG.GRID_SIZE);
+
+
+        this.container.add(this.graphics);
+
+        // 입출력 버퍼
+        this.inputBuffer = [];
+        this.outputBuffer = [];
+        this.maxBufferSize = bConfig.MAX_BUFFER || config.maxBufferSize || 5;
+        this.hasPower = true;
+    }
+
+    // 아이템 수락 가능 여부 확인 (기본값: false, 가공소 등에서 오버라이드)
+    canAcceptItem(type) {
+        return false;
+    }
+
+    // 아이템 투입
+    acceptItem(itemType) {
+        if (this.canAcceptItem(itemType)) {
+            this.inputBuffer.push(itemType);
+            return true;
+        }
+        return false;
+    }
+
+    // 출력 버퍼에서 아이템 하나 꺼내기
+    popOutput() {
+        return this.outputBuffer.shift();
     }
 
     initGraphics(color) {

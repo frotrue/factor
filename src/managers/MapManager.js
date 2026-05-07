@@ -11,10 +11,30 @@ export default class MapManager {
     }
 
     generateResourcePatches() {
-        // 초기 자원들 배치 (시작 지점 근처)
-        this.addPatch(2, 2, 4, 'RAW_DATA');
-        this.addPatch(-6, 3, 3, 'SILICON');
-        this.addPatch(4, -5, 3, 'ENERGY');
+        this.resourceMap.clear();
+
+        const types = ['RAW_DATA', 'SILICON', 'ENERGY'];
+        const numPatches = Math.floor(Math.random() * 8) + 8; // 8 ~ 15 patches
+
+        // Ensure at least one of each type is created
+        for (let i = 0; i < numPatches; i++) {
+            const type = i < types.length ? types[i] : types[Math.floor(Math.random() * types.length)];
+            
+            // Random position (-30 to +30 grid cells)
+            let startX, startY, isSafeZone;
+            do {
+                startX = Math.floor(Math.random() * 61) - 30;
+                startY = Math.floor(Math.random() * 61) - 30;
+                
+                // Safe zone check (distance from 0,0 should be >= 4)
+                isSafeZone = Math.abs(startX) < 4 && Math.abs(startY) < 4;
+            } while (isSafeZone);
+
+            // Random size (2x2 to 5x5)
+            const size = Math.floor(Math.random() * 4) + 2; 
+
+            this.addPatch(startX, startY, size, type);
+        }
     }
 
     addPatch(startX, startY, size, type) {

@@ -1,10 +1,22 @@
 import Miner from './Miner.js';
 import Conveyor from './Conveyor.js';
+import Processor from './Processor.js';
+import Core from './Core.js';
+import PowerPlant from './PowerPlant.js';
+import PowerNode from './PowerNode.js';
+import Storage from './Storage.js';
+import Unloader from './Unloader.js';
 
 // 타입 문자열 → 클래스 매핑 레지스트리
 const REGISTRY = {
     MINER: Miner,
-    CONVEYOR: Conveyor
+    CONVEYOR: Conveyor,
+    PROCESSOR: Processor,
+    CORE: Core,
+    POWER_PLANT: PowerPlant,
+    POWER_NODE: PowerNode,
+    STORAGE: Storage,
+    UNLOADER: Unloader
 };
 
 /**

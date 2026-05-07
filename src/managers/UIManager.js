@@ -1,27 +1,67 @@
 import { CONFIG } from '../config.js';
 import EventBus from './EventBus.js';
 
-/**
- * UI 매니저 - CONFIG.BUILDINGS 기반 동적 UI 생성
- * 새 건물 추가 시 HTML 수정 없이 자동으로 버튼 생성
- */
 export default class UIManager {
     constructor(scene) {
         this.scene = scene;
         this.selectedBuildingType = 'MINER';
         this.buttons = {};
+        
+        // HUD Elements
+        this.scoreEl = document.getElementById('hud-score');
+        this.packetsEl = document.getElementById('hud-packets');
+        this.powerEl = document.getElementById('hud-power');
+        
+        // Hotkeys mapping
+        this.hotkeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        
+        // DOM 최적화 캐시 (Fix 2)
+        this.lastItemCount = -1;
+        this.lastScore = -1;
 
         this.createBuildingButtons();
-        this.createInfoText();
+        this.setupEvents();
+    }
+
+    setupEvents() {
+        EventBus.on('CORE_DATA_RECEIVED', (data) => {
+            if (this.scoreEl && this.lastScore !== data.score) {
+                this.lastScore = data.score;
+                this.scoreEl.innerText = data.score.toFixed(2);
+            }
+        });
+
+        EventBus.on('POWER_UPDATED', (data) => {
+            if (this.powerEl) {
+                const isDeficit = data.net < 0;
+                this.powerEl.innerText = `${data.production} / ${data.consumption} W`;
+                this.powerEl.style.color = isDeficit ? '#ef4444' : '#fde047';
+                this.powerEl.style.textShadow = isDeficit ? '0 0 10px #ef4444' : '0 0 10px #fde047';
+            }
+        });
+        
+        // Keyboard hotkeys setup
+        this.scene.input.keyboard.on('keydown', (event) => {
+            const key = event.key;
+            if (this.hotkeys.includes(key)) {
+                const index = parseInt(key) - 1;
+                const buildingKeys = Object.keys(CONFIG.BUILDINGS);
+                if (index < buildingKeys.length) {
+                    this.selectBuilding(buildingKeys[index]);
+                }
+            } else if (key === 'Delete' || key === 'Backspace' || key === '0') {
+                this.selectBuilding('REMOVE');
+            }
+        });
     }
 
     createBuildingButtons() {
         const overlay = document.getElementById('ui-overlay');
         if (!overlay) return;
 
-        // 기존 하드코딩된 버튼 제거 후 동적 생성
         overlay.innerHTML = '';
 
+        let index = 0;
         Object.entries(CONFIG.BUILDINGS).forEach(([key, data]) => {
             const btn = document.createElement('button');
             btn.id = `btn-${key.toLowerCase()}`;
@@ -33,6 +73,14 @@ export default class UIManager {
             icon.style.background = `#${data.COLOR.toString(16).padStart(6, '0')}`;
 
             const label = document.createTextNode(data.NAME.split('(')[0].trim());
+            
+            // Hotkey label
+            if (index < this.hotkeys.length) {
+                const hotkeyLabel = document.createElement('div');
+                hotkeyLabel.className = 'hotkey-label';
+                hotkeyLabel.innerText = this.hotkeys[index];
+                btn.appendChild(hotkeyLabel);
+            }
 
             btn.appendChild(icon);
             btn.appendChild(label);
@@ -41,13 +89,26 @@ export default class UIManager {
 
             overlay.appendChild(btn);
             this.buttons[key] = btn;
+            index++;
         });
+
+        // 삭제(망치) 버튼 추가
+        const removeBtn = document.createElement('button');
+        removeBtn.id = 'btn-remove';
+        removeBtn.className = 'build-btn';
+        removeBtn.innerHTML = `
+            <div class="hotkey-label">0</div>
+            <div class="icon" style="background:#444; border:1px solid #ff4444"></div>
+            철거
+        `;
+        removeBtn.onclick = () => this.selectBuilding('REMOVE');
+        overlay.appendChild(removeBtn);
+        this.buttons['REMOVE'] = removeBtn;
     }
 
     selectBuilding(type) {
         this.selectedBuildingType = type;
 
-        // 버튼 활성 상태 업데이트
         Object.entries(this.buttons).forEach(([key, btn]) => {
             btn.classList.toggle('active', key === type);
         });
@@ -55,18 +116,51 @@ export default class UIManager {
         EventBus.emit('BUILDING_SELECTED', { type });
     }
 
-    createInfoText() {
-        this.uiText = this.scene.add.text(10, 10, '', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            backgroundColor: '#00000088',
-            padding: { x: 5, y: 5 }
-        }).setScrollFactor(0).setDepth(200);
+    update(itemCount) {
+        if (this.packetsEl && this.lastItemCount !== itemCount) {
+            this.lastItemCount = itemCount;
+            this.packetsEl.innerText = itemCount;
+        }
     }
 
-    update(itemCount) {
-        const bName = CONFIG.BUILDINGS[this.selectedBuildingType]?.NAME || '';
-        this.uiText.setText(`패킷: ${itemCount}\n모드: ${bName}`);
+    // Phase C: Hover Tooltip
+    showTooltip(x, y, title, content) {
+        const tooltip = document.getElementById('tooltip');
+        if (!tooltip) return;
+        
+        tooltip.style.display = 'block';
+        tooltip.style.left = `${x + 15}px`;
+        tooltip.style.top = `${y + 15}px`;
+        
+        tooltip.innerHTML = `<div class="tooltip-title">${title}</div><div>${content}</div>`;
+    }
+
+    hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip) tooltip.style.display = 'none';
+    }
+
+    // Phase D: Activity Log
+    logMessage(message, isAlert = false) {
+        const logContainer = document.getElementById('activity-log');
+        if (!logContainer) return;
+
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        if (isAlert) {
+            entry.style.borderLeftColor = '#ff4444';
+            entry.style.color = '#ffaaaa';
+        }
+        entry.innerText = `> ${message}`;
+
+        logContainer.appendChild(entry);
+
+        // Remove after animation (5s total)
+        setTimeout(() => {
+            if (entry.parentNode === logContainer) {
+                logContainer.removeChild(entry);
+            }
+        }, 5000);
     }
 
     getSelectedBuildingType() {

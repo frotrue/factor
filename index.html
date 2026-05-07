@@ -3,87 +3,304 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Factory Automation Game</title>
+    <title>The Neural Factory</title>
+    <!-- Google Fonts: Share Tech Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-magenta: #ff00ea;
+            --neon-green: #39ff14;
+            --bg-dark: #0a0a0c;
+            --glass-bg: rgba(10, 10, 12, 0.65);
+            --glass-border: rgba(0, 243, 255, 0.2);
+        }
+
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #1a1a1a;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            font-family: 'Share Tech Mono', monospace;
+            user-select: none;
         }
+
         #game-container {
             width: 100vw;
             height: 100vh;
         }
+
+        /* Glassmorphism Base Panel */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 243, 255, 0.05);
+            border-radius: 8px;
+            pointer-events: all;
+        }
+
+        /* Top HUD Dashboard */
+        #top-hud {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 30px;
+            padding: 15px 30px;
+            min-width: 400px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hud-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hud-label {
+            font-size: 12px;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+
+        .hud-value {
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        /* Info Layer (Controls) */
+        #info-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 15px;
+            pointer-events: none;
+        }
+
+        #info-layer h2 {
+            margin: 0 0 10px 0;
+            color: var(--neon-magenta);
+            text-shadow: 0 0 8px rgba(255, 0, 234, 0.5);
+            font-size: 20px;
+            letter-spacing: 1px;
+        }
+
+        .control-hint {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .control-key {
+            color: var(--neon-cyan);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        /* Bottom UI Overlay */
         #ui-overlay {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 15px;
             padding: 15px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            pointer-events: all;
         }
+
         .build-btn {
-            width: 60px;
-            height: 60px;
+            position: relative;
+            width: 70px;
+            height: 70px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #333;
-            border: 2px solid transparent;
+            background: rgba(20, 20, 25, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
-            color: #ccc;
-            font-size: 10px;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            color: #aaa;
+            font-family: inherit;
+            font-size: 11px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
+
         .build-btn:hover {
-            background: #444;
-            transform: translateY(-2px);
-        }
-        .build-btn.active {
-            border-color: #ffff00;
-            background: #555;
+            background: rgba(40, 40, 50, 0.9);
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.3);
             color: #fff;
         }
-        .icon {
-            width: 30px;
-            height: 30px;
-            margin-bottom: 4px;
-            border-radius: 4px;
-        }
-        #btn-miner .icon { background: #ef4444; }
-        #btn-conveyor .icon { background: #3b82f6; }
 
-        #info-layer {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            pointer-events: none;
-            text-shadow: 1px 1px 2px black;
+        .build-btn.active {
+            border-color: var(--neon-cyan);
+            background: rgba(0, 243, 255, 0.1);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
         }
+
+        .build-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        /* 철거 버튼 특수 스타일 */
+        #btn-remove.active {
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.3), inset 0 0 10px rgba(255, 68, 68, 0.1);
+        }
+        #btn-remove.active::after {
+            background: #ff4444;
+            box-shadow: 0 0 8px #ff4444;
+        }
+
+        .icon {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* 단축키 라벨 */
+        .hotkey-label {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            background: rgba(0,0,0,0.5);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        
+        /* 알림 플로팅 텍스트 컨테이너 */
+        #notification-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        /* Hover Tooltip (Phase C) */
+        #tooltip {
+            position: absolute;
+            background: rgba(10, 10, 15, 0.9);
+            border: 1px solid var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 2000;
+            white-space: pre-wrap;
+        }
+        .tooltip-title {
+            color: var(--neon-cyan);
+            font-weight: bold;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+            padding-bottom: 3px;
+        }
+
+        /* Activity Log (Phase D) */
+        #activity-log {
+            position: absolute;
+            bottom: 120px;
+            left: 20px;
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            pointer-events: none;
+        }
+        .log-entry {
+            background: rgba(0,0,0,0.6);
+            border-left: 2px solid var(--neon-cyan);
+            padding: 5px 10px;
+            font-size: 11px;
+            color: #ccc;
+            animation: fadein 0.3s forwards, fadeout 0.5s 4.5s forwards;
+            opacity: 0;
+        }
+        @keyframes fadein { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeout { from { opacity: 1; } to { opacity: 0; } }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
     
-    <div id="info-layer">
-        <h2 style="margin: 0;">Factory & Defense</h2>
-        <p style="margin: 5px 0; font-size: 14px; opacity: 0.8;">R: 회전 | 휠: 줌 | 마우스 중간 버튼: 이동</p>
+    <!-- Phase A: Top Dashboard -->
+    <div id="top-hud" class="glass-panel" style="display: none;">
+        <div class="hud-stat">
+            <div class="hud-label">Power Output</div>
+            <div class="hud-value" id="hud-power" style="color: #fde047; text-shadow: 0 0 10px #fde047;">0 W</div>
+        </div>
+        <div class="hud-stat">
+            <div class="hud-label">Confidence Score</div>
+            <div class="hud-value" id="hud-score">0.00</div>
+        </div>
+        <div class="hud-stat">
+            <div class="hud-label">Data Packets</div>
+            <div class="hud-value" id="hud-packets">0</div>
+        </div>
+        <div class="hud-stat">
+            <div class="hud-label">Epoch</div>
+            <div class="hud-value" id="hud-epoch">1</div>
+        </div>
     </div>
 
-    <div id="ui-overlay">
+    <!-- Phase A: Info & Controls -->
+    <div id="info-layer" class="glass-panel" style="display: none;">
+        <h2>Neural.OS v1.0</h2>
+        <div class="control-hint"><span class="control-key">W A S D</span> Pan Camera</div>
+        <div class="control-key" style="margin-top:4px; display:inline-block">Scroll</div> <span class="control-hint">Zoom</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">R</div> <span class="control-hint">Rotate</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">F2</div> <span class="control-hint">Power Grid</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">R-Click</div> <span class="control-hint">Demolish</span>
+    </div>
+
+    <!-- Phase A/D: Bottom Build Menu -->
+    <div id="ui-overlay" class="glass-panel" style="display: none;">
         <!-- Buttons are dynamically generated by UIManager.js -->
     </div>
+
+    <!-- Phase C: Tooltip -->
+    <div id="tooltip"></div>
+
+    <!-- Phase D: Activity Log -->
+    <div id="activity-log"></div>
+
+    <div id="notification-container"></div>
 
     <script type="module" src="/src/main.js"></script>
 </body>

@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import EventBus from './EventBus.js';
 
 export default class ItemManager {
     constructor(scene) {
@@ -8,6 +9,13 @@ export default class ItemManager {
         // Phaser Group을 이용한 오브젝트 풀링
         this.pool = scene.add.group({
             maxSize: 2000 
+        });
+
+        // 고아 아이템(Orphan Items) 처리 (Fix 5)
+        EventBus.on('BUILDING_REMOVED', ({ key }) => {
+            const [x, y] = key.split(',').map(Number);
+            const orphanItems = this.items.filter(item => item.gridX === x && item.gridY === y);
+            orphanItems.forEach(item => this.despawn(item));
         });
     }
 
@@ -48,6 +56,11 @@ export default class ItemManager {
 
     // 아이템 제거
     despawn(item) {
+        // 트윈 애니메이션 강제 종료 (Fix 4)
+        if (this.scene && this.scene.tweens) {
+            this.scene.tweens.killTweensOf(item.sprite);
+        }
+
         item.sprite.setActive(false);
         item.sprite.setVisible(false);
         // pool.killAndHide()는 sprite를 비활성화하고 숨깁니다.

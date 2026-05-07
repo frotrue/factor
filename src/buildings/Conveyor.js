@@ -3,7 +3,7 @@ import { CONFIG } from '../config.js';
 
 export default class Conveyor extends BaseBuilding {
     constructor(scene, x, y, config = {}) {
-        super(scene, x, y, 'Conveyor', { 
+        super(scene, x, y, 'CONVEYOR', { 
             ...config, 
             color: CONFIG.BUILDINGS.CONVEYOR.COLOR 
         });

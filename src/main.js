@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import MainMenuScene from './scenes/MainMenuScene.js';
 import MainScene from './scenes/MainScene.js';
 
 const config = {
@@ -6,9 +7,9 @@ const config = {
     width: window.innerWidth,
     height: window.innerHeight,
     parent: 'game-container',
-    backgroundColor: '#2d2d2d',
-    pixelArt: true,
-    scene: [MainScene],
+    backgroundColor: '#050510',
+    pixelArt: false,
+    scene: [MainMenuScene, MainScene],
     scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH

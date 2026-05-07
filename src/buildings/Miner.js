@@ -3,7 +3,7 @@ import { CONFIG } from '../config.js';
 
 export default class Miner extends BaseBuilding {
     constructor(scene, x, y, config = {}) {
-        super(scene, x, y, 'Miner', { 
+        super(scene, x, y, 'MINER', { 
             ...config, 
             color: CONFIG.BUILDINGS.MINER.COLOR 
         });
@@ -15,6 +15,13 @@ export default class Miner extends BaseBuilding {
     }
 
     onTick(tickCount, occupiedPositions) {
-        // 생산 로직은 TickSystem에서 shouldProduce를 체크하여 처리함
+        if (tickCount % this.productionRate === 0) {
+            if (this.outputBuffer.length >= this.maxBufferSize) return; // 무한 버퍼 증식 방지 (Fix 1)
+            
+            const resourceType = this.scene.mapManager.getResourceAt(this.x, this.y);
+            if (resourceType) {
+                this.outputBuffer.push(resourceType);
+            }
+        }
     }
 }

@@ -9,6 +9,14 @@ export default class CameraController {
     constructor(scene) {
         this.scene = scene;
         this.camera = scene.cameras.main;
+        this.moveSpeed = 10;
+
+        this.keys = scene.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D
+        });
 
         this.setup();
     }
@@ -29,5 +37,15 @@ export default class CameraController {
                 this.camera.scrollY -= (pointer.y - pointer.prevPosition.y) / this.camera.zoom;
             }
         });
+    }
+
+    update() {
+        const zoom = this.camera.zoom;
+        const speed = this.moveSpeed / zoom;
+
+        if (this.keys.left.isDown) this.camera.scrollX -= speed;
+        if (this.keys.right.isDown) this.camera.scrollX += speed;
+        if (this.keys.up.isDown) this.camera.scrollY -= speed;
+        if (this.keys.down.isDown) this.camera.scrollY += speed;
     }
 }
