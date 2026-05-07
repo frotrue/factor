@@ -10,9 +10,11 @@ export default class Miner extends BaseBuilding {
         this.productionRate = CONFIG.BUILDINGS.MINER.PRODUCTION_RATE;
     }
 
+    shouldProduce(tickCount) {
+        return tickCount % this.productionRate === 0;
+    }
+
     onTick(tickCount, occupiedPositions) {
-        if (tickCount % this.productionRate === 0) {
-            this.scene.tryProduceItem(this, occupiedPositions);
-        }
+        // 생산 로직은 TickSystem에서 shouldProduce를 체크하여 처리함
     }
 }

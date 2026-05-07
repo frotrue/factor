@@ -15,6 +15,13 @@ export const CONFIG = {
         GRID_REDRAW_THRESHOLD: 0.1 // 카메라 이동량이 이보다 작으면 그리드를 다시 그리지 않음
     },
 
+    DIRECTIONS: [
+        { x: 1, y: 0, angle: 0 },
+        { x: 0, y: 1, angle: 90 },
+        { x: -1, y: 0, angle: 180 },
+        { x: 0, y: -1, angle: 270 }
+    ],
+
     // 데이터 기반 건물 정의 (3.2 전략)
     BUILDINGS: {
         MINER: {
