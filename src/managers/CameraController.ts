@@ -25,9 +25,35 @@ export default class CameraController {
     setup(): void {
         this.camera.setZoom(CONFIG.CAMERA.DEFAULT_ZOOM);
 
-        this.scene.input.on('wheel', (_pointer: any, _gameObjects: any, _deltaX: number, deltaY: number) => {
-            let newZoom = this.camera.zoom + (deltaY > 0 ? -0.1 : 0.1);
-            this.camera.zoom = Phaser.Math.Clamp(newZoom, CONFIG.CAMERA.MIN_ZOOM, CONFIG.CAMERA.MAX_ZOOM);
+        this.scene.input.on('wheel', (pointer: Phaser.Input.Pointer, _gameObjects: any, _deltaX: number, deltaY: number) => {
+            const cam = this.camera;
+            const oldZoom = cam.zoom;
+            
+            // Continuous zoom delta
+            const zoomDelta = -deltaY * 0.001;
+            let newZoom = Phaser.Math.Clamp(oldZoom + zoomDelta, CONFIG.CAMERA.MIN_ZOOM, CONFIG.CAMERA.MAX_ZOOM);
+            
+            if (oldZoom === newZoom) return;
+
+            // Use activePointer to ensure we have the latest screen coordinates
+            const mouse = this.scene.input.activePointer;
+            
+            // Screen center offsets (Phaser cameras zoom relative to their center by default)
+            const halfWidth = cam.width / 2;
+            const halfHeight = cam.height / 2;
+
+            // Calculate the world point under the mouse cursor BEFORE zooming
+            // world = (screen - screenCenter) / zoom + scroll + screenCenter
+            const worldX = (mouse.x - halfWidth) / oldZoom + cam.scrollX + halfWidth;
+            const worldY = (mouse.y - halfHeight) / oldZoom + cam.scrollY + halfHeight;
+
+            // Apply the new zoom
+            cam.setZoom(newZoom);
+
+            // Adjust scroll to keep that world point under the mouse cursor AFTER zooming
+            // scroll = world - screenCenter - (screen - screenCenter) / zoom
+            cam.scrollX = worldX - halfWidth - (mouse.x - halfWidth) / newZoom;
+            cam.scrollY = worldY - halfHeight - (mouse.y - halfHeight) / newZoom;
         });
 
         this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
