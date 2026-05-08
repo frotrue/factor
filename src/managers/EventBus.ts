@@ -1,30 +1,50 @@
-type EventCallback = (...args: any[]) => void;
+import { PowerUpdateData, CoreDataEvent } from '../types';
+
+export interface EventMap {
+    'BUILDING_SELECTED': { type: string };
+    'BUILDING_PLACED': { key: string; building: any; type: string };
+    'BUILDING_REMOVED': { key: string };
+    'POWER_UPDATED': PowerUpdateData;
+    'CORE_DAMAGED': { amount: number };
+    'CORE_DATA_RECEIVED': CoreDataEvent;
+    'ENEMY_KILLED': { id: string };
+    'GAME_OVER': void;
+    'WAVE_STARTED': { wave: number };
+    'WAVE_UPDATE': { timer: number };
+    'WAVE_ENDED': { wave: number };
+    'GAME_SPEED_CHANGED': { speed: number };
+    'SAVE_REQUESTED': void;
+    'LOAD_REQUESTED': void;
+    'RESEARCH_UNLOCKED': { id: string };
+}
+
+type EventCallback<T = any> = (data: T) => void;
 
 class EventBusClass {
-    private events: Map<string, EventCallback[]> = new Map();
+    private events: { [K in keyof EventMap]?: EventCallback<EventMap[K]>[] } = {};
 
-    on(event: string, callback: EventCallback): void {
-        if (!this.events.has(event)) {
-            this.events.set(event, []);
+    on<K extends keyof EventMap>(event: K, callback: EventCallback<EventMap[K]>): void {
+        if (!this.events[event]) {
+            this.events[event] = [] as any;
         }
-        this.events.get(event)!.push(callback);
+        (this.events[event] as any).push(callback);
     }
 
-    off(event: string, callback?: EventCallback): void {
+    off<K extends keyof EventMap>(event: K, callback?: EventCallback<EventMap[K]>): void {
         if (!callback) {
-            this.events.delete(event);
+            delete this.events[event];
             return;
         }
-        const callbacks = this.events.get(event);
+        const callbacks = this.events[event];
         if (callbacks) {
-            this.events.set(event, callbacks.filter(cb => cb !== callback));
+            this.events[event] = callbacks.filter((cb: any) => cb !== callback) as any;
         }
     }
 
-    emit(event: string, data?: any): void {
-        const callbacks = this.events.get(event);
+    emit<K extends keyof EventMap>(event: K, data?: EventMap[K]): void {
+        const callbacks = this.events[event];
         if (callbacks) {
-            callbacks.forEach(cb => cb(data));
+            callbacks.forEach(cb => cb(data as EventMap[K]));
         }
     }
 }

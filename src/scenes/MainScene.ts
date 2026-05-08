@@ -9,6 +9,10 @@ import GridRenderer from '../managers/GridRenderer';
 import CameraController from '../managers/CameraController';
 import TickSystem from '../managers/TickSystem';
 import PowerManager from '../managers/PowerManager';
+import WaveManager from '../managers/WaveManager';
+import SaveManager from '../managers/SaveManager';
+import ResearchManager from '../managers/ResearchManager';
+import InventoryManager from '../managers/InventoryManager';
 import EventBus from '../managers/EventBus';
 
 export default class MainScene extends Phaser.Scene {
@@ -20,12 +24,20 @@ export default class MainScene extends Phaser.Scene {
     cameraController!: CameraController;
     tickSystem!: TickSystem;
     powerManager!: PowerManager;
+    waveManager!: WaveManager;
+    saveManager!: SaveManager;
+    researchManager!: ResearchManager;
+    inventoryManager!: InventoryManager;
 
     currentRotation: number = 0;
+    gameSpeed: number = 1;
     showPowerGrid: boolean = false;
     powerGridDirty: boolean = false;
+    showDefenseRange: boolean = false;
+    defenseRangeDirty: boolean = false;
 
     powerGridGraphics!: Phaser.GameObjects.Graphics;
+    defenseRangeGraphics!: Phaser.GameObjects.Graphics;
     cursorContainer!: Phaser.GameObjects.Container;
     ghostGraphics!: Phaser.GameObjects.Graphics;
     cursorArrow!: Phaser.GameObjects.Triangle;
@@ -39,10 +51,14 @@ export default class MainScene extends Phaser.Scene {
         this.itemManager = new ItemManager(this);
         this.buildingManager = new BuildingManager(this);
         this.powerManager = new PowerManager(this, this.buildingManager);
+        this.waveManager = new WaveManager(this, this.buildingManager);
         this.tickSystem = new TickSystem(this, this.buildingManager, this.itemManager, this.mapManager, this.powerManager);
         this.gridRenderer = new GridRenderer(this, this.mapManager);
         this.cameraController = new CameraController(this);
         this.uiManager = new UIManager(this);
+        this.saveManager = new SaveManager(this);
+        this.researchManager = new ResearchManager(this);
+        this.inventoryManager = new InventoryManager(this.buildingManager);
 
         this.mapManager.generateResourcePatches();
         this.buildingManager.place(0, 0, 'CORE', 0);
@@ -51,6 +67,9 @@ export default class MainScene extends Phaser.Scene {
         this.setupInput();
         this.setupEvents();
         this.gridRenderer.draw(true);
+
+        // Initialize UI buttons now that all managers are ready
+        this.uiManager.createBuildingButtons();
     }
 
     setupEvents(): void {
@@ -71,6 +90,7 @@ export default class MainScene extends Phaser.Scene {
                 duration: 200, ease: 'Back.easeOut'
             });
             this.uiManager.logMessage(`System: ${CONFIG.BUILDINGS[type].NAME} Online.`);
+            this.defenseRangeDirty = true;
         });
 
         EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
@@ -84,6 +104,7 @@ export default class MainScene extends Phaser.Scene {
                 onComplete: () => effect.destroy()
             });
             this.uiManager.logMessage(`System: Unit disconnected at [${x}, ${y}].`, true);
+            this.defenseRangeDirty = true;
         });
 
         this.events.on('shutdown', () => {
@@ -91,6 +112,17 @@ export default class MainScene extends Phaser.Scene {
             EventBus.off('BUILDING_PLACED');
             EventBus.off('BUILDING_REMOVED');
             EventBus.off('POWER_UPDATED');
+            EventBus.off('ENEMY_KILLED');
+            EventBus.off('GAME_OVER');
+            EventBus.off('CORE_DAMAGED');
+            EventBus.off('WAVE_STARTED');
+            EventBus.off('WAVE_UPDATE');
+            EventBus.off('WAVE_ENDED');
+            EventBus.off('CORE_DATA_RECEIVED');
+            EventBus.off('SAVE_REQUESTED');
+            EventBus.off('LOAD_REQUESTED');
+            EventBus.off('GAME_SPEED_CHANGED');
+            EventBus.off('RESEARCH_UNLOCKED');
         });
     }
 
@@ -103,11 +135,19 @@ export default class MainScene extends Phaser.Scene {
             this.powerGridDirty = true;
             this.uiManager.logMessage(`System: Power Grid Overlay ${this.showPowerGrid ? 'ON' : 'OFF'}`);
         });
+        this.input.keyboard!.on('keydown-F1', () => {
+            this.showDefenseRange = !this.showDefenseRange;
+            this.defenseRangeDirty = true;
+            this.uiManager.logMessage(`System: Defense Range Overlay ${this.showDefenseRange ? 'ON' : 'OFF'}`);
+        });
     }
 
     setupCursor(): void {
         this.powerGridGraphics = this.add.graphics();
         this.powerGridGraphics.setDepth(10);
+
+        this.defenseRangeGraphics = this.add.graphics();
+        this.defenseRangeGraphics.setDepth(11);
 
         this.cursorContainer = this.add.container(0, 0);
         this.ghostGraphics = this.add.graphics();
@@ -178,10 +218,14 @@ export default class MainScene extends Phaser.Scene {
         this.cursorArrow.setAngle(CONFIG.DIRECTIONS[this.currentRotation].angle);
     }
 
-    update(time: number, _delta: number): void {
+    update(time: number, delta: number): void {
         this.updateCursorPosition();
         this.gridRenderer.draw();
+        
         this.tickSystem.update(time);
+        this.waveManager.update(delta * this.gameSpeed);
+        this.saveManager.update(delta);
+
         this.uiManager.update(this.itemManager.getItems().length);
         this.cameraController.update();
 
@@ -189,6 +233,31 @@ export default class MainScene extends Phaser.Scene {
             this.drawPowerGridOverlay();
             this.powerGridDirty = false;
         }
+
+        if (this.defenseRangeDirty) {
+            this.drawDefenseRangeOverlay();
+            this.defenseRangeDirty = false;
+        }
+    }
+
+    drawDefenseRangeOverlay(): void {
+        this.defenseRangeGraphics.clear();
+        if (!this.showDefenseRange) return;
+
+        this.defenseRangeGraphics.fillStyle(0xff4444, 0.1);
+        this.defenseRangeGraphics.lineStyle(1, 0xff4444, 0.5);
+
+        this.buildingManager.forEach(building => {
+            const bConfig = CONFIG.BUILDINGS[building.type];
+            if (bConfig && bConfig.DEFENSE && bConfig.DEFENSE.RANGE > 0) {
+                const range = bConfig.DEFENSE.RANGE;
+                const centerX = building.x + CONFIG.GRID_SIZE / 2;
+                const centerY = building.y + CONFIG.GRID_SIZE / 2;
+                const radius = range * CONFIG.GRID_SIZE;
+                this.defenseRangeGraphics.fillCircle(centerX, centerY, radius);
+                this.defenseRangeGraphics.strokeCircle(centerX, centerY, radius);
+            }
+        });
     }
 
     drawPowerGridOverlay(): void {
@@ -225,14 +294,30 @@ export default class MainScene extends Phaser.Scene {
 
         const key = `${snappedX},${snappedY}`;
         const mode = this.uiManager.getSelectedBuildingType();
+
+        // Drag to build Conveyors / Fast Links
+        if (pointer.leftButtonDown() && (mode === 'CONVEYOR' || mode === 'FAST_LINK')) {
+            const bConfig = CONFIG.BUILDINGS[mode];
+            const w = bConfig?.WIDTH || 1;
+            const h = bConfig?.HEIGHT || 1;
+            
+            const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
+            
+            if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
+                this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
+            }
+        }
+
         const existingBuilding = this.buildingManager.get(key);
 
         if (mode !== 'REMOVE') {
             const bConfig = CONFIG.BUILDINGS[mode];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;
+            
+            const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
 
-            if (this.isBlocked(snappedX, snappedY, w, h)) {
+            if (!isUnlocked || this.isBlocked(snappedX, snappedY, w, h)) {
                 this.ghostGraphics.clear();
                 this.ghostGraphics.fillStyle(0xff0000, 0.5);
                 this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
@@ -256,6 +341,16 @@ export default class MainScene extends Phaser.Scene {
             }
             if ((existingBuilding as any).isProcessing !== undefined) {
                 content += `\nStatus: ${(existingBuilding as any).isProcessing ? 'Processing' : 'Idle'}`;
+            }
+            if (existingBuilding.type === 'PROCESSOR') {
+                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+            }
+            if (existingBuilding.type === 'WEIGHT_TRAINER') {
+                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+            }
+            if (existingBuilding.type === 'NEURAL_TRAINER') {
+                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+                content += `\n[Left Click to Cycle Recipe]`;
             }
 
             this.uiManager.showTooltip(pointer.x, pointer.y, bConfig.NAME, content);
@@ -282,15 +377,33 @@ export default class MainScene extends Phaser.Scene {
             if (mode === 'REMOVE') {
                 if (this.buildingManager.has(key)) this.buildingManager.remove(key);
             } else {
+                const existingBuilding = this.buildingManager.get(key);
+                if (existingBuilding && existingBuilding.type === 'NEURAL_TRAINER') {
+                    (existingBuilding as any).cycleRecipe();
+                    return;
+                }
+
+                // For Conveyor/FastLink, we already handled in updateCursorPosition with drag
+                if (mode === 'CONVEYOR' || mode === 'FAST_LINK') return;
+
                 const bConfig = CONFIG.BUILDINGS[mode];
                 const w = bConfig?.WIDTH || 1;
                 const h = bConfig?.HEIGHT || 1;
-                if (!this.isBlocked(snappedX, snappedY, w, h)) {
+                
+                const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
+                
+                if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
                     this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
                 }
             }
         } else if (pointer.rightButtonDown()) {
             if (this.buildingManager.has(key)) this.buildingManager.remove(key);
         }
+    }
+
+    setGameSpeed(speed: number): void {
+        this.gameSpeed = Math.max(1, Math.min(3, speed));
+        this.tickSystem.tickRate = (CONFIG.TICK_RATE / 2) / this.gameSpeed;
+        EventBus.emit('GAME_SPEED_CHANGED', { speed: this.gameSpeed });
     }
 }

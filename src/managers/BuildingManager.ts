@@ -13,7 +13,7 @@ export default class BuildingManager {
         this.buildings = new Map();
     }
 
-    place(x: number, y: number, type: string, rotation: number): BaseBuilding | null {
+    place(x: number, y: number, type: string, rotation: number, config: import('../types').BuildingOptions = {}): BaseBuilding | null {
         const bConfig = CONFIG.BUILDINGS[type];
         const w = bConfig?.WIDTH || 1;
         const h = bConfig?.HEIGHT || 1;
@@ -25,7 +25,20 @@ export default class BuildingManager {
             }
         }
 
-        const building = createBuilding(this.scene, x, y, type, { rotation });
+        // Check and deduct building costs
+        if (bConfig.COST && bConfig.COST.length > 0) {
+            const inventoryManager = (this.scene as any).inventoryManager;
+            if (inventoryManager && !inventoryManager.spend(bConfig.COST)) {
+                const uiManager = (this.scene as any).uiManager;
+                if (uiManager) {
+                    const costText = bConfig.COST.map((c: any) => `${c.amount} ${c.resource}`).join(', ');
+                    uiManager.logMessage(`System: Insufficient resources. Need: ${costText}`, true);
+                }
+                return null;
+            }
+        }
+
+        const building = createBuilding(this.scene, x, y, type, { ...config, rotation });
         if (building) {
             for (let dx = 0; dx < w; dx++) {
                 for (let dy = 0; dy < h; dy++) {
@@ -41,6 +54,12 @@ export default class BuildingManager {
     remove(key: string): void {
         const building = this.buildings.get(key);
         if (building) {
+            if (building.type === 'CORE') {
+                const uiManager = (this.scene as any).uiManager;
+                if (uiManager) uiManager.logMessage("System: Cannot remove Neural Core.", true);
+                return;
+            }
+
             const bConfig = CONFIG.BUILDINGS[building.type];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;

@@ -31,6 +31,9 @@ export default class PowerManager {
         this.poweredArea.clear();
         this.nodes = [];
 
+        const generators: PowerNodeInfo[] = [];
+        const relays: PowerNodeInfo[] = [];
+
         this.buildingManager.forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             if (!pConfig) return;
@@ -42,26 +45,44 @@ export default class PowerManager {
 
             if (isGenerating && pConfig.PRODUCTION > 0) {
                 this.totalProduction += pConfig.PRODUCTION;
-            }
-
-            if (pConfig.RANGE && pConfig.RANGE > 0) {
-                this.nodes.push({ x: building.x, y: building.y, range: pConfig.RANGE });
+                const range = pConfig.RANGE || 0;
+                generators.push({ x: building.x, y: building.y, range });
+            } else if (pConfig.RANGE && pConfig.RANGE > 0) {
+                relays.push({ x: building.x, y: building.y, range: pConfig.RANGE });
             }
         });
 
-        this.nodes.forEach(node => {
-            const rangeTiles = node.range;
+        const getCoveredTiles = (node: PowerNodeInfo): string[] => {
+            if (node.range <= 0) return [];
+            const tiles: string[] = [];
             const cx = Math.floor(node.x / this.gridSize);
             const cy = Math.floor(node.y / this.gridSize);
-
-            for (let dx = -rangeTiles; dx <= rangeTiles; dx++) {
-                for (let dy = -rangeTiles; dy <= rangeTiles; dy++) {
-                    const gridX = (cx + dx) * this.gridSize;
-                    const gridY = (cy + dy) * this.gridSize;
-                    this.poweredArea.add(`${gridX},${gridY}`);
+            for (let dx = -node.range; dx <= node.range; dx++) {
+                for (let dy = -node.range; dy <= node.range; dy++) {
+                    tiles.push(`${(cx + dx) * this.gridSize},${(cy + dy) * this.gridSize}`);
                 }
             }
-        });
+            return tiles;
+        };
+
+        const connectedRelays = new Set<PowerNodeInfo>();
+        const queue: PowerNodeInfo[] = [...generators];
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            const currentTiles = getCoveredTiles(current);
+            currentTiles.forEach(t => this.poweredArea.add(t));
+
+            relays.forEach(relay => {
+                if (!connectedRelays.has(relay)) {
+                    const relayKey = `${relay.x},${relay.y}`;
+                    if (this.poweredArea.has(relayKey)) {
+                        connectedRelays.add(relay);
+                        queue.push(relay);
+                    }
+                }
+            });
+        }
 
         this.buildingManager.forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;

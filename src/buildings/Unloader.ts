@@ -3,6 +3,7 @@ import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
 import Storage from './Storage';
 import { BuildingOptions } from '../types';
+import type MainScene from '../scenes/MainScene';
 
 export default class Unloader extends BaseBuilding {
     selectedType: string | null;
@@ -20,7 +21,7 @@ export default class Unloader extends BaseBuilding {
         const dir = CONFIG.DIRECTIONS[this.rotation];
         const backX = this.x - dir.x * CONFIG.GRID_SIZE;
         const backY = this.y - dir.y * CONFIG.GRID_SIZE;
-        const buildingManager = (this.scene as any).buildingManager;
+        const buildingManager = (this.scene as MainScene).buildingManager;
         const backBuilding = buildingManager.get(`${backX},${backY}`);
 
         if (backBuilding && backBuilding.type === 'STORAGE') {

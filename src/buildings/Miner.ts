@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
 import { BuildingOptions } from '../types';
+import type MainScene from '../scenes/MainScene';
 
 export default class Miner extends BaseBuilding {
     productionRate: number;
@@ -18,7 +19,7 @@ export default class Miner extends BaseBuilding {
     onTick(tickCount: number): void {
         if (tickCount % this.productionRate === 0) {
             if (this.outputBuffer.length >= this.maxBufferSize) return;
-            const mapManager = (this.scene as any).mapManager;
+            const mapManager = (this.scene as MainScene).mapManager;
             const resourceType = mapManager.getResourceAt(this.x, this.y);
             if (resourceType) {
                 this.outputBuffer.push(resourceType);

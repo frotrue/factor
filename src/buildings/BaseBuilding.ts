@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
+import { BuildingOptions, GameItem, MoveTarget } from '../types';
 
 /**
  * 모든 건물의 기반 클래스
@@ -75,6 +75,10 @@ export default class BaseBuilding {
 
     onTick(_tickCount: number, _occupiedPositions?: Set<string>): void {
         // Override in subclass
+    }
+
+    getNextPosition(item: GameItem, currentTick: number): MoveTarget | null {
+        return null;
     }
 
     destroy(): void {

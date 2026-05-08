@@ -73,10 +73,10 @@ export default class MainMenuScene extends Phaser.Scene {
         startBtn.on('pointerdown', () => {
             const topHud = document.getElementById('top-hud');
             const infoLayer = document.getElementById('info-layer');
-            const uiOverlay = document.getElementById('ui-overlay');
+            const bottomUiContainer = document.getElementById('bottom-ui-container');
             if (topHud) topHud.style.display = 'flex';
             if (infoLayer) infoLayer.style.display = 'block';
-            if (uiOverlay) uiOverlay.style.display = 'flex';
+            if (bottomUiContainer) bottomUiContainer.style.display = 'flex';
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {

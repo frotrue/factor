@@ -29,14 +29,15 @@ export default class TickSystem {
         this.itemManager = itemManager;
         this.mapManager = mapManager;
         this.powerManager = powerManager;
-        this.tickRate = CONFIG.TICK_RATE;
+        this.tickRate = CONFIG.TICK_RATE / 2; // Run ticks twice as fast
         this.currentTick = 0;
         this.lastTickTime = 0;
         this.gridSize = CONFIG.GRID_SIZE;
     }
 
     update(time: number): void {
-        if (time > this.lastTickTime + this.tickRate) {
+        const adjustedTickRate = this.tickRate / (this.scene as any).gameSpeed;
+        if (time > this.lastTickTime + adjustedTickRate) {
             this.lastTickTime = time;
             this.runTick();
         }
@@ -44,8 +45,9 @@ export default class TickSystem {
 
     runTick(): void {
         this.currentTick++;
+        const isFullTick = this.currentTick % 2 === 0;
 
-        if (this.powerManager) {
+        if (this.powerManager && isFullTick) {
             this.powerManager.updatePowerGrid();
         }
 
@@ -53,13 +55,19 @@ export default class TickSystem {
         const occupiedPositions = new Set<string>();
         items.forEach(item => occupiedPositions.add(`${item.gridX},${item.gridY}`));
 
-        this.processBuildingOutputs(occupiedPositions);
-        const nextMoves = this.planItemMoves(items, occupiedPositions);
+        if (isFullTick) {
+            this.processBuildingOutputs(occupiedPositions);
+        }
+
+        const nextMoves = this.planItemMoves(items, occupiedPositions, isFullTick);
         this.executeItemMoves(nextMoves);
-        this.processBuildings(occupiedPositions);
+
+        if (isFullTick) {
+            this.processBuildings(occupiedPositions);
+        }
     }
 
-    planItemMoves(items: GameItem[], occupiedPositions: Set<string>): Map<GameItem, MoveTarget> {
+    planItemMoves(items: GameItem[], occupiedPositions: Set<string>, isFullTick: boolean): Map<GameItem, MoveTarget> {
         const nextMoves = new Map<GameItem, MoveTarget>();
         const itemsToConsume: { item: GameItem; building: any }[] = [];
 
@@ -67,32 +75,35 @@ export default class TickSystem {
             const item = items[i];
             const currentBuilding = this.buildingManager.get(`${item.gridX},${item.gridY}`);
 
-            if (currentBuilding && currentBuilding.type === 'CONVEYOR') {
-                const dir = CONFIG.DIRECTIONS[currentBuilding.rotation];
-                const nextX = item.gridX + dir.x * this.gridSize;
-                const nextY = item.gridY + dir.y * this.gridSize;
-                const nextKey = `${nextX},${nextY}`;
+            if (currentBuilding) {
+                const isFast = currentBuilding.type === 'FAST_LINK';
+                if (!isFast && !isFullTick) continue;
 
-                const nextBuilding = this.buildingManager.get(nextKey);
-                const isNextOccupied = occupiedPositions.has(nextKey);
+                if ((currentBuilding as any).getNextPosition) {
+                    const nextPos = (currentBuilding as any).getNextPosition(item, this.currentTick);
+                    if (!nextPos) continue;
 
-                if (nextBuilding) {
-                    if (nextBuilding.type !== 'CONVEYOR') {
-                        if (nextBuilding.canAcceptItem && nextBuilding.canAcceptItem(item.type)) {
-                            itemsToConsume.push({ item, building: nextBuilding });
+                    const nextKey = `${nextPos.x},${nextPos.y}`;
+                    const nextBuilding = this.buildingManager.get(nextKey);
+                    const isNextOccupied = occupiedPositions.has(nextKey);
+
+                    if (nextBuilding) {
+                        if (!(nextBuilding as any).getNextPosition) { // Not a conveyor-like building
+                            if (nextBuilding.canAcceptItem && nextBuilding.canAcceptItem(item.type)) {
+                                itemsToConsume.push({ item, building: nextBuilding });
+                                occupiedPositions.delete(`${item.gridX},${item.gridY}`);
+                            }
+                        } else if (!isNextOccupied) {
+                            nextMoves.set(item, nextPos);
+                            occupiedPositions.add(nextKey);
                             occupiedPositions.delete(`${item.gridX},${item.gridY}`);
-                            continue;
                         }
-                    } else if (!isNextOccupied) {
-                        nextMoves.set(item, { x: nextX, y: nextY });
-                        occupiedPositions.add(nextKey);
+                    }
+                } else if (!isFast && isFullTick) {
+                    if (currentBuilding.canAcceptItem && currentBuilding.canAcceptItem(item.type)) {
+                        itemsToConsume.push({ item, building: currentBuilding });
                         occupiedPositions.delete(`${item.gridX},${item.gridY}`);
                     }
-                }
-            } else if (currentBuilding && currentBuilding.type !== 'CONVEYOR') {
-                if (currentBuilding.canAcceptItem && currentBuilding.canAcceptItem(item.type)) {
-                    itemsToConsume.push({ item, building: currentBuilding });
-                    occupiedPositions.delete(`${item.gridX},${item.gridY}`);
                 }
             }
         }
@@ -130,6 +141,7 @@ export default class TickSystem {
     }
 
     executeItemMoves(nextMoves: Map<GameItem, MoveTarget>): void {
+        const adjustedTickRate = this.tickRate / (this.scene as any).gameSpeed;
         nextMoves.forEach((pos, item) => {
             item.gridX = pos.x;
             item.gridY = pos.y;
@@ -137,7 +149,7 @@ export default class TickSystem {
                 targets: item.sprite,
                 x: item.gridX + this.gridSize / 2,
                 y: item.gridY + this.gridSize / 2,
-                duration: this.tickRate,
+                duration: adjustedTickRate,
                 ease: 'Linear'
             });
         });

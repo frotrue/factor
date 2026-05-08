@@ -110,15 +110,58 @@
             background: rgba(0, 243, 255, 0.1);
         }
 
-        /* Bottom UI Overlay */
-        #ui-overlay {
+        /* Bottom UI Container */
+        #bottom-ui-container {
             position: absolute;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        /* Category Tabs */
+        #ui-tabs {
+            display: flex;
+            gap: 5px;
+            pointer-events: all;
+        }
+
+        .tab-btn {
+            background: rgba(20, 20, 25, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px 4px 0 0;
+            color: #aaa;
+            padding: 5px 15px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: none;
+        }
+
+        .tab-btn:hover {
+            background: rgba(40, 40, 50, 0.9);
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 243, 255, 0.1);
+            color: #fff;
+            border-color: var(--neon-cyan);
+            border-bottom: 2px solid var(--neon-cyan);
+            box-shadow: 0 -2px 10px rgba(0, 243, 255, 0.1);
+        }
+
+        /* Bottom UI Overlay */
+        #ui-overlay {
+            display: flex;
             gap: 15px;
             padding: 15px;
+            pointer-events: all;
         }
 
         .build-btn {
@@ -259,11 +302,58 @@
 <body>
     <div id="game-container"></div>
     
+    <!-- System Buttons -->
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
+        <button id="btn-research" class="build-btn" style="width: 50px; height: 50px; font-size: 24px; display: none;">🔬</button>
+        <button id="btn-settings" class="build-btn" style="width: 50px; height: 50px; font-size: 24px;">⚙️</button>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; z-index: 2000; padding: 30px; min-width: 300px;">
+        <h2 style="color: var(--neon-cyan); margin-top: 0; text-align: center;">System Settings</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="color: #aaa; font-size: 14px;">Clock Speed</label>
+            <div style="display: flex; gap: 10px; margin-top: 8px;">
+                <button id="btn-speed-1" class="build-btn active" style="width: 60px; height: 35px; flex-direction: row;">1x</button>
+                <button id="btn-speed-2" class="build-btn" style="width: 60px; height: 35px; flex-direction: row;">2x</button>
+                <button id="btn-speed-3" class="build-btn" style="width: 60px; height: 35px; flex-direction: row;">3x</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 30px; display: flex; gap: 10px;">
+            <button id="btn-save" class="build-btn" style="flex: 1; height: 45px; color: #fff; flex-direction: row;">Save State</button>
+            <button id="btn-load" class="build-btn" style="flex: 1; height: 45px; color: #fff; flex-direction: row;">Load State</button>
+        </div>
+
+        <button id="btn-close-settings" class="build-btn" style="width: 100%; height: 40px; flex-direction: row;">Close</button>
+    </div>
+
+    <!-- Research Modal -->
+    <div id="research-modal" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; z-index: 2000; padding: 30px; width: 600px; max-height: 80vh;">
+        <h2 style="color: #6366f1; margin-top: 0; text-align: center; font-size: 28px; text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);">Research Tree</h2>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+            <span style="color: #aaa; font-size: 16px;">Available Confidence Score:</span>
+            <span id="research-score" style="color: #fde047; font-size: 20px; font-weight: bold;">0.00</span>
+        </div>
+
+        <div id="research-tree-container" style="flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 15px;">
+            <!-- Research nodes will be injected here by UIManager -->
+        </div>
+
+        <button id="btn-close-research" class="build-btn" style="width: 100%; height: 40px; flex-direction: row; margin-top: 20px;">Close</button>
+    </div>
+
     <!-- Phase A: Top Dashboard -->
     <div id="top-hud" class="glass-panel" style="display: none;">
         <div class="hud-stat">
             <div class="hud-label">Power Output</div>
             <div class="hud-value" id="hud-power" style="color: #fde047; text-shadow: 0 0 10px #fde047;">0 W</div>
+        </div>
+        <div class="hud-stat">
+            <div class="hud-label">Silicon</div>
+            <div class="hud-value" id="hud-silicon" style="color: #94a3b8; text-shadow: 0 0 10px #94a3b8;">0</div>
         </div>
         <div class="hud-stat">
             <div class="hud-label">Confidence Score</div>
@@ -274,9 +364,20 @@
             <div class="hud-value" id="hud-packets">0</div>
         </div>
         <div class="hud-stat">
-            <div class="hud-label">Epoch</div>
-            <div class="hud-value" id="hud-epoch">1</div>
+            <div class="hud-label">Wave</div>
+            <div class="hud-value" id="hud-wave" style="color: #ff4444; text-shadow: 0 0 10px #ff4444;">0</div>
         </div>
+        <div class="hud-stat">
+            <div class="hud-label">Next Wave In</div>
+            <div class="hud-value" id="hud-wave-timer">30s</div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; align-items: center; z-index: 1000; padding: 40px; pointer-events: all;">
+        <h1 style="color: #ff4444; font-family: 'Share Tech Mono'; font-size: 48px; margin: 0 0 20px 0; text-shadow: 0 0 20px #ff4444;">SYSTEM FAILURE</h1>
+        <p style="color: #ffffff; font-size: 18px; margin-bottom: 30px;">The Neural Core has been compromised.</p>
+        <button id="btn-restart" class="build-btn" style="width: auto; height: auto; padding: 10px 30px; font-size: 20px;">REBOOT SYSTEM</button>
     </div>
 
     <!-- Phase A: Info & Controls -->
@@ -285,13 +386,19 @@
         <div class="control-hint"><span class="control-key">W A S D</span> Pan Camera</div>
         <div class="control-key" style="margin-top:4px; display:inline-block">Scroll</div> <span class="control-hint">Zoom</span><br>
         <div class="control-key" style="margin-top:4px; display:inline-block">R</div> <span class="control-hint">Rotate</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">F1</div> <span class="control-hint">Defense Range</span><br>
         <div class="control-key" style="margin-top:4px; display:inline-block">F2</div> <span class="control-hint">Power Grid</span><br>
         <div class="control-key" style="margin-top:4px; display:inline-block">R-Click</div> <span class="control-hint">Demolish</span>
     </div>
 
     <!-- Phase A/D: Bottom Build Menu -->
-    <div id="ui-overlay" class="glass-panel" style="display: none;">
-        <!-- Buttons are dynamically generated by UIManager.js -->
+    <div id="bottom-ui-container" style="display: none;">
+        <div id="ui-tabs">
+            <!-- Tabs injected by UIManager.ts -->
+        </div>
+        <div id="ui-overlay" class="glass-panel">
+            <!-- Buttons are dynamically generated by UIManager.ts -->
+        </div>
     </div>
 
     <!-- Phase C: Tooltip -->
