@@ -1,28 +1,18 @@
-import MainScene from '../scenes/MainScene';
-import { SaveData, SavedBuilding, SavedItem, SavedEnemy } from '../types';
 import EventBus from './EventBus';
-import Core from '../buildings/Core';
 import { CONFIG } from '../config';
 import BaseEnemy from '../enemies/BaseEnemy';
-
 export default class SaveManager {
-    scene: MainScene;
-    autoSaveInterval: number;
-    autoSaveTimer: number;
-
-    constructor(scene: MainScene) {
+    constructor(scene) {
         this.scene = scene;
         this.autoSaveInterval = 60000;
         this.autoSaveTimer = 0;
-
         EventBus.on('SAVE_REQUESTED', () => {
             this.saveGame();
             this.scene.uiManager.logMessage('System: State saved successfully.');
         });
         EventBus.on('LOAD_REQUESTED', () => this.loadGame());
     }
-
-    update(delta: number): void {
+    update(delta) {
         this.autoSaveTimer += delta;
         if (this.autoSaveTimer >= this.autoSaveInterval) {
             this.saveGame();
@@ -30,16 +20,17 @@ export default class SaveManager {
             this.scene.uiManager.logMessage('System: Auto-saved successfully.');
         }
     }
-
-    saveGame(): void {
-        const buildings: SavedBuilding[] = [];
+    saveGame() {
+        const buildings = [];
         this.scene.buildingManager.forEach(b => {
-            if (b.type === 'CORE') return;
-            let customState: any = undefined;
-            if ((b as any).getCustomState) {
-                customState = (b as any).getCustomState();
-            } else if (b.type === 'NEURAL_TRAINER') {
-                customState = { recipe: (b as any).recipe.OUTPUT };
+            if (b.type === 'CORE')
+                return;
+            let customState = undefined;
+            if (b.getCustomState) {
+                customState = b.getCustomState();
+            }
+            else if (b.type === 'NEURAL_TRAINER') {
+                customState = { recipe: b.recipe.OUTPUT };
             }
             buildings.push({
                 x: b.x,
@@ -51,8 +42,7 @@ export default class SaveManager {
                 customState
             });
         });
-
-        const items: SavedItem[] = [];
+        const items = [];
         this.scene.itemManager.getItems().forEach(item => {
             items.push({
                 x: item.gridX,
@@ -60,15 +50,13 @@ export default class SaveManager {
                 type: item.type
             });
         });
-
         const cables = Array.from(this.scene.cableManager.cables.values()).map(c => ({
             fromKey: c.fromKey,
             toKey: c.toKey,
             cableType: c.cableType,
             queue: [...c.queue]
         }));
-
-        const enemies: SavedEnemy[] = [];
+        const enemies = [];
         this.scene.waveManager.enemies.forEach(e => {
             enemies.push({
                 id: e.id,
@@ -78,15 +66,12 @@ export default class SaveManager {
                 hp: e.hp
             });
         });
-
-        const resourceMapArray: { key: string; type: string }[] = [];
+        const resourceMapArray = [];
         this.scene.mapManager.getResourceMap().forEach((type, key) => {
             resourceMapArray.push({ key, type });
         });
-
-        const coreBuilding = this.scene.buildingManager.get(`0,0`) as Core | null;
-        
-        const saveData: SaveData = {
+        const coreBuilding = this.scene.buildingManager.get(`0,0`);
+        const saveData = {
             version: '1.0.0',
             timestamp: Date.now(),
             wave: {
@@ -115,34 +100,29 @@ export default class SaveManager {
             resourceMap: resourceMapArray,
             research: this.scene.researchManager.getUnlockedResearch()
         };
-
         localStorage.setItem('neural_factory_save', JSON.stringify(saveData));
     }
-
-    loadGame(): boolean {
+    loadGame() {
         const saveString = localStorage.getItem('neural_factory_save');
-        if (!saveString) return false;
-
+        if (!saveString)
+            return false;
         try {
-            const data: SaveData = JSON.parse(saveString);
-
+            const data = JSON.parse(saveString);
             // Clean up existing state
             this.scene.buildingManager.forEach(b => b.destroy());
             this.scene.buildingManager.buildings.clear();
-            
             this.scene.itemManager.getItems().forEach(item => item.sprite.destroy());
             this.scene.itemManager.items = [];
-            
             this.scene.waveManager.enemies.forEach(e => {
-                if (e.sprite) e.sprite.destroy();
-                if (e.hpBar) e.hpBar.destroy();
+                if (e.sprite)
+                    e.sprite.destroy();
+                if (e.hpBar)
+                    e.hpBar.destroy();
             });
             this.scene.waveManager.enemies.clear();
-
             this.scene.cableManager.cables.clear();
             this.scene.cableManager.apConnections.clear();
             this.scene.cableManager.graphics.clear();
-
             // Load Resource Map
             if (data.resourceMap) {
                 this.scene.mapManager.resourceMap.clear();
@@ -151,28 +131,26 @@ export default class SaveManager {
                 });
                 this.scene.gridRenderer.draw(true);
             }
-
             // Load Core
-            const core = this.scene.buildingManager.place(0, 0, 'CORE', 0) as Core;
+            const core = this.scene.buildingManager.place(0, 0, 'CORE', 0);
             if (core) {
                 core.hp = data.core.hp;
                 core.totalDataReceived = data.core.totalDataReceived;
                 core.confidenceScore = data.core.confidenceScore;
                 core.drawHpBar();
-                EventBus.emit('CORE_DATA_RECEIVED', { 
-                    type: 'LOAD', 
-                    score: core.confidenceScore, 
-                    total: core.totalDataReceived 
+                EventBus.emit('CORE_DATA_RECEIVED', {
+                    type: 'LOAD',
+                    score: core.confidenceScore,
+                    total: core.totalDataReceived
                 });
             }
-
             // Load Research
             if (data.research) {
                 this.scene.researchManager.loadUnlockedResearch(data.research);
-            } else {
+            }
+            else {
                 this.scene.researchManager.loadUnlockedResearch([]);
             }
-
             // Load Buildings
             data.buildings.forEach(b => {
                 const placed = this.scene.buildingManager.place(b.x, b.y, b.type, b.rotation, { customState: b.customState });
@@ -182,17 +160,15 @@ export default class SaveManager {
                     if (placed.type === 'NEURAL_TRAINER' && b.customState && b.customState.recipe) {
                         const recipeKey = Object.keys(CONFIG.RECIPES).find(k => CONFIG.RECIPES[k].OUTPUT === b.customState.recipe);
                         if (recipeKey) {
-                            (placed as any).recipe = CONFIG.RECIPES[recipeKey];
+                            placed.recipe = CONFIG.RECIPES[recipeKey];
                         }
                     }
                 }
             });
-
             // Load Items
             data.items.forEach(i => {
                 this.scene.itemManager.spawn(i.x, i.y, i.type);
             });
-
             // Load Cables
             if (data.cables) {
                 data.cables.forEach(c => {
@@ -206,7 +182,6 @@ export default class SaveManager {
                     }
                 });
             }
-
             // Load Wave
             this.scene.waveManager.currentWave = data.wave.currentWave;
             this.scene.waveManager.waveTimer = data.wave.waveTimer;
@@ -214,12 +189,10 @@ export default class SaveManager {
             this.scene.waveManager.enemiesToSpawn = data.wave.enemiesToSpawn;
             this.scene.waveManager.hpMultiplier = data.wave.hpMultiplier;
             this.scene.waveManager.enemyIdCounter = data.wave.enemyIdCounter;
-            
             if (data.wave.currentWave > 0 && data.wave.enemiesSpawned < data.wave.enemiesToSpawn) {
                 this.scene.waveManager.waveActive = true;
                 EventBus.emit('WAVE_STARTED', { wave: data.wave.currentWave });
             }
-
             data.wave.enemies.forEach(e => {
                 const enemy = new BaseEnemy(this.scene, e.type, e.x, e.y, 1, e.id, this.scene.buildingManager);
                 enemy.maxHp = CONFIG.ENEMIES[e.type].BASE_HP * data.wave.hpMultiplier;
@@ -227,25 +200,23 @@ export default class SaveManager {
                 enemy.drawHpBar();
                 this.scene.waveManager.enemies.set(e.id, enemy);
             });
-
             // Load Settings
             if (data.settings) {
                 this.scene.setGameSpeed(data.settings.gameSpeed || 1);
-                
                 this.scene.showPowerGrid = data.settings.showPowerGrid;
                 this.scene.powerGridDirty = true;
-                
                 this.scene.showDefenseRange = data.settings.showDefenseRange;
                 this.scene.defenseRangeDirty = true;
             }
-
             this.scene.uiManager.createBuildingButtons();
             this.scene.uiManager.logMessage('System: Save file loaded successfully.');
             return true;
-        } catch (e) {
+        }
+        catch (e) {
             console.error('Failed to load save', e);
             this.scene.uiManager.logMessage('System: Save file corrupted.', true);
             return false;
         }
     }
 }
+//# sourceMappingURL=SaveManager.js.map

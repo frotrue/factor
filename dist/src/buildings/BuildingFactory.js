@@ -1,5 +1,3 @@
-import Phaser from 'phaser';
-import BaseBuilding from './BaseBuilding';
 import Miner from './Miner';
 import Processor from './Processor';
 import WeightTrainer from './WeightTrainer';
@@ -8,15 +6,11 @@ import PowerPlant from './PowerPlant';
 import PowerNode from './PowerNode';
 import Storage from './Storage';
 import Unloader from './Unloader';
-import DefenseTower, { Classifier, Filter, Firewall } from './DefenseTower';
+import { Classifier, Filter, Firewall } from './DefenseTower';
 import SolarPanel from './SolarPanel';
 import NeuralTrainer from './NeuralTrainer';
 import AccessPoint from './AccessPoint';
-import { BuildingOptions } from '../types';
-
-type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
-
-const REGISTRY: Record<string, BuildingClass> = {
+const REGISTRY = {
     MINER: Miner,
     PROCESSOR: Processor,
     CORE: Core,
@@ -32,8 +26,7 @@ const REGISTRY: Record<string, BuildingClass> = {
     WEIGHT_TRAINER: WeightTrainer,
     ACCESS_POINT: AccessPoint
 };
-
-export function createBuilding(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}): BaseBuilding | null {
+export function createBuilding(scene, x, y, type, config = {}) {
     const BuildingCls = REGISTRY[type];
     if (!BuildingCls) {
         console.warn(`Unknown building type: ${type}`);
@@ -41,7 +34,7 @@ export function createBuilding(scene: Phaser.Scene, x: number, y: number, type: 
     }
     return new BuildingCls(scene, x, y, config);
 }
-
-export function registerBuilding(type: string, BuildingCls: BuildingClass): void {
+export function registerBuilding(type, BuildingCls) {
     REGISTRY[type] = BuildingCls;
 }
+//# sourceMappingURL=BuildingFactory.js.map

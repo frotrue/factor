@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-
 import BuildingManager from '../managers/BuildingManager';
 import ItemManager from '../managers/ItemManager';
 import MapManager from '../managers/MapManager';
@@ -15,49 +14,23 @@ import ResearchManager from '../managers/ResearchManager';
 import InventoryManager from '../managers/InventoryManager';
 import CableManager from '../managers/CableManager';
 import EventBus from '../managers/EventBus';
-
 export default class MainScene extends Phaser.Scene {
-    buildingManager!: BuildingManager;
-    itemManager!: ItemManager;
-    mapManager!: MapManager;
-    uiManager!: UIManager;
-    gridRenderer!: GridRenderer;
-    cameraController!: CameraController;
-    tickSystem!: TickSystem;
-    powerManager!: PowerManager;
-    waveManager!: WaveManager;
-    saveManager!: SaveManager;
-    researchManager!: ResearchManager;
-    inventoryManager!: InventoryManager;
-    cableManager!: CableManager;
-
-    cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
-    cableStartKey: string | null = null;
-    cableDraftGraphics!: Phaser.GameObjects.Graphics;
-
-    currentRotation: number = 0;
-    gameSpeed: number = 1;
-    showPowerGrid: boolean = false;
-    powerGridDirty: boolean = false;
-    showDefenseRange: boolean = false;
-    defenseRangeDirty: boolean = false;
-
-    powerGridGraphics!: Phaser.GameObjects.Graphics;
-    defenseRangeGraphics!: Phaser.GameObjects.Graphics;
-    cursorContainer!: Phaser.GameObjects.Container;
-    ghostGraphics!: Phaser.GameObjects.Graphics;
-    cursorArrow!: Phaser.GameObjects.Triangle;
-
     constructor() {
         super('MainScene');
+        this.cableState = 'IDLE';
+        this.cableStartKey = null;
+        this.currentRotation = 0;
+        this.gameSpeed = 1;
+        this.showPowerGrid = false;
+        this.powerGridDirty = false;
+        this.showDefenseRange = false;
+        this.defenseRangeDirty = false;
     }
-
-    create(): void {
+    create() {
         this.mapManager = new MapManager();
         this.itemManager = new ItemManager(this);
         this.buildingManager = new BuildingManager(this);
         this.powerManager = new PowerManager(this, this.buildingManager);
-        this.cableManager = new CableManager(this);
         this.waveManager = new WaveManager(this, this.buildingManager);
         this.tickSystem = new TickSystem(this, this.buildingManager, this.itemManager, this.mapManager, this.powerManager);
         this.gridRenderer = new GridRenderer(this, this.mapManager);
@@ -66,37 +39,24 @@ export default class MainScene extends Phaser.Scene {
         this.saveManager = new SaveManager(this);
         this.researchManager = new ResearchManager(this);
         this.inventoryManager = new InventoryManager(this.buildingManager);
-
+        this.cableManager = new CableManager(this);
         this.mapManager.generateResourcePatches();
         this.buildingManager.place(0, 0, 'CORE', 0);
-
-        // 시작 시 일정량의 실리콘 제공을 위한 창고 설치
-        const startStorage = this.buildingManager.place(-64, 0, 'STORAGE', 0);
-        if (startStorage) {
-            for (let i = 0; i < 30; i++) {
-                startStorage.inputBuffer.push('SILICON');
-            }
-        }
-
         this.setupCursor();
         this.setupInput();
         this.setupEvents();
         this.gridRenderer.draw(true);
-
         // Initialize UI buttons now that all managers are ready
         this.uiManager.createBuildingButtons();
     }
-
-    setupEvents(): void {
+    setupEvents() {
         EventBus.on('BUILDING_SELECTED', () => {
             this.updateCursorGraphics();
         });
-
         EventBus.on('POWER_UPDATED', () => {
             this.powerGridDirty = true;
         });
-
-        EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
+        EventBus.on('BUILDING_PLACED', ({ building, type }) => {
             building.container.setScale(0.5);
             building.container.setAlpha(0);
             this.tweens.add({
@@ -107,8 +67,7 @@ export default class MainScene extends Phaser.Scene {
             this.uiManager.logMessage(`System: ${CONFIG.BUILDINGS[type].NAME} Online.`);
             this.defenseRangeDirty = true;
         });
-
-        EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
+        EventBus.on('BUILDING_REMOVED', ({ key }) => {
             const [x, y] = key.split(',').map(Number);
             const effect = this.add.rectangle(x + CONFIG.GRID_SIZE / 2, y + CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, 0xff4444);
             effect.setDepth(15);
@@ -121,7 +80,6 @@ export default class MainScene extends Phaser.Scene {
             this.uiManager.logMessage(`System: Unit disconnected at [${x}, ${y}].`, true);
             this.defenseRangeDirty = true;
         });
-
         this.events.on('shutdown', () => {
             EventBus.off('BUILDING_SELECTED');
             EventBus.off('BUILDING_PLACED');
@@ -140,50 +98,40 @@ export default class MainScene extends Phaser.Scene {
             EventBus.off('RESEARCH_UNLOCKED');
         });
     }
-
-    setupInput(): void {
-        this.input.mouse!.disableContextMenu();
+    setupInput() {
+        this.input.mouse.disableContextMenu();
         this.input.on('pointerdown', this.handlePointerDown, this);
-        this.input.keyboard!.on('keydown-R', () => this.rotateCursor());
-        this.input.keyboard!.on('keydown-F2', () => {
+        this.input.keyboard.on('keydown-R', () => this.rotateCursor());
+        this.input.keyboard.on('keydown-F2', () => {
             this.showPowerGrid = !this.showPowerGrid;
             this.powerGridDirty = true;
             this.uiManager.logMessage(`System: Power Grid Overlay ${this.showPowerGrid ? 'ON' : 'OFF'}`);
         });
-        this.input.keyboard!.on('keydown-F1', () => {
+        this.input.keyboard.on('keydown-F1', () => {
             this.showDefenseRange = !this.showDefenseRange;
             this.defenseRangeDirty = true;
             this.uiManager.logMessage(`System: Defense Range Overlay ${this.showDefenseRange ? 'ON' : 'OFF'}`);
         });
     }
-
-    setupCursor(): void {
+    setupCursor() {
         this.powerGridGraphics = this.add.graphics();
         this.powerGridGraphics.setDepth(10);
-
         this.defenseRangeGraphics = this.add.graphics();
         this.defenseRangeGraphics.setDepth(11);
-
         this.cableDraftGraphics = this.add.graphics();
         this.cableDraftGraphics.setDepth(14);
-
         this.cursorContainer = this.add.container(0, 0);
         this.ghostGraphics = this.add.graphics();
-        this.cursorArrow = this.add.triangle(
-            CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE / 2,
-            12, 0, 0, 12, 0, -12, 0xffffff, 1
-        );
+        this.cursorArrow = this.add.triangle(CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE / 2, 12, 0, 0, 12, 0, -12, 0xffffff, 1);
         this.cursorArrow.setAngle(CONFIG.DIRECTIONS[this.currentRotation].angle);
         this.cursorContainer.add([this.ghostGraphics, this.cursorArrow]);
         this.cursorContainer.setDepth(100);
         this.cursorContainer.setAlpha(0.6);
         this.updateCursorGraphics();
     }
-
-    updateCursorGraphics(): void {
+    updateCursorGraphics() {
         const mode = this.uiManager.getSelectedBuildingType();
         this.ghostGraphics.clear();
-
         if (mode === 'REMOVE') {
             this.ghostGraphics.lineStyle(2, 0xff0000);
             this.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
@@ -191,24 +139,24 @@ export default class MainScene extends Phaser.Scene {
             this.ghostGraphics.lineBetween(CONFIG.GRID_SIZE, 0, 0, CONFIG.GRID_SIZE);
             this.cursorArrow.setVisible(false);
             this.cursorContainer.setAlpha(1);
-        } else if (mode === 'BASIC' || mode === 'FIBER') {
+        }
+        else if (mode === 'BASIC' || mode === 'FIBER') {
             this.ghostGraphics.lineStyle(2, CONFIG.CABLES[mode].COLOR);
             this.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.cursorArrow.setVisible(false);
             this.cursorContainer.setAlpha(1);
-        } else {
+        }
+        else {
             const bConfig = CONFIG.BUILDINGS[mode];
-            if (!bConfig) return;
+            if (!bConfig)
+                return;
             const w = bConfig.WIDTH || 1;
             const h = bConfig.HEIGHT || 1;
-
             this.ghostGraphics.fillStyle(bConfig.COLOR || 0xaaaaaa, 0.5);
             this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
-
             const cx = (CONFIG.GRID_SIZE * w) / 2;
             const cy = (CONFIG.GRID_SIZE * h) / 2;
             this.ghostGraphics.lineStyle(2, 0xffffff);
-
             switch (this.currentRotation) {
                 case 0:
                     this.ghostGraphics.lineBetween(cx - 5, cy, cx + 10, cy);
@@ -231,31 +179,23 @@ export default class MainScene extends Phaser.Scene {
                     this.ghostGraphics.lineBetween(cx, cy - 10, cx + 5, cy - 5);
                     break;
             }
-
             this.cursorArrow.setVisible(true);
             this.cursorContainer.setAlpha(0.7);
         }
     }
-
-    rotateCursor(): void {
+    rotateCursor() {
         this.currentRotation = (this.currentRotation + 1) % 4;
         this.cursorArrow.setAngle(CONFIG.DIRECTIONS[this.currentRotation].angle);
     }
-
-    update(time: number, delta: number): void {
+    update(time, delta) {
         this.updateCursorPosition();
         this.gridRenderer.draw();
-        
         this.tickSystem.update(time);
         this.waveManager.update(delta * this.gameSpeed);
         this.saveManager.update(delta);
-
         this.uiManager.update(this.itemManager.getItems().length);
         this.cameraController.update();
-
-        this.cableManager.markDirtyIfThrottlingChanged();
         this.cableManager.drawCables();
-
         if (this.cableState === 'CABLE_START' && this.cableStartKey) {
             this.cableDraftGraphics.clear();
             const pointer = this.input.activePointer;
@@ -265,28 +205,25 @@ export default class MainScene extends Phaser.Scene {
             const cy1 = startY + CONFIG.GRID_SIZE / 2;
             this.cableDraftGraphics.lineStyle(2, 0xffffff, 0.5);
             this.cableDraftGraphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, worldPoint.x, worldPoint.y));
-        } else {
+        }
+        else {
             this.cableDraftGraphics.clear();
         }
-
         if (this.powerGridDirty) {
             this.drawPowerGridOverlay();
             this.powerGridDirty = false;
         }
-
         if (this.defenseRangeDirty) {
             this.drawDefenseRangeOverlay();
             this.defenseRangeDirty = false;
         }
     }
-
-    drawDefenseRangeOverlay(): void {
+    drawDefenseRangeOverlay() {
         this.defenseRangeGraphics.clear();
-        if (!this.showDefenseRange) return;
-
+        if (!this.showDefenseRange)
+            return;
         this.defenseRangeGraphics.fillStyle(0xff4444, 0.1);
         this.defenseRangeGraphics.lineStyle(1, 0xff4444, 0.5);
-
         this.buildingManager.forEach(building => {
             const bConfig = CONFIG.BUILDINGS[building.type];
             if (bConfig && bConfig.DEFENSE && bConfig.DEFENSE.RANGE > 0) {
@@ -299,22 +236,19 @@ export default class MainScene extends Phaser.Scene {
             }
         });
     }
-
-    drawPowerGridOverlay(): void {
+    drawPowerGridOverlay() {
         this.powerGridGraphics.clear();
-        if (!this.showPowerGrid || !this.powerManager) return;
-
+        if (!this.showPowerGrid || !this.powerManager)
+            return;
         this.powerGridGraphics.fillStyle(0xfde047, 0.15);
         this.powerGridGraphics.lineStyle(1, 0xfde047, 0.5);
-
         this.powerManager.poweredArea.forEach(key => {
             const [x, y] = key.split(',').map(Number);
             this.powerGridGraphics.fillRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.powerGridGraphics.strokeRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
         });
     }
-
-    isBlocked(x: number, y: number, w: number, h: number): boolean {
+    isBlocked(x, y, w, h) {
         for (let dx = 0; dx < w; dx++) {
             for (let dy = 0; dy < h; dy++) {
                 if (this.buildingManager.has(`${x + dx * CONFIG.GRID_SIZE},${y + dy * CONFIG.GRID_SIZE}`)) {
@@ -324,32 +258,26 @@ export default class MainScene extends Phaser.Scene {
         }
         return false;
     }
-
-    updateCursorPosition(): void {
+    updateCursorPosition() {
         const pointer = this.input.activePointer;
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         this.cursorContainer.setPosition(snappedX, snappedY);
-
         const key = `${snappedX},${snappedY}`;
         const mode = this.uiManager.getSelectedBuildingType();
-
         // Drag to build Conveyors / Fast Links
         if (pointer.leftButtonDown() && (mode === 'CONVEYOR' || mode === 'FAST_LINK')) {
             const bConfig = CONFIG.BUILDINGS[mode];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;
-            
             const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-            
+            const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
             if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
                 // this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
             }
         }
-
         const existingBuilding = this.buildingManager.get(key);
-
         if (mode !== 'REMOVE') {
             if (mode === 'BASIC' || mode === 'FIBER') {
                 const cConfig = CONFIG.CABLES[mode];
@@ -358,32 +286,31 @@ export default class MainScene extends Phaser.Scene {
                     this.ghostGraphics.clear();
                     this.ghostGraphics.fillStyle(0xff0000, 0.5);
                     this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-                } else {
+                }
+                else {
                     this.updateCursorGraphics();
                 }
-            } else {
+            }
+            else {
                 const bConfig = CONFIG.BUILDINGS[mode];
                 if (bConfig) {
                     const w = bConfig.WIDTH || 1;
                     const h = bConfig.HEIGHT || 1;
-                    
                     const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-
                     if (!isUnlocked || this.isBlocked(snappedX, snappedY, w, h)) {
                         this.ghostGraphics.clear();
                         this.ghostGraphics.fillStyle(0xff0000, 0.5);
                         this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
-                    } else {
+                    }
+                    else {
                         this.updateCursorGraphics();
                     }
                 }
             }
         }
-
         if (existingBuilding) {
             const bConfig = CONFIG.BUILDINGS[existingBuilding.type];
             let content = `Type: ${existingBuilding.type}`;
-
             if (bConfig.POWER && bConfig.POWER.CONSUMPTION > 0) {
                 content += `\nPower: ${existingBuilding.hasPower ? '⚡ OK' : '❌ OUTAGE'}`;
             }
@@ -393,134 +320,101 @@ export default class MainScene extends Phaser.Scene {
             if (existingBuilding.outputBuffer) {
                 content += `\nOutput Buffer: ${existingBuilding.outputBuffer.length}`;
             }
-            if ((existingBuilding as any).isProcessing !== undefined) {
-                content += `\nStatus: ${(existingBuilding as any).isProcessing ? 'Processing' : 'Idle'}`;
+            if (existingBuilding.isProcessing !== undefined) {
+                content += `\nStatus: ${existingBuilding.isProcessing ? 'Processing' : 'Idle'}`;
             }
             if (existingBuilding.type === 'PROCESSOR') {
-                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+                content += `\nRecipe: ${existingBuilding.recipe?.OUTPUT}`;
             }
             if (existingBuilding.type === 'WEIGHT_TRAINER') {
-                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+                content += `\nRecipe: ${existingBuilding.recipe?.OUTPUT}`;
             }
             if (existingBuilding.type === 'NEURAL_TRAINER') {
-                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+                content += `\nRecipe: ${existingBuilding.recipe?.OUTPUT}`;
                 content += `\n[Left Click to Cycle Recipe]`;
             }
-
             this.uiManager.showTooltip(pointer.x, pointer.y, bConfig.NAME, content);
-        } else {
+        }
+        else {
             const resourceType = this.mapManager.getResourceAt(snappedX, snappedY);
             if (resourceType) {
                 this.uiManager.showTooltip(pointer.x, pointer.y, "Resource Node", `Type: ${resourceType}`);
-            } else {
+            }
+            else {
                 this.uiManager.hideTooltip();
             }
         }
     }
-
-    handlePointerDown(pointer: Phaser.Input.Pointer): void {
-        if (pointer.middleButtonDown()) return;
-
+    handlePointerDown(pointer) {
+        if (pointer.middleButtonDown())
+            return;
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         const key = `${snappedX},${snappedY}`;
-        // P1: 2x2 건물의 원점 키로 정규화
-        const normalizedKey = this.cableManager.normalizeKey(key, this.buildingManager);
         const mode = this.uiManager.getSelectedBuildingType();
-
         if (pointer.leftButtonDown()) {
             if (mode === 'REMOVE') {
-                if (this.buildingManager.has(key)) {
-                    // 케이블이 있으면 먼저 케이블 제거, 없으면 건물 제거
-                    const cables = this.cableManager.getCablesForBuilding(normalizedKey);
-                    if (cables.length > 0) {
-                        cables.forEach(c => this.cableManager.disconnect(c.id));
-                        this.uiManager.logMessage(`System: ${cables.length}개 케이블 해제됨.`);
-                    } else {
-                        this.buildingManager.remove(key);
-                    }
-                }
-            } else if (mode === 'BASIC' || mode === 'FIBER') {
+                if (this.buildingManager.has(key))
+                    this.buildingManager.remove(key);
+            }
+            else if (mode === 'BASIC' || mode === 'FIBER') {
                 const cConfig = CONFIG.CABLES[mode];
                 const isUnlocked = !cConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(cConfig.UNLOCK_REQUIRED);
-                
                 if (isUnlocked && this.buildingManager.has(key)) {
                     if (this.cableState === 'IDLE') {
                         this.cableState = 'CABLE_START';
-                        this.cableStartKey = normalizedKey;
-                    } else if (this.cableState === 'CABLE_START') {
-                        if (this.cableStartKey !== normalizedKey) {
-                            // P3: 케이블 비용 차감
-                            const costPerTile = cConfig.COST_PER_TILE || 0;
-                            if (costPerTile > 0) {
-                                const canAfford = this.inventoryManager.canAfford([{ resource: 'SILICON', amount: costPerTile }]);
-                                if (!canAfford) {
-                                    this.uiManager.logMessage(`System: 실리콘이 부족합니다. (필요: ${costPerTile})`, true);
-                                    this.cableState = 'IDLE';
-                                    this.cableStartKey = null;
-                                    return;
-                                }
-                            }
-                            if (this.cableManager.connect(this.cableStartKey!, normalizedKey, mode)) {
-                                if (costPerTile > 0) {
-                                    this.inventoryManager.spend([{ resource: 'SILICON', amount: costPerTile }]);
-                                }
+                        this.cableStartKey = key;
+                    }
+                    else if (this.cableState === 'CABLE_START') {
+                        if (this.cableStartKey !== key) {
+                            if (this.cableManager.connect(this.cableStartKey, key, mode)) {
                                 this.uiManager.logMessage(`System: Cable connected.`);
-                            } else {
-                                this.uiManager.logMessage(`System: 이미 연결되어 있습니다.`);
                             }
                         }
                         this.cableState = 'IDLE';
                         this.cableStartKey = null;
                     }
-                } else if (this.cableState === 'CABLE_START') {
+                }
+                else if (this.cableState === 'CABLE_START') {
+                    // Clicking on empty space cancels cable drawing
                     this.cableState = 'IDLE';
                     this.cableStartKey = null;
                 }
-            } else {
+            }
+            else {
+                // Cancel cable state if changing mode
                 this.cableState = 'IDLE';
                 this.cableStartKey = null;
-
                 const existingBuilding = this.buildingManager.get(key);
                 if (existingBuilding && existingBuilding.type === 'NEURAL_TRAINER') {
-                    (existingBuilding as any).cycleRecipe();
+                    existingBuilding.cycleRecipe();
                     return;
                 }
-
-                if (mode === 'CONVEYOR' || mode === 'FAST_LINK') return;
-
+                if (mode === 'CONVEYOR' || mode === 'FAST_LINK')
+                    return;
                 const bConfig = CONFIG.BUILDINGS[mode];
-                if (!bConfig) return;
+                if (!bConfig)
+                    return;
                 const w = bConfig.WIDTH || 1;
                 const h = bConfig.HEIGHT || 1;
-                
                 const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-                
                 if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
                     this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
                 }
             }
-        } else if (pointer.rightButtonDown()) {
+        }
+        else if (pointer.rightButtonDown()) {
             this.cableState = 'IDLE';
             this.cableStartKey = null;
-
-            // P7: 케이블 모드에서 우클릭 시 해당 건물의 케이블 삭제
-            if ((mode === 'BASIC' || mode === 'FIBER') && this.buildingManager.has(key)) {
-                const cables = this.cableManager.getCablesForBuilding(normalizedKey);
-                if (cables.length > 0) {
-                    cables.forEach(c => this.cableManager.disconnect(c.id));
-                    this.uiManager.logMessage(`System: ${cables.length}개 케이블 해제됨.`);
-                }
-            } else if (this.buildingManager.has(key)) {
+            if (this.buildingManager.has(key))
                 this.buildingManager.remove(key);
-            }
         }
     }
-
-    setGameSpeed(speed: number): void {
+    setGameSpeed(speed) {
         this.gameSpeed = Math.max(1, Math.min(3, speed));
-        // P9: tickRate는 TickSystem.update()에서 gameSpeed로 나누므로 여기서는 변경하지 않음
+        this.tickSystem.tickRate = (CONFIG.TICK_RATE / 2) / this.gameSpeed;
         EventBus.emit('GAME_SPEED_CHANGED', { speed: this.gameSpeed });
     }
 }
+//# sourceMappingURL=MainScene.js.map

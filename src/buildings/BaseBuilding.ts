@@ -69,8 +69,13 @@ export default class BaseBuilding {
         return false;
     }
 
+    /** 케이블이 데이터를 빼갈 때 참조하는 버퍼. Storage 등에서 override */
+    getOutputSource(): string[] {
+        return this.outputBuffer;
+    }
+
     popOutput(): string | undefined {
-        return this.outputBuffer.shift();
+        return this.getOutputSource().shift();
     }
 
     onTick(_tickCount: number, _occupiedPositions?: Set<string>): void {

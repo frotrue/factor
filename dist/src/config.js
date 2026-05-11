@@ -1,9 +1,6 @@
-import { GameConfig } from './types';
-
-export const CONFIG: GameConfig = {
+export const CONFIG = {
     GRID_SIZE: 32,
     TICK_RATE: 500,
-    
     // 카메라 설정
     CAMERA: {
         DEFAULT_ZOOM: 1.5,
@@ -11,19 +8,16 @@ export const CONFIG: GameConfig = {
         MAX_ZOOM: 3.0,
         LERP: 0.1
     },
-
     // 렌더링 최적화 설정
     OPTIMIZATION: {
         GRID_REDRAW_THRESHOLD: 0.1
     },
-
     DIRECTIONS: [
         { x: 1, y: 0, angle: 0 },
         { x: 0, y: 1, angle: 90 },
         { x: -1, y: 0, angle: 180 },
         { x: 0, y: -1, angle: 270 }
     ],
-
     BUILDINGS: {
         MINER: {
             ID: 'MINER',
@@ -49,7 +43,7 @@ export const CONFIG: GameConfig = {
             NAME: '메인 서버 (Neural Core)',
             COLOR: 0x10b981,
             HP: 1000,
-            POWER: { CONSUMPTION: 0, PRODUCTION: 50, RANGE: 3 },
+            POWER: { CONSUMPTION: 0, PRODUCTION: 20, RANGE: 3 },
             CATEGORY: 'NONE'
         },
         PROCESSOR: {
@@ -203,38 +197,35 @@ export const CONFIG: GameConfig = {
             COST: [{ resource: 'SILICON', amount: 15 }]
         }
     },
-
     CABLES: {
         BASIC: {
             ID: 'BASIC',
             NAME: '이더넷 케이블 (Ethernet)',
             COLOR: 0x3b82f6,
-            BANDWIDTH: 3,         // 틱당 3개 전송
-            COST_PER_TILE: 1,     // 거리당 실리콘 비용
+            BANDWIDTH: 3, // 틱당 3개 전송
+            COST_PER_TILE: 1, // 거리당 실리콘 비용
             MAX_QUEUE: 10
         },
         FIBER: {
             ID: 'FIBER',
             NAME: '광섬유 케이블 (Fiber Optic)',
             COLOR: 0x06b6d4,
-            BANDWIDTH: 8,         // 틱당 8개 전송
+            BANDWIDTH: 8, // 틱당 8개 전송
             COST_PER_TILE: 3,
             MAX_QUEUE: 20,
             UNLOCK_REQUIRED: 'TECH_FIBER_OPTIC'
         }
     },
-    
     ACCESS_POINT: {
         ID: 'ACCESS_POINT',
         NAME: 'AP (Access Point)',
         COLOR: 0x22d3ee,
         RANGE: 5,
-        BANDWIDTH: 2,             // 무선은 대역폭 낮음
+        BANDWIDTH: 2, // 무선은 대역폭 낮음
         POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
         COST: [{ resource: 'SILICON', amount: 15 }],
         CATEGORY: 'LOGISTICS'
     },
-
     RECIPES: {
         LABELLING: {
             INPUTS: [{ type: 'RAW_DATA', amount: 1 }],
@@ -257,7 +248,6 @@ export const CONFIG: GameConfig = {
             TIME: 5
         }
     },
-
     ITEMS: {
         RAW_DATA: {
             ID: 'RAW_DATA',
@@ -308,13 +298,11 @@ export const CONFIG: GameConfig = {
             RADIUS: 8
         }
     },
-
     RESOURCE_PATCHES: {
         RAW_DATA: 0x00ffff,
         SILICON: 0x94a3b8,
         ENERGY: 0xfde047
     },
-
     ENEMIES: {
         NOISE: {
             ID: 'NOISE',
@@ -353,7 +341,6 @@ export const CONFIG: GameConfig = {
             RADIUS: 16
         }
     },
-
     RESEARCH: {
         TECH_FAST_CONVEYOR: {
             ID: 'TECH_FAST_CONVEYOR',
@@ -394,3 +381,4 @@ export const CONFIG: GameConfig = {
         }
     }
 };
+//# sourceMappingURL=config.js.map

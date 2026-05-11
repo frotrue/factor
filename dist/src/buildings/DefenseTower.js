@@ -1,0 +1,144 @@
+import Phaser from 'phaser';
+import BaseBuilding from './BaseBuilding';
+import { CONFIG } from '../config';
+export default class DefenseTower extends BaseBuilding {
+    constructor(scene, x, y, type, config = {}) {
+        super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
+        this.fireTimer = 0;
+        const bConfig = CONFIG.BUILDINGS[type];
+        if (bConfig.HP) {
+            this.maxHp = bConfig.HP;
+            this.hp = this.maxHp;
+            this.hpBar = scene.add.graphics();
+            this.container.add(this.hpBar);
+            this.drawHpBar();
+        }
+        else {
+            this.maxHp = 0;
+            this.hp = 0;
+        }
+    }
+    drawHpBar() {
+        if (!this.hpBar)
+            return;
+        this.hpBar.clear();
+        const width = CONFIG.GRID_SIZE;
+        const height = 4;
+        const percent = Math.max(0, this.hp / this.maxHp);
+        this.hpBar.fillStyle(0xff0000, 1);
+        this.hpBar.fillRect(-width / 2, -CONFIG.GRID_SIZE / 2 - 6, width, height);
+        this.hpBar.fillStyle(0x00ff00, 1);
+        this.hpBar.fillRect(-width / 2, -CONFIG.GRID_SIZE / 2 - 6, width * percent, height);
+    }
+    takeDamage(amount) {
+        if (this.maxHp <= 0)
+            return;
+        this.hp -= amount;
+        if (this.hp <= 0) {
+            const buildingManager = this.scene.buildingManager;
+            if (buildingManager) {
+                buildingManager.remove(`${this.x},${this.y}`);
+            }
+        }
+        else {
+            this.drawHpBar();
+        }
+    }
+    canAcceptItem(type) {
+        const dConfig = CONFIG.BUILDINGS[this.type].DEFENSE;
+        if (!dConfig || dConfig.AMMO_CONSUMPTION === 0)
+            return false;
+        return type === dConfig.AMMO_TYPE && this.inputBuffer.length < this.maxBufferSize;
+    }
+    onTick(_tickCount) {
+        const dConfig = CONFIG.BUILDINGS[this.type].DEFENSE;
+        if (!dConfig)
+            return;
+        this.fireTimer++;
+        if (this.fireTimer >= dConfig.FIRE_RATE) {
+            this.tryFire(dConfig);
+        }
+    }
+    tryFire(dConfig) {
+        const waveManager = this.scene.waveManager;
+        if (!waveManager)
+            return;
+        const range = dConfig.RANGE;
+        const enemies = waveManager.getEnemiesInRange(this.x + (CONFIG.GRID_SIZE / 2), this.y + (CONFIG.GRID_SIZE / 2), range);
+        if (enemies.length === 0)
+            return;
+        let confidence = 100;
+        if (dConfig.AMMO_CONSUMPTION > 0) {
+            if (this.inputBuffer.length < dConfig.AMMO_CONSUMPTION)
+                return;
+            confidence = Math.min(100, (this.inputBuffer.length / this.maxBufferSize) * 100);
+            for (let i = 0; i < dConfig.AMMO_CONSUMPTION; i++) {
+                this.inputBuffer.shift();
+            }
+        }
+        const actualDamage = dConfig.DAMAGE * (confidence / 100);
+        const hitChance = 0.5 + (confidence / 200);
+        if (dConfig.IS_AOE) {
+            enemies.forEach((enemy) => {
+                if (Math.random() <= hitChance) {
+                    this.fireProjectile(enemy, actualDamage);
+                }
+            });
+        }
+        else if (this.type === 'FIREWALL') {
+            // 방화벽은 투사체 없이 직접 닿은 적에게 데미지
+            enemies.forEach((enemy) => {
+                const dist = Phaser.Math.Distance.Between(this.x + CONFIG.GRID_SIZE / 2, this.y + CONFIG.GRID_SIZE / 2, enemy.x, enemy.y);
+                if (dist <= CONFIG.GRID_SIZE) {
+                    enemy.takeDamage(actualDamage);
+                    this.takeDamage(enemy.damage / 5); // 방화벽도 피해를 입음
+                }
+            });
+        }
+        else {
+            const target = enemies.sort((a, b) => {
+                const da = Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y);
+                const db = Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y);
+                return da - db;
+            })[0];
+            if (Math.random() <= hitChance) {
+                this.fireProjectile(target, actualDamage);
+            }
+        }
+        this.fireTimer = 0;
+    }
+    fireProjectile(target, damage) {
+        if (!target.active)
+            return;
+        const x = this.x + CONFIG.GRID_SIZE / 2;
+        const y = this.y + CONFIG.GRID_SIZE / 2;
+        const proj = this.scene.add.circle(x, y, 3, 0xffffff);
+        proj.setDepth(40);
+        this.scene.tweens.add({
+            targets: proj,
+            x: target.x,
+            y: target.y,
+            duration: 100,
+            onComplete: () => {
+                proj.destroy();
+                target.takeDamage(damage);
+            }
+        });
+    }
+}
+export class Classifier extends DefenseTower {
+    constructor(scene, x, y, config = {}) {
+        super(scene, x, y, 'CLASSIFIER', config);
+    }
+}
+export class Filter extends DefenseTower {
+    constructor(scene, x, y, config = {}) {
+        super(scene, x, y, 'FILTER', config);
+    }
+}
+export class Firewall extends DefenseTower {
+    constructor(scene, x, y, config = {}) {
+        super(scene, x, y, 'FIREWALL', config);
+    }
+}
+//# sourceMappingURL=DefenseTower.js.map

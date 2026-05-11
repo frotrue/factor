@@ -58,6 +58,28 @@ export interface ItemConfig {
     RADIUS: number;
 }
 
+// ── 전역 설정용 추가 인터페이스 ──
+export interface CableConfig {
+    ID: string;
+    NAME: string;
+    COLOR: number;
+    BANDWIDTH: number;
+    COST_PER_TILE: number;
+    MAX_QUEUE: number;
+    UNLOCK_REQUIRED?: string;
+}
+
+export interface APConfig {
+    ID: string;
+    NAME: string;
+    COLOR: number;
+    RANGE: number;
+    BANDWIDTH: number;
+    POWER: PowerConfig;
+    COST?: BuildingCost[];
+    CATEGORY?: string;
+}
+
 // ── 게임 전역 설정 ──
 export interface GameConfig {
     GRID_SIZE: number;
@@ -73,6 +95,8 @@ export interface GameConfig {
     };
     DIRECTIONS: Direction[];
     BUILDINGS: Record<string, BuildingConfig>;
+    CABLES: Record<string, CableConfig>;
+    ACCESS_POINT: APConfig;
     RECIPES: Record<string, Recipe>;
     ITEMS: Record<string, ItemConfig>;
     RESOURCE_PATCHES: Record<string, number>;
@@ -95,10 +119,21 @@ export interface ResearchNode {
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
 export type BuildingType = 
-    | 'MINER' | 'CONVEYOR' | 'CORE' | 'PROCESSOR'
+    | 'MINER' | 'CORE' | 'PROCESSOR'
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
-    | 'SPLITTER' | 'MERGER' | 'FAST_LINK' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER';
+    | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER';
+
+// ── 케이블 연결 ──
+export interface CableConnection {
+    id: string;
+    fromKey: string;
+    toKey: string;
+    bandwidth: number;
+    queue: string[];
+    cableType: 'BASIC' | 'FIBER';
+    flowDirection?: 'FORWARD' | 'BACKWARD';
+}
 
 // ── 아이템 런타임 객체 ──
 export interface GameItem {
@@ -190,6 +225,13 @@ export interface SavedEnemy {
     hp: number;
 }
 
+export interface SavedCable {
+    fromKey: string;
+    toKey: string;
+    cableType: string;
+    queue: string[];
+}
+
 export interface SaveData {
     version: string;
     timestamp: number;
@@ -209,6 +251,7 @@ export interface SaveData {
     };
     buildings: SavedBuilding[];
     items: SavedItem[];
+    cables?: SavedCable[];
     settings: {
         gameSpeed: number;
         showPowerGrid: boolean;
