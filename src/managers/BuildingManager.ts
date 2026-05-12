@@ -25,8 +25,8 @@ export default class BuildingManager {
             }
         }
 
-        // Check and deduct building costs
-        if (bConfig.COST && bConfig.COST.length > 0) {
+        // Check and deduct building costs unless restoring trusted save data.
+        if (!config.skipCost && bConfig.COST && bConfig.COST.length > 0) {
             const inventoryManager = (this.scene as any).inventoryManager;
             if (inventoryManager && !inventoryManager.spend(bConfig.COST)) {
                 const uiManager = (this.scene as any).uiManager;

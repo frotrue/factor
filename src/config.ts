@@ -3,8 +3,16 @@ import { GameConfig } from './types';
 export const CONFIG: GameConfig = {
     GRID_SIZE: 32,
     TICK_RATE: 500,
-    
-    // 카메라 설정
+
+    TIMING: {
+        TICK_RATE_MULTIPLIER: 0.5,
+        AUTO_SAVE_INTERVAL_MS: 60000,
+        INITIAL_WAVE_DELAY_MS: 30000,
+        WAVE_COOLDOWN_MS: 20000,
+        ENEMY_SPAWN_INTERVAL_MS: 1000,
+        DATA_PULSE_DURATION_MS: 500
+    },
+
     CAMERA: {
         DEFAULT_ZOOM: 1.5,
         MIN_ZOOM: 0.5,
@@ -12,7 +20,6 @@ export const CONFIG: GameConfig = {
         LERP: 0.1
     },
 
-    // 렌더링 최적화 설정
     OPTIMIZATION: {
         GRID_REDRAW_THRESHOLD: 0.1
     },
@@ -27,23 +34,32 @@ export const CONFIG: GameConfig = {
     BUILDINGS: {
         MINER: {
             ID: 'MINER',
-            NAME: '데이터 추출기 (Data Node)',
+            NAME: '자원 추출기 (Extractor)',
             COLOR: 0xef4444,
             PRODUCTION_RATE: 2,
-            DESCRIPTION: '메모리 영역에서 원시 데이터를 추출합니다.',
+            DESCRIPTION: 'Silicon 자원 위에서 Silicon을 채굴합니다.',
             POWER: { CONSUMPTION: 5, PRODUCTION: 0 },
             CATEGORY: 'EXTRACTION'
         },
-        /*
+        DATA_DOWNLOADER: {
+            ID: 'DATA_DOWNLOADER',
+            NAME: '데이터 다운로더 (Data Downloader)',
+            COLOR: 0x00ffff,
+            PRODUCTION_RATE: 2,
+            DESCRIPTION: '전력만 공급되면 어디서든 Signal Packet을 다운로드합니다.',
+            POWER: { CONSUMPTION: 6, PRODUCTION: 0 },
+            CATEGORY: 'EXTRACTION',
+            COST: [{ resource: 'SILICON', amount: 5 }]
+        },
         CONVEYOR: {
             ID: 'CONVEYOR',
-            NAME: '시냅스 경로 (Synaptic Link)',
+            NAME: '컨베이어 벨트 (Conveyor)',
             COLOR: 0x3b82f6,
-            DESCRIPTION: '데이터 패킷을 다음 노드로 운반합니다.',
+            DESCRIPTION: 'Silicon 같은 물리 자원을 한 방향으로 운반합니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 0 },
-            CATEGORY: 'LOGISTICS'
+            CATEGORY: 'LOGISTICS',
+            COST: [{ resource: 'SILICON', amount: 1 }]
         },
-        */
         CORE: {
             ID: 'CORE',
             NAME: '메인 서버 (Neural Core)',
@@ -56,7 +72,7 @@ export const CONFIG: GameConfig = {
             ID: 'PROCESSOR',
             NAME: '데이터 가공소 (Data Processor)',
             COLOR: 0xa855f7,
-            DESCRIPTION: '원시 데이터를 라벨링된 데이터로 가공합니다.',
+            DESCRIPTION: 'Signal Packet을 라벨링된 데이터로 가공합니다.',
             POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 5 }]
@@ -74,7 +90,7 @@ export const CONFIG: GameConfig = {
             ID: 'POWER_NODE',
             NAME: '전력 송신탑 (Power Node)',
             COLOR: 0xf59e0b,
-            DESCRIPTION: '메인 서버로부터 전력을 중계합니다.',
+            DESCRIPTION: '전력을 주변 건물로 중계합니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 0, RANGE: 5 },
             CATEGORY: 'POWER',
             COST: [{ resource: 'SILICON', amount: 3 }]
@@ -83,16 +99,16 @@ export const CONFIG: GameConfig = {
             ID: 'POWER_PLANT',
             NAME: '에너지 발전소 (Power Plant)',
             COLOR: 0xfacc15,
-            DESCRIPTION: '에너지 셀 매립지에서 전력을 생산합니다.',
-            POWER: { CONSUMPTION: 0, PRODUCTION: 50, RANGE: 0 },
+            DESCRIPTION: 'Energy Cell 매립지에서 전력을 생산합니다.',
+            POWER: { CONSUMPTION: 0, PRODUCTION: 50, RANGE: 3 },
             CATEGORY: 'POWER',
             COST: [{ resource: 'SILICON', amount: 15 }]
         },
         STORAGE: {
             ID: 'STORAGE',
-            NAME: '데이터 창고 (Storage)',
+            NAME: '자원 창고 (Storage)',
             COLOR: 0x6b7280,
-            DESCRIPTION: '대량의 데이터를 보관합니다. (2x2)',
+            DESCRIPTION: '대량의 물리 자원 또는 데이터를 보관합니다. (2x2)',
             WIDTH: 2,
             HEIGHT: 2,
             MAX_BUFFER: 50,
@@ -103,7 +119,7 @@ export const CONFIG: GameConfig = {
             ID: 'UNLOADER',
             NAME: '하역기 (Unloader)',
             COLOR: 0xf97316,
-            DESCRIPTION: '인접한 창고에서 데이터를 빼냅니다.',
+            DESCRIPTION: '인접한 창고에서 자원을 빼냅니다.',
             POWER: { CONSUMPTION: 5, PRODUCTION: 0 },
             CATEGORY: 'EXTRACTION'
         },
@@ -111,7 +127,7 @@ export const CONFIG: GameConfig = {
             ID: 'CLASSIFIER',
             NAME: '분류 모델 (Classifier)',
             COLOR: 0xd946ef,
-            DESCRIPTION: '단일 대상에게 높은 데미지를 주는 방어 타워.',
+            DESCRIPTION: '단일 대상에게 높은 피해를 주는 방어 타워입니다.',
             POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
             MAX_BUFFER: 20,
             DEFENSE: { DAMAGE: 25, RANGE: 4, FIRE_RATE: 2, AMMO_TYPE: 'WEIGHT_UPDATE', AMMO_CONSUMPTION: 1 },
@@ -122,7 +138,7 @@ export const CONFIG: GameConfig = {
             ID: 'FILTER',
             NAME: '노이즈 필터 (Filter)',
             COLOR: 0x8b5cf6,
-            DESCRIPTION: '범위 내의 적들에게 지속적인 광역 피해를 주는 방어 타워.',
+            DESCRIPTION: '범위 내의 적들에게 지속적인 광역 피해를 줍니다.',
             POWER: { CONSUMPTION: 15, PRODUCTION: 0 },
             MAX_BUFFER: 30,
             DEFENSE: { DAMAGE: 10, RANGE: 3, FIRE_RATE: 4, AMMO_TYPE: 'WEIGHT_UPDATE', AMMO_CONSUMPTION: 2, IS_AOE: true },
@@ -133,19 +149,30 @@ export const CONFIG: GameConfig = {
             ID: 'FIREWALL',
             NAME: '방화벽 (Firewall)',
             COLOR: 0xe11d48,
-            DESCRIPTION: '적의 이동을 막고 접촉 시 데미지를 줍니다.',
+            DESCRIPTION: '적의 이동을 막고 접촉 시 피해를 줍니다.',
             POWER: { CONSUMPTION: 5, PRODUCTION: 0 },
             HP: 500,
             DEFENSE: { DAMAGE: 5, RANGE: 1, FIRE_RATE: 1, AMMO_CONSUMPTION: 0 },
             CATEGORY: 'DEFENSE',
             COST: [{ resource: 'SILICON', amount: 20 }]
         },
+        FAST_LINK: {
+            ID: 'FAST_LINK',
+            NAME: '고속 컨베이어 (Fast Link)',
+            COLOR: 0x2563eb,
+            DESCRIPTION: 'Silicon을 일반 컨베이어보다 빠르게 운반합니다.',
+            POWER: { CONSUMPTION: 1, PRODUCTION: 0 },
+            UNLOCK_REQUIRED: 'TECH_FAST_CONVEYOR',
+            CATEGORY: 'LOGISTICS',
+            COST: [{ resource: 'SILICON', amount: 5 }]
+        },
         /*
+        Legacy conveyor-family config kept for future splitter/merger mechanics.
         SPLITTER: {
             ID: 'SPLITTER',
             NAME: '분배기 (Splitter)',
             COLOR: 0x22d3ee,
-            DESCRIPTION: '입력된 데이터를 좌/우 또는 직진/우측으로 번갈아 보냅니다.',
+            DESCRIPTION: '입력된 물리 자원을 여러 방향으로 분배합니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 0 },
             UNLOCK_REQUIRED: 'TECH_SPLITTER',
             CATEGORY: 'LOGISTICS',
@@ -155,20 +182,10 @@ export const CONFIG: GameConfig = {
             ID: 'MERGER',
             NAME: '합류기 (Merger)',
             COLOR: 0x0ea5e9,
-            DESCRIPTION: '여러 방향에서 들어오는 데이터를 한 방향으로 합칩니다.',
+            DESCRIPTION: '여러 방향에서 들어오는 물리 자원을 한 방향으로 합칩니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 0 },
             CATEGORY: 'LOGISTICS',
             COST: [{ resource: 'SILICON', amount: 3 }]
-        },
-        FAST_LINK: {
-            ID: 'FAST_LINK',
-            NAME: '고속 시냅스 (Fast Link)',
-            COLOR: 0x2563eb,
-            DESCRIPTION: '데이터 패킷을 2배 빠르게 운반합니다.',
-            POWER: { CONSUMPTION: 1, PRODUCTION: 0 },
-            UNLOCK_REQUIRED: 'TECH_FAST_CONVEYOR',
-            CATEGORY: 'LOGISTICS',
-            COST: [{ resource: 'SILICON', amount: 5 }]
         },
         */
         SOLAR_PANEL: {
@@ -185,7 +202,7 @@ export const CONFIG: GameConfig = {
             ID: 'NEURAL_TRAINER',
             NAME: '신경망 학습기 (Neural Trainer)',
             COLOR: 0x6366f1,
-            DESCRIPTION: '고급 아이템을 생산하는 2x2 사이즈의 가공소입니다.',
+            DESCRIPTION: '고급 데이터 아이템을 생산하는 2x2 가공소입니다.',
             WIDTH: 2,
             HEIGHT: 2,
             POWER: { CONSUMPTION: 20, PRODUCTION: 0 },
@@ -209,27 +226,27 @@ export const CONFIG: GameConfig = {
             ID: 'BASIC',
             NAME: '이더넷 케이블 (Ethernet)',
             COLOR: 0x3b82f6,
-            BANDWIDTH: 3,         // 틱당 3개 전송
-            COST_PER_TILE: 1,     // 거리당 실리콘 비용
+            BANDWIDTH: 3,
+            COST_PER_TILE: 1,
             MAX_QUEUE: 10
         },
         FIBER: {
             ID: 'FIBER',
             NAME: '광섬유 케이블 (Fiber Optic)',
             COLOR: 0x06b6d4,
-            BANDWIDTH: 8,         // 틱당 8개 전송
+            BANDWIDTH: 8,
             COST_PER_TILE: 3,
             MAX_QUEUE: 20,
             UNLOCK_REQUIRED: 'TECH_FIBER_OPTIC'
         }
     },
-    
+
     ACCESS_POINT: {
         ID: 'ACCESS_POINT',
         NAME: 'AP (Access Point)',
         COLOR: 0x22d3ee,
         RANGE: 5,
-        BANDWIDTH: 2,             // 무선은 대역폭 낮음
+        BANDWIDTH: 2,
         POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
         COST: [{ resource: 'SILICON', amount: 15 }],
         CATEGORY: 'LOGISTICS'
@@ -261,7 +278,7 @@ export const CONFIG: GameConfig = {
     ITEMS: {
         RAW_DATA: {
             ID: 'RAW_DATA',
-            NAME: 'Raw Data',
+            NAME: 'Signal Packet',
             COLOR: 0x00ffff,
             RADIUS: 6
         },
@@ -310,7 +327,6 @@ export const CONFIG: GameConfig = {
     },
 
     RESOURCE_PATCHES: {
-        RAW_DATA: 0x00ffff,
         SILICON: 0x94a3b8,
         ENERGY: 0xfde047
     },
@@ -323,7 +339,8 @@ export const CONFIG: GameConfig = {
             BASE_HP: 50,
             SPEED: 30,
             DAMAGE: 10,
-            RADIUS: 8
+            RADIUS: 8,
+            REWARD_SILICON: 1
         },
         MALWARE: {
             ID: 'MALWARE',
@@ -332,7 +349,8 @@ export const CONFIG: GameConfig = {
             BASE_HP: 150,
             SPEED: 25,
             DAMAGE: 30,
-            RADIUS: 10
+            RADIUS: 10,
+            REWARD_SILICON: 3
         },
         ADVERSARIAL: {
             ID: 'ADVERSARIAL',
@@ -341,7 +359,8 @@ export const CONFIG: GameConfig = {
             BASE_HP: 80,
             SPEED: 50,
             DAMAGE: 20,
-            RADIUS: 6
+            RADIUS: 6,
+            REWARD_SILICON: 2
         },
         OVERFITTED_MODEL: {
             ID: 'OVERFITTED_MODEL',
@@ -350,23 +369,83 @@ export const CONFIG: GameConfig = {
             BASE_HP: 1500,
             SPEED: 15,
             DAMAGE: 100,
-            RADIUS: 16
+            RADIUS: 16,
+            REWARD_SILICON: 20
         }
     },
 
     RESEARCH: {
+        TECH_EFFICIENT_MINING: {
+            ID: 'TECH_EFFICIENT_MINING',
+            NAME: '효율적 채굴',
+            COST: 75,
+            DESCRIPTION: '자원 추출기의 생산 주기를 25% 단축합니다.',
+            UNLOCKS: {},
+            EFFECTS: { MINING_RATE_MULTIPLIER: 0.75 }
+        },
+        TECH_STREAMLINED_PROCESSING: {
+            ID: 'TECH_STREAMLINED_PROCESSING',
+            NAME: '처리 파이프라인 최적화',
+            COST: 120,
+            DESCRIPTION: '가공 건물의 처리 시간을 20% 단축합니다.',
+            REQUIREMENTS: ['TECH_EFFICIENT_MINING'],
+            UNLOCKS: {},
+            EFFECTS: { PROCESSING_SPEED_MULTIPLIER: 0.8 }
+        },
+        TECH_PRECISION_INFERENCE: {
+            ID: 'TECH_PRECISION_INFERENCE',
+            NAME: '정밀 추론',
+            COST: 140,
+            DESCRIPTION: '분류 모델과 필터의 피해량을 30% 증가시킵니다.',
+            UNLOCKS: {},
+            EFFECTS: { TOWER_DAMAGE_MULTIPLIER: 1.3 }
+        },
+        TECH_DEFENSE_RANGE: {
+            ID: 'TECH_DEFENSE_RANGE',
+            NAME: '방어 범위 확장',
+            COST: 160,
+            DESCRIPTION: '방어 타워의 사거리를 1칸 늘립니다.',
+            REQUIREMENTS: ['TECH_PRECISION_INFERENCE'],
+            UNLOCKS: {},
+            EFFECTS: { TOWER_RANGE_BONUS: 1 }
+        },
+        TECH_RAPID_RESPONSE: {
+            ID: 'TECH_RAPID_RESPONSE',
+            NAME: '고속 대응 루프',
+            COST: 220,
+            DESCRIPTION: '방어 타워의 발사 주기를 20% 단축합니다.',
+            REQUIREMENTS: ['TECH_DEFENSE_RANGE'],
+            UNLOCKS: {},
+            EFFECTS: { TOWER_FIRE_RATE_MULTIPLIER: 0.8 }
+        },
+        TECH_DISTRIBUTED_AP: {
+            ID: 'TECH_DISTRIBUTED_AP',
+            NAME: '분산 AP 처리',
+            COST: 150,
+            DESCRIPTION: 'AP 범위를 2칸 늘리고 케이블 처리량을 1 증가시킵니다.',
+            UNLOCKS: {},
+            EFFECTS: { AP_RANGE_BONUS: 2, CABLE_BANDWIDTH_BONUS: 1 }
+        },
+        TECH_FIREWALL_HARDENING: {
+            ID: 'TECH_FIREWALL_HARDENING',
+            NAME: '방화벽 경화',
+            COST: 180,
+            DESCRIPTION: '방화벽 체력을 50% 증가시킵니다.',
+            UNLOCKS: {},
+            EFFECTS: { FIREWALL_HP_MULTIPLIER: 1.5 }
+        },
         TECH_FAST_CONVEYOR: {
             ID: 'TECH_FAST_CONVEYOR',
-            NAME: '고속 시냅스 연결',
+            NAME: '고속 컨베이어',
             COST: 50,
-            DESCRIPTION: '데이터 이동 속도를 2배로 증가시키는 고속 컨베이어를 해금합니다.',
+            DESCRIPTION: '물리 자원을 더 빠르게 운반하는 고속 컨베이어를 해금합니다.',
             UNLOCKS: { BUILDINGS: ['FAST_LINK'] }
         },
         TECH_SPLITTER: {
             ID: 'TECH_SPLITTER',
             NAME: '데이터 분산 처리',
             COST: 50,
-            DESCRIPTION: '데이터의 흐름을 양갈래로 나눌 수 있는 분배기를 해금합니다.',
+            DESCRIPTION: '미래 분배기 물류 확장을 위한 레거시 연구입니다. 현재 빌드 UI에는 노출되지 않습니다.',
             UNLOCKS: { BUILDINGS: ['SPLITTER'] }
         },
         TECH_SOLAR_POWER: {
@@ -381,14 +460,13 @@ export const CONFIG: GameConfig = {
             NAME: '고급 모델 학습',
             COST: 200,
             DESCRIPTION: '고급 아이템을 생산할 수 있는 신경망 학습기와 모델 학습 레시피를 해금합니다.',
-            REQUIREMENTS: ['TECH_FAST_CONVEYOR'],
             UNLOCKS: { BUILDINGS: ['NEURAL_TRAINER'], RECIPES: ['MODEL_TRAINING'] }
         },
         TECH_AUTOMATED_DEFENSE: {
             ID: 'TECH_AUTOMATED_DEFENSE',
             NAME: '자동 방어 AI',
             COST: 300,
-            DESCRIPTION: '최종 방어 타워의 탄약이 되는 추론 유닛(Inference Unit) 생산 레시피를 해금합니다.',
+            DESCRIPTION: '최종 방어 타워의 탄약이 되는 추론 유닛 생산 레시피를 해금합니다.',
             REQUIREMENTS: ['TECH_ADVANCED_PROCESSING'],
             UNLOCKS: { RECIPES: ['INFERENCE_UNIT_PRODUCTION'] }
         }

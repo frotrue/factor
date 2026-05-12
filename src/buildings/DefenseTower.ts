@@ -17,7 +17,11 @@ export default class DefenseTower extends BaseBuilding {
 
         const bConfig = CONFIG.BUILDINGS[type];
         if (bConfig.HP) {
-            this.maxHp = bConfig.HP;
+            const researchManager = (scene as MainScene).researchManager;
+            const hpMultiplier = type === 'FIREWALL'
+                ? researchManager?.getEffectValue('FIREWALL_HP_MULTIPLIER', 1) ?? 1
+                : 1;
+            this.maxHp = Math.round(bConfig.HP * hpMultiplier);
             this.hp = this.maxHp;
             this.hpBar = scene.add.graphics();
             this.container.add(this.hpBar);
@@ -65,8 +69,14 @@ export default class DefenseTower extends BaseBuilding {
         const dConfig = CONFIG.BUILDINGS[this.type].DEFENSE;
         if (!dConfig) return;
 
+        if (this.isInfected(_tickCount) && _tickCount % 2 !== 0) return;
+
+        const researchManager = (this.scene as MainScene).researchManager;
+        const fireMultiplier = researchManager?.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1) ?? 1;
+        const fireRate = Math.max(1, Math.round(dConfig.FIRE_RATE * fireMultiplier));
+
         this.fireTimer++;
-        if (this.fireTimer >= dConfig.FIRE_RATE) {
+        if (this.fireTimer >= fireRate) {
             this.tryFire(dConfig);
         }
     }
@@ -75,7 +85,8 @@ export default class DefenseTower extends BaseBuilding {
         const waveManager = (this.scene as MainScene).waveManager;
         if (!waveManager) return;
 
-        const range = dConfig.RANGE;
+        const researchManager = (this.scene as MainScene).researchManager;
+        const range = dConfig.RANGE + (researchManager?.getEffectValue('TOWER_RANGE_BONUS', 0) ?? 0);
         const enemies = waveManager.getEnemiesInRange(
             this.x + (CONFIG.GRID_SIZE/2), 
             this.y + (CONFIG.GRID_SIZE/2), 
@@ -93,12 +104,13 @@ export default class DefenseTower extends BaseBuilding {
             }
         }
 
-        const actualDamage = dConfig.DAMAGE * (confidence / 100);
+        const damageMultiplier = researchManager?.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1) ?? 1;
+        const actualDamage = dConfig.DAMAGE * damageMultiplier * (confidence / 100);
         const hitChance = 0.5 + (confidence / 200);
 
         if (dConfig.IS_AOE) {
             enemies.forEach((enemy: BaseEnemy) => {
-                if (Math.random() <= hitChance) {
+                if (Math.random() <= hitChance * enemy.getHitChanceMultiplier()) {
                     this.fireProjectile(enemy, actualDamage);
                 }
             });
@@ -118,7 +130,7 @@ export default class DefenseTower extends BaseBuilding {
                 return da - db;
             })[0];
             
-            if (Math.random() <= hitChance) {
+            if (Math.random() <= hitChance * target.getHitChanceMultiplier()) {
                 this.fireProjectile(target, actualDamage);
             }
         }
@@ -130,19 +142,10 @@ export default class DefenseTower extends BaseBuilding {
         if (!target.active) return;
         const x = this.x + CONFIG.GRID_SIZE / 2;
         const y = this.y + CONFIG.GRID_SIZE / 2;
-        
-        const proj = this.scene.add.circle(x, y, 3, 0xffffff);
-        proj.setDepth(40);
-        
-        this.scene.tweens.add({
-            targets: proj,
-            x: target.x,
-            y: target.y,
-            duration: 100,
-            onComplete: () => {
-                proj.destroy();
-                target.takeDamage(damage);
-            }
+        const mainScene = this.scene as MainScene;
+        mainScene.soundManager?.play('shot');
+        mainScene.effectsManager?.playDefenseShot(x, y, target.x, target.y, () => {
+            target.takeDamage(damage);
         });
     }
 }

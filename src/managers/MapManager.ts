@@ -11,7 +11,7 @@ export default class MapManager {
 
     generateResourcePatches(): void {
         this.resourceMap.clear();
-        const types = ['RAW_DATA', 'SILICON', 'ENERGY'];
+        const types = ['SILICON', 'ENERGY'];
         const numPatches = Math.floor(Math.random() * 8) + 8;
 
         for (let i = 0; i < numPatches; i++) {

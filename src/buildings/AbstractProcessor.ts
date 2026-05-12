@@ -34,9 +34,17 @@ export default class AbstractProcessor extends BaseBuilding {
     }
 
     onTick(_tickCount: number): void {
+        if (this.isInfected(_tickCount) && _tickCount % 2 !== 0) {
+            this.updateProgressDisplay();
+            return;
+        }
+
         if (this.isProcessing) {
             this.processingTimer++;
-            if (this.processingTimer >= this.recipe.TIME) {
+            const researchManager = (this.scene as any).researchManager;
+            const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
+            const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
+            if (this.processingTimer >= requiredTime) {
                 this.finishProcessing();
             }
         } else {
@@ -75,7 +83,10 @@ export default class AbstractProcessor extends BaseBuilding {
     }
 
     updateProgressDisplay(): void {
-        const progress = this.isProcessing ? this.processingTimer / this.recipe.TIME : 0;
+        const researchManager = (this.scene as any).researchManager;
+        const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
+        const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
+        const progress = this.isProcessing ? this.processingTimer / requiredTime : 0;
         this.progressBar.width = CONFIG.GRID_SIZE * progress;
         this.progressBg.setVisible(this.isProcessing);
         this.progressBar.setVisible(this.isProcessing);

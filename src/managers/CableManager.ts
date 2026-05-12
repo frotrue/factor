@@ -5,6 +5,8 @@ import BuildingManager from './BuildingManager';
 import ItemManager from './ItemManager';
 import EventBus from './EventBus';
 
+const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
+
 export default class CableManager {
     scene: Phaser.Scene;
     cables: Map<string, CableConnection>;
@@ -28,6 +30,15 @@ export default class CableManager {
 
         EventBus.on('BUILDING_PLACED', () => {
             this.apDirty = true;
+        });
+
+        EventBus.on('RESEARCH_UNLOCKED', () => {
+            const bandwidthBonus = (this.scene as any).researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
+            this.cables.forEach(cable => {
+                cable.bandwidth = CONFIG.CABLES[cable.cableType].BANDWIDTH + bandwidthBonus;
+            });
+            this.apDirty = true;
+            this.dirty = true;
         });
     }
 
@@ -53,16 +64,18 @@ export default class CableManager {
         if (this.cables.has(id)) return false;
 
         const config = CONFIG.CABLES[type];
+        const bandwidthBonus = (this.scene as any).researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
         this.cables.set(id, {
             id,
             fromKey,
             toKey,
-            bandwidth: config.BANDWIDTH,
+            bandwidth: config.BANDWIDTH + bandwidthBonus,
             queue: [],
             cableType: type
         });
         this.dirty = true;
         this.apDirty = true; // AP connections might need recalc to avoid duplicates
+        EventBus.emit('CABLE_CONNECTED', { fromKey, toKey, cableType: type });
         return true;
     }
 
@@ -108,6 +121,10 @@ export default class CableManager {
         return Array.from(this.cables.values()).filter(c => c.toKey === key);
     }
 
+    isDataItem(itemType: string | undefined): boolean {
+        return Boolean(itemType && DATA_ITEMS.has(itemType));
+    }
+
     updateAPConnections(buildingManager: BuildingManager): void {
         // dirty flag로 불필요한 재계산 방지 (P6)
         if (!this.apDirty) return;
@@ -129,9 +146,11 @@ export default class CableManager {
 
         for (const ap of aps) {
             const inRange = others.filter(b => {
+                const rangeBonus = (this.scene as any).researchManager?.getEffectValue('AP_RANGE_BONUS', 0) ?? 0;
+                const apRange = ap.range + rangeBonus;
                 const dx = Math.abs(b.x - ap.x) / CONFIG.GRID_SIZE;
                 const dy = Math.abs(b.y - ap.y) / CONFIG.GRID_SIZE;
-                return dx <= ap.range && dy <= ap.range;
+                return dx <= apRange && dy <= apRange;
             });
 
             for (const source of inRange) {
@@ -179,9 +198,9 @@ export default class CableManager {
                 const aOut = buildingA.getOutputSource();
                 const bOut = buildingB.getOutputSource();
 
-                if (aOut.length > 0 && buildingB.canAcceptItem(aOut[0])) {
+                if (this.isDataItem(aOut[0]) && buildingB.canAcceptItem(aOut[0])) {
                     flowDir = 'FORWARD';
-                } else if (bOut.length > 0 && buildingA.canAcceptItem(bOut[0])) {
+                } else if (this.isDataItem(bOut[0]) && buildingA.canAcceptItem(bOut[0])) {
                     flowDir = 'BACKWARD';
                 }
                 cable.flowDirection = flowDir;
@@ -194,6 +213,7 @@ export default class CableManager {
             
             while (sourceOutput.length > 0 && cable.queue.length < maxQueue) {
                 const item = sourceOutput[0];
+                if (!this.isDataItem(item)) break;
                 if (currentDest.canAcceptItem(item) || cable.queue.length > 0) {
                     cable.queue.push(currentSource.popOutput()!);
                 } else {
@@ -205,6 +225,7 @@ export default class CableManager {
             while (cable.queue.length > 0 && transferred < cable.bandwidth) {
                 const packet = cable.queue.shift();
                 if (packet) {
+                    if (!this.isDataItem(packet)) continue;
                     if (currentDest.canAcceptItem(packet)) {
                         currentDest.acceptItem(packet);
                         transferred++;
@@ -234,9 +255,9 @@ export default class CableManager {
             let currentDest = buildingB;
             let isBackward = false;
 
-            if (aOut.length > 0 && buildingB.canAcceptItem(aOut[0])) {
+            if (this.isDataItem(aOut[0]) && buildingB.canAcceptItem(aOut[0])) {
                 // Forward
-            } else if (bOut.length > 0 && buildingA.canAcceptItem(bOut[0])) {
+            } else if (this.isDataItem(bOut[0]) && buildingA.canAcceptItem(bOut[0])) {
                 currentSource = buildingB;
                 currentDest = buildingA;
                 isBackward = true;
@@ -248,6 +269,7 @@ export default class CableManager {
             let transferred = 0;
             while (sourceOutput.length > 0 && transferred < cable.bandwidth) {
                 const item = sourceOutput[0];
+                if (!this.isDataItem(item)) break;
                 if (currentDest.canAcceptItem(item)) {
                     currentDest.acceptItem(currentSource.popOutput()!);
                     transferred++;
@@ -274,16 +296,26 @@ export default class CableManager {
 
         const pulse = this.scene.add.circle(cx1, cy1, 4, itemConfig.COLOR);
         pulse.setDepth(16);
+        const trail = this.scene.add.graphics();
+        trail.setDepth(15);
+        trail.lineStyle(1, itemConfig.COLOR, 0.28);
+        trail.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
 
         this.scene.tweens.add({
             targets: pulse,
             x: cx2,
             y: cy2,
-            duration: CONFIG.TICK_RATE,
+            duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
             ease: 'Linear',
             onComplete: () => {
                 pulse.destroy();
             }
+        });
+        this.scene.tweens.add({
+            targets: trail,
+            alpha: 0,
+            duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
+            onComplete: () => trail.destroy()
         });
     }
 

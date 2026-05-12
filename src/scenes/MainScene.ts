@@ -14,6 +14,9 @@ import SaveManager from '../managers/SaveManager';
 import ResearchManager from '../managers/ResearchManager';
 import InventoryManager from '../managers/InventoryManager';
 import CableManager from '../managers/CableManager';
+import EffectsManager from '../managers/EffectsManager';
+import SoundManager from '../managers/SoundManager';
+import TutorialManager from '../managers/TutorialManager';
 import EventBus from '../managers/EventBus';
 
 export default class MainScene extends Phaser.Scene {
@@ -30,6 +33,9 @@ export default class MainScene extends Phaser.Scene {
     researchManager!: ResearchManager;
     inventoryManager!: InventoryManager;
     cableManager!: CableManager;
+    effectsManager!: EffectsManager;
+    soundManager!: SoundManager;
+    tutorialManager!: TutorialManager;
 
     cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
     cableStartKey: string | null = null;
@@ -62,10 +68,12 @@ export default class MainScene extends Phaser.Scene {
         this.tickSystem = new TickSystem(this, this.buildingManager, this.itemManager, this.mapManager, this.powerManager);
         this.gridRenderer = new GridRenderer(this, this.mapManager);
         this.cameraController = new CameraController(this);
+        this.soundManager = new SoundManager();
         this.uiManager = new UIManager(this);
         this.saveManager = new SaveManager(this);
         this.researchManager = new ResearchManager(this);
         this.inventoryManager = new InventoryManager(this.buildingManager);
+        this.effectsManager = new EffectsManager(this);
 
         this.mapManager.generateResourcePatches();
         this.buildingManager.place(0, 0, 'CORE', 0);
@@ -85,6 +93,7 @@ export default class MainScene extends Phaser.Scene {
 
         // Initialize UI buttons now that all managers are ready
         this.uiManager.createBuildingButtons();
+        this.tutorialManager = new TutorialManager(this);
     }
 
     setupEvents(): void {
@@ -97,29 +106,24 @@ export default class MainScene extends Phaser.Scene {
         });
 
         EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
-            building.container.setScale(0.5);
-            building.container.setAlpha(0);
-            this.tweens.add({
-                targets: building.container,
-                scaleX: 1, scaleY: 1, alpha: 1,
-                duration: 200, ease: 'Back.easeOut'
-            });
+            this.effectsManager.playBuildOnline(building, type);
             this.uiManager.logMessage(`System: ${CONFIG.BUILDINGS[type].NAME} Online.`);
             this.defenseRangeDirty = true;
         });
 
         EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
             const [x, y] = key.split(',').map(Number);
-            const effect = this.add.rectangle(x + CONFIG.GRID_SIZE / 2, y + CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, 0xff4444);
-            effect.setDepth(15);
-            this.tweens.add({
-                targets: effect,
-                scaleX: 1.5, scaleY: 1.5, alpha: 0,
-                duration: 300, ease: 'Power2',
-                onComplete: () => effect.destroy()
-            });
+            this.effectsManager.playBuildingRemoved(x, y);
             this.uiManager.logMessage(`System: Unit disconnected at [${x}, ${y}].`, true);
             this.defenseRangeDirty = true;
+        });
+
+        EventBus.on('WAVE_STARTED', () => {
+            this.effectsManager.playWaveStart();
+        });
+
+        EventBus.on('ENEMY_KILLED', ({ x, y }: { id: string; type: string; x: number; y: number; rewardSilicon: number }) => {
+            this.effectsManager.playEnemyKilled(x, y);
         });
 
         this.events.on('shutdown', () => {
@@ -138,6 +142,10 @@ export default class MainScene extends Phaser.Scene {
             EventBus.off('LOAD_REQUESTED');
             EventBus.off('GAME_SPEED_CHANGED');
             EventBus.off('RESEARCH_UNLOCKED');
+            EventBus.off('RESEARCH_OPENED');
+            EventBus.off('CABLE_CONNECTED');
+            EventBus.off('TUTORIAL_RESET');
+            EventBus.off('AUDIO_SETTINGS_CHANGED');
         });
     }
 
@@ -255,6 +263,7 @@ export default class MainScene extends Phaser.Scene {
 
         this.cableManager.markDirtyIfThrottlingChanged();
         this.cableManager.drawCables();
+        this.effectsManager.updatePowerWarnings();
 
         if (this.cableState === 'CABLE_START' && this.cableStartKey) {
             this.cableDraftGraphics.clear();
@@ -290,7 +299,7 @@ export default class MainScene extends Phaser.Scene {
         this.buildingManager.forEach(building => {
             const bConfig = CONFIG.BUILDINGS[building.type];
             if (bConfig && bConfig.DEFENSE && bConfig.DEFENSE.RANGE > 0) {
-                const range = bConfig.DEFENSE.RANGE;
+                const range = bConfig.DEFENSE.RANGE + this.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
                 const centerX = building.x + CONFIG.GRID_SIZE / 2;
                 const centerY = building.y + CONFIG.GRID_SIZE / 2;
                 const radius = range * CONFIG.GRID_SIZE;
@@ -304,9 +313,24 @@ export default class MainScene extends Phaser.Scene {
         this.powerGridGraphics.clear();
         if (!this.showPowerGrid || !this.powerManager) return;
 
+        const networks = this.powerManager.networks || [];
+        if (networks.length > 0) {
+            networks.forEach(network => {
+                const color = network.isBlackout ? 0xef4444 : network.color;
+                this.powerGridGraphics.fillStyle(color, network.isBlackout ? 0.2 : 0.14);
+                this.powerGridGraphics.lineStyle(1, color, network.isBlackout ? 0.65 : 0.45);
+
+                network.tiles.forEach(key => {
+                    const [x, y] = key.split(',').map(Number);
+                    this.powerGridGraphics.fillRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+                    this.powerGridGraphics.strokeRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+                });
+            });
+            return;
+        }
+
         this.powerGridGraphics.fillStyle(0xfde047, 0.15);
         this.powerGridGraphics.lineStyle(1, 0xfde047, 0.5);
-
         this.powerManager.poweredArea.forEach(key => {
             const [x, y] = key.split(',').map(Number);
             this.powerGridGraphics.fillRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
@@ -335,16 +359,14 @@ export default class MainScene extends Phaser.Scene {
         const key = `${snappedX},${snappedY}`;
         const mode = this.uiManager.getSelectedBuildingType();
 
-        // Drag to build Conveyors / Fast Links
         if (pointer.leftButtonDown() && (mode === 'CONVEYOR' || mode === 'FAST_LINK')) {
             const bConfig = CONFIG.BUILDINGS[mode];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;
-            
             const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-            
+
             if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
-                // this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
+                this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
             }
         }
 
@@ -384,8 +406,17 @@ export default class MainScene extends Phaser.Scene {
             const bConfig = CONFIG.BUILDINGS[existingBuilding.type];
             let content = `Type: ${existingBuilding.type}`;
 
-            if (bConfig.POWER && bConfig.POWER.CONSUMPTION > 0) {
-                content += `\nPower: ${existingBuilding.hasPower ? '⚡ OK' : '❌ OUTAGE'}`;
+            if (bConfig.POWER) {
+                if (bConfig.POWER.CONSUMPTION > 0) {
+                    content += `\nPower: ${existingBuilding.hasPower ? 'OK' : 'OUTAGE'}`;
+                }
+                const network = this.powerManager.getNetworkForBuilding(`${existingBuilding.x},${existingBuilding.y}`);
+                if (network) {
+                    content += `\nPower Network: #${network.id}`;
+                    content += `\nNetwork Power: ${network.production} / ${network.consumption} W`;
+                } else if (bConfig.POWER.CONSUMPTION > 0 || bConfig.POWER.PRODUCTION > 0 || (bConfig.POWER.RANGE || 0) > 0) {
+                    content += `\nPower Network: None`;
+                }
             }
             if (existingBuilding.inputBuffer) {
                 content += `\nInput Buffer: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
@@ -406,12 +437,26 @@ export default class MainScene extends Phaser.Scene {
                 content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
                 content += `\n[Left Click to Cycle Recipe]`;
             }
+            if (bConfig.DEFENSE) {
+                const damageMultiplier = this.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
+                const rangeBonus = this.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
+                const fireRateMultiplier = this.researchManager.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1);
+                const effectiveDamage = bConfig.DEFENSE.DAMAGE * damageMultiplier;
+                const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
+                const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
+                content += `\nDamage: ${effectiveDamage.toFixed(1)}`;
+                content += `\nRange: ${effectiveRange} tiles`;
+                content += `\nFire Rate: ${effectiveFireRate} ticks`;
+                content += `\nAmmo: ${bConfig.DEFENSE.AMMO_TYPE || 'None'} x${bConfig.DEFENSE.AMMO_CONSUMPTION}`;
+                content += `\nBuffer: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
+            }
 
             this.uiManager.showTooltip(pointer.x, pointer.y, bConfig.NAME, content);
         } else {
             const resourceType = this.mapManager.getResourceAt(snappedX, snappedY);
             if (resourceType) {
-                this.uiManager.showTooltip(pointer.x, pointer.y, "Resource Node", `Type: ${resourceType}`);
+                const resourceName = CONFIG.ITEMS[resourceType]?.NAME || resourceType;
+                this.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `Type: ${resourceType}`);
             } else {
                 this.uiManager.hideTooltip();
             }
@@ -487,8 +532,6 @@ export default class MainScene extends Phaser.Scene {
                     (existingBuilding as any).cycleRecipe();
                     return;
                 }
-
-                if (mode === 'CONVEYOR' || mode === 'FAST_LINK') return;
 
                 const bConfig = CONFIG.BUILDINGS[mode];
                 if (!bConfig) return;

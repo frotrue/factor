@@ -84,6 +84,14 @@ export interface APConfig {
 export interface GameConfig {
     GRID_SIZE: number;
     TICK_RATE: number;
+    TIMING: {
+        TICK_RATE_MULTIPLIER: number;
+        AUTO_SAVE_INTERVAL_MS: number;
+        INITIAL_WAVE_DELAY_MS: number;
+        WAVE_COOLDOWN_MS: number;
+        ENEMY_SPAWN_INTERVAL_MS: number;
+        DATA_PULSE_DURATION_MS: number;
+    };
     CAMERA: {
         DEFAULT_ZOOM: number;
         MIN_ZOOM: number;
@@ -104,6 +112,17 @@ export interface GameConfig {
     RESEARCH: Record<string, ResearchNode>;
 }
 
+export interface ResearchEffects {
+    MINING_RATE_MULTIPLIER?: number;
+    PROCESSING_SPEED_MULTIPLIER?: number;
+    TOWER_DAMAGE_MULTIPLIER?: number;
+    TOWER_RANGE_BONUS?: number;
+    TOWER_FIRE_RATE_MULTIPLIER?: number;
+    AP_RANGE_BONUS?: number;
+    CABLE_BANDWIDTH_BONUS?: number;
+    FIREWALL_HP_MULTIPLIER?: number;
+}
+
 // ── 연구 노드 (Research) ──
 export interface ResearchNode {
     ID: string;
@@ -115,14 +134,16 @@ export interface ResearchNode {
         RECIPES?: string[];
     };
     REQUIREMENTS?: string[]; // IDs of required research nodes
+    EFFECTS?: ResearchEffects;
 }
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
 export type BuildingType = 
-    | 'MINER' | 'CORE' | 'PROCESSOR'
+    | 'MINER' | 'DATA_DOWNLOADER' | 'CORE' | 'PROCESSOR'
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
-    | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER';
+    | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
+    | 'CONVEYOR' | 'FAST_LINK';
 
 // ── 케이블 연결 ──
 export interface CableConnection {
@@ -155,6 +176,8 @@ export interface PowerUpdateData {
     consumption: number;
     net: number;
     isBlackout: boolean;
+    networks?: PowerNetwork[];
+    blackoutNetworks?: number;
 }
 
 // ── 코어 데이터 수신 이벤트 ──
@@ -171,12 +194,24 @@ export interface PowerNodeInfo {
     range: number;
 }
 
+export interface PowerNetwork {
+    id: number;
+    tiles: Set<string>;
+    buildings: string[];
+    production: number;
+    consumption: number;
+    net: number;
+    isBlackout: boolean;
+    color: number;
+}
+
 // ── 건물 생성 옵션 ──
 export interface BuildingOptions {
     rotation?: number;
     color?: number;
     maxBufferSize?: number;
     customState?: any;
+    skipCost?: boolean;
 }
 
 // ── 방어 타워 설정 ──
@@ -198,6 +233,7 @@ export interface EnemyConfig {
     SPEED: number; // pixels per second or per frame
     DAMAGE: number;
     RADIUS: number;
+    REWARD_SILICON?: number;
 }
 
 // ── 세이브/로드 (Phase 2) ──
@@ -257,6 +293,9 @@ export interface SaveData {
         showPowerGrid: boolean;
         showDefenseRange: boolean;
         masterVolume: number;
+        muted?: boolean;
+        tutorialCompleted?: boolean;
+        tutorialStep?: number;
     };
     resourceMap: { key: string; type: string }[];
     research: string[];

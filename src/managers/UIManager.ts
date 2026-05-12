@@ -19,10 +19,11 @@ export default class UIManager {
     hotkeys: string[];
     lastItemCount: number;
     lastScore: number;
+    activeResearchTab: 'RESEARCH' | 'DEFENSE';
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
-        this.selectedBuildingType = 'MINER';
+        this.selectedBuildingType = 'DATA_DOWNLOADER';
         this.buttons = {};
         this.activeCategory = 'EXTRACTION';
         this.currentTabBuildings = [];
@@ -37,6 +38,7 @@ export default class UIManager {
         this.hotkeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
         this.lastItemCount = -1;
         this.lastScore = -1;
+        this.activeResearchTab = 'RESEARCH';
 
         // Note: createBuildingButtons is now called by MainScene after ResearchManager is initialized
         this.setupEvents();
@@ -52,8 +54,9 @@ export default class UIManager {
 
         EventBus.on('POWER_UPDATED', (data: PowerUpdateData) => {
             if (this.powerEl) {
-                const isDeficit = data.net < 0;
-                this.powerEl.innerText = `${data.production} / ${data.consumption} W`;
+                const isDeficit = data.isBlackout || data.net < 0;
+                const networkText = data.networks ? ` | ${data.networks.length} grids` : '';
+                this.powerEl.innerText = `${data.production} / ${data.consumption} W${networkText}`;
                 this.powerEl.style.color = isDeficit ? '#ef4444' : '#fde047';
                 this.powerEl.style.textShadow = isDeficit ? '0 0 10px #ef4444' : '0 0 10px #fde047';
             }
@@ -117,6 +120,7 @@ export default class UIManager {
             btnResearch.style.display = 'flex'; // Show research button
             btnResearch.onclick = () => {
                 modalResearch.style.display = 'flex';
+                EventBus.emit('RESEARCH_OPENED');
                 this.renderResearchTree();
             };
         }
@@ -151,7 +155,48 @@ export default class UIManager {
         if (!container) return;
         container.innerHTML = '';
 
+        const tabs = document.createElement('div');
+        tabs.style.display = 'flex';
+        tabs.style.gap = '8px';
+        tabs.style.marginBottom = '12px';
+
+        [
+            { id: 'RESEARCH' as const, label: 'Research' },
+            { id: 'DEFENSE' as const, label: 'Defense Upgrades' }
+        ].forEach(tab => {
+            const tabBtn = document.createElement('button');
+            tabBtn.className = 'tab-btn';
+            tabBtn.innerText = tab.label;
+            tabBtn.classList.toggle('active', this.activeResearchTab === tab.id);
+            tabBtn.onclick = () => {
+                this.activeResearchTab = tab.id;
+                this.renderResearchTree();
+            };
+            tabs.appendChild(tabBtn);
+        });
+        container.appendChild(tabs);
+
+        const list = document.createElement('div');
+        list.style.display = 'flex';
+        list.style.flexDirection = 'column';
+        list.style.gap = '15px';
+        container.appendChild(list);
+
+        const defenseResearchIds = new Set([
+            'TECH_PRECISION_INFERENCE',
+            'TECH_DEFENSE_RANGE',
+            'TECH_RAPID_RESPONSE',
+            'TECH_FIREWALL_HARDENING',
+            'TECH_AUTOMATED_DEFENSE'
+        ]);
+
         Object.values(CONFIG.RESEARCH).forEach(node => {
+            const hasActiveUnlock = !node.UNLOCKS.BUILDINGS || node.UNLOCKS.BUILDINGS.some(type => Boolean(CONFIG.BUILDINGS[type]));
+            if (!hasActiveUnlock) return;
+            const isDefenseNode = defenseResearchIds.has(node.ID);
+            if (this.activeResearchTab === 'DEFENSE' && !isDefenseNode) return;
+            if (this.activeResearchTab === 'RESEARCH' && isDefenseNode) return;
+
             const isUnlocked = rm.isUnlocked(node.ID);
             const canUnlock = rm.canUnlock(node.ID);
             
@@ -183,9 +228,11 @@ export default class UIManager {
             header.appendChild(cost);
             
             const desc = document.createElement('div');
-            desc.innerText = node.DESCRIPTION;
+            const effectSummary = this.getResearchEffectSummary(node.ID);
+            desc.innerText = effectSummary ? `${node.DESCRIPTION}\n${effectSummary}` : node.DESCRIPTION;
             desc.style.color = '#aaa';
             desc.style.fontSize = '14px';
+            desc.style.whiteSpace = 'pre-wrap';
 
             const actionBtn = document.createElement('button');
             actionBtn.className = 'build-btn';
@@ -213,8 +260,19 @@ export default class UIManager {
             card.appendChild(header);
             card.appendChild(desc);
             card.appendChild(actionBtn);
-            container.appendChild(card);
+            list.appendChild(card);
         });
+    }
+
+    getResearchEffectSummary(researchId: string): string {
+        const summaries: Record<string, string> = {
+            TECH_PRECISION_INFERENCE: 'Effect: Tower Damage +30%',
+            TECH_DEFENSE_RANGE: 'Effect: Tower Range +1 tile',
+            TECH_RAPID_RESPONSE: 'Effect: Fire Rate 20% faster',
+            TECH_FIREWALL_HARDENING: 'Effect: Firewall HP +50%',
+            TECH_AUTOMATED_DEFENSE: 'Effect: Unlocks Inference Unit production'
+        };
+        return summaries[researchId] || '';
     }
 
     setupSettingsUI(): void {
@@ -223,6 +281,14 @@ export default class UIManager {
         const btnClose = document.getElementById('btn-close-settings');
         const btnSave = document.getElementById('btn-save');
         const btnLoad = document.getElementById('btn-load');
+        const volumeInput = document.getElementById('audio-volume') as HTMLInputElement | null;
+        const mutedInput = document.getElementById('audio-muted') as HTMLInputElement | null;
+        const btnResetTutorial = document.getElementById('btn-reset-tutorial');
+        const mainScene = this.scene as MainScene;
+        const audioSettings = mainScene.soundManager?.getSettings?.();
+
+        if (volumeInput && audioSettings) volumeInput.value = String(Math.round(audioSettings.masterVolume * 100));
+        if (mutedInput && audioSettings) mutedInput.checked = audioSettings.muted;
 
         if (btnSettings && modalSettings) {
             btnSettings.onclick = () => {
@@ -238,6 +304,20 @@ export default class UIManager {
 
         if (btnSave) btnSave.onclick = () => EventBus.emit('SAVE_REQUESTED');
         if (btnLoad) btnLoad.onclick = () => EventBus.emit('LOAD_REQUESTED');
+        if (btnResetTutorial) {
+            btnResetTutorial.onclick = () => {
+                EventBus.emit('TUTORIAL_RESET');
+                this.logMessage('Tutorial: 안내를 다시 시작합니다.');
+            };
+        }
+
+        const emitAudioSettings = () => {
+            const volume = volumeInput ? Number(volumeInput.value) / 100 : audioSettings?.masterVolume ?? 0.6;
+            const muted = mutedInput ? mutedInput.checked : audioSettings?.muted ?? false;
+            EventBus.emit('AUDIO_SETTINGS_CHANGED', { masterVolume: volume, muted });
+        };
+        if (volumeInput) volumeInput.oninput = emitAudioSettings;
+        if (mutedInput) mutedInput.onchange = emitAudioSettings;
 
         [1, 2, 3].forEach(speed => {
             const btn = document.getElementById(`btn-speed-${speed}`);

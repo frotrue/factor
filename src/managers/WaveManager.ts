@@ -25,7 +25,7 @@ export default class WaveManager {
         this.enemies = new Map();
         this.currentWave = 0;
         this.waveActive = false;
-        this.waveTimer = 30000;
+        this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
         this.spawnTimer = 0;
         this.enemiesToSpawn = 0;
         this.enemiesSpawned = 0;
@@ -35,8 +35,9 @@ export default class WaveManager {
         this.coreX = CONFIG.GRID_SIZE / 2;
         this.coreY = CONFIG.GRID_SIZE / 2;
 
-        EventBus.on('ENEMY_KILLED', ({ id }: { id: string }) => {
+        EventBus.on('ENEMY_KILLED', ({ id, rewardSilicon }: { id: string; rewardSilicon: number }) => {
             this.enemies.delete(id);
+            this.grantSiliconReward(rewardSilicon);
             if (this.waveActive && this.enemies.size === 0 && this.enemiesSpawned >= this.enemiesToSpawn) {
                 this.endWave();
             }
@@ -58,14 +59,14 @@ export default class WaveManager {
         this.spawnTimer = 0;
         
         if (this.currentWave <= 5) {
-            this.enemiesToSpawn = 5 + this.currentWave;
+            this.enemiesToSpawn = 4 + this.currentWave;
             this.hpMultiplier = 1;
         } else if (this.currentWave <= 15) {
-            this.enemiesToSpawn = 10 + this.currentWave * 2;
-            this.hpMultiplier = 1.5;
+            this.enemiesToSpawn = 8 + Math.floor(this.currentWave * 1.5);
+            this.hpMultiplier = 1.25 + (this.currentWave - 5) * 0.04;
         } else {
-            this.enemiesToSpawn = 20 + this.currentWave * 2;
-            this.hpMultiplier = 2.5 + (this.currentWave - 15) * 0.15;
+            this.enemiesToSpawn = 18 + Math.floor(this.currentWave * 1.8);
+            this.hpMultiplier = 1.8 + (this.currentWave - 15) * 0.12;
         }
 
         // Add 1 extra boss enemy every 10 waves
@@ -78,7 +79,7 @@ export default class WaveManager {
 
     endWave(): void {
         this.waveActive = false;
-        this.waveTimer = 20000;
+        this.waveTimer = CONFIG.TIMING.WAVE_COOLDOWN_MS;
         EventBus.emit('WAVE_ENDED', { wave: this.currentWave });
     }
 
@@ -125,14 +126,44 @@ export default class WaveManager {
                 this.spawnTimer -= delta;
                 if (this.spawnTimer <= 0) {
                     this.spawnEnemy();
-                    this.spawnTimer = 1000;
+                    this.spawnTimer = CONFIG.TIMING.ENEMY_SPAWN_INTERVAL_MS;
                 }
             }
         }
 
+        this.applyBossAuras();
         this.enemies.forEach(enemy => {
             enemy.update(delta, this.coreX, this.coreY);
         });
+    }
+
+    applyBossAuras(): void {
+        const bosses = Array.from(this.enemies.values()).filter(e => e.active && e.type === 'OVERFITTED_MODEL');
+        this.enemies.forEach(enemy => {
+            enemy.auraSpeedMultiplier = 1;
+            if (enemy.type === 'OVERFITTED_MODEL') return;
+            const boosted = bosses.some(boss => Phaser.Math.Distance.Between(enemy.x, enemy.y, boss.x, boss.y) <= CONFIG.GRID_SIZE * 8);
+            if (boosted) enemy.auraSpeedMultiplier = 1.25;
+        });
+    }
+
+    grantSiliconReward(amount: number): void {
+        if (amount <= 0) return;
+        const buildingManager = (this.scene as any).buildingManager as BuildingManager;
+        let remaining = amount;
+
+        buildingManager.forEach(building => {
+            if (remaining <= 0 || building.type !== 'STORAGE') return;
+            while (remaining > 0 && building.canAcceptItem('SILICON')) {
+                building.acceptItem('SILICON');
+                remaining--;
+            }
+        });
+
+        const uiManager = (this.scene as any).uiManager;
+        if (uiManager && remaining < amount) {
+            uiManager.logMessage(`System: Recovered ${amount - remaining} Silicon from enemy residue.`);
+        }
     }
 
     getEnemiesInRange(x: number, y: number, range: number): BaseEnemy[] {

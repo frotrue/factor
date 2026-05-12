@@ -12,7 +12,7 @@ export default class SaveManager {
 
     constructor(scene: MainScene) {
         this.scene = scene;
-        this.autoSaveInterval = 60000;
+        this.autoSaveInterval = CONFIG.TIMING.AUTO_SAVE_INTERVAL_MS;
         this.autoSaveTimer = 0;
 
         EventBus.on('SAVE_REQUESTED', () => {
@@ -85,6 +85,7 @@ export default class SaveManager {
         });
 
         const coreBuilding = this.scene.buildingManager.get(`0,0`) as Core | null;
+        const audioSettings = this.scene.soundManager?.getSettings?.() ?? { masterVolume: 0.6, muted: false };
         
         const saveData: SaveData = {
             version: '1.0.0',
@@ -110,7 +111,10 @@ export default class SaveManager {
                 gameSpeed: this.scene.gameSpeed,
                 showPowerGrid: this.scene.showPowerGrid,
                 showDefenseRange: this.scene.showDefenseRange,
-                masterVolume: 1.0
+                masterVolume: audioSettings.masterVolume,
+                muted: audioSettings.muted,
+                tutorialCompleted: this.scene.tutorialManager?.isCompleted?.() ?? false,
+                tutorialStep: this.scene.tutorialManager?.getSavedStep?.() ?? 0
             },
             resourceMap: resourceMapArray,
             research: this.scene.researchManager.getUnlockedResearch()
@@ -136,6 +140,8 @@ export default class SaveManager {
             this.scene.waveManager.enemies.forEach(e => {
                 if (e.sprite) e.sprite.destroy();
                 if (e.hpBar) e.hpBar.destroy();
+                if ((e as any).statusGraphics) (e as any).statusGraphics.destroy();
+                if ((e as any).auraGraphics) (e as any).auraGraphics.destroy();
             });
             this.scene.waveManager.enemies.clear();
 
@@ -153,7 +159,7 @@ export default class SaveManager {
             }
 
             // Load Core
-            const core = this.scene.buildingManager.place(0, 0, 'CORE', 0) as Core;
+            const core = this.scene.buildingManager.place(0, 0, 'CORE', 0, { skipCost: true }) as Core;
             if (core) {
                 core.hp = data.core.hp;
                 core.totalDataReceived = data.core.totalDataReceived;
@@ -175,7 +181,10 @@ export default class SaveManager {
 
             // Load Buildings
             data.buildings.forEach(b => {
-                const placed = this.scene.buildingManager.place(b.x, b.y, b.type, b.rotation, { customState: b.customState });
+                const placed = this.scene.buildingManager.place(b.x, b.y, b.type, b.rotation, {
+                    customState: b.customState,
+                    skipCost: true
+                });
                 if (placed) {
                     placed.inputBuffer = b.inputBuffer || [];
                     placed.outputBuffer = b.outputBuffer || [];
@@ -198,13 +207,15 @@ export default class SaveManager {
                 data.cables.forEach(c => {
                     const cableType = c.cableType === 'FIBER' ? 'FIBER' : 'BASIC';
                     if (this.scene.cableManager.connect(c.fromKey, c.toKey, cableType)) {
-                        const id = `cable_${c.fromKey}_${c.toKey}`;
+                        const id = this.scene.cableManager.makeCableId(c.fromKey, c.toKey);
                         const cable = this.scene.cableManager.cables.get(id);
                         if (cable) {
                             cable.queue = c.queue || [];
                         }
                     }
                 });
+                this.scene.cableManager.dirty = true;
+                this.scene.cableManager.apDirty = true;
             }
 
             // Load Wave
@@ -237,9 +248,21 @@ export default class SaveManager {
                 
                 this.scene.showDefenseRange = data.settings.showDefenseRange;
                 this.scene.defenseRangeDirty = true;
+
+                this.scene.soundManager?.setSettings?.(
+                    typeof data.settings.masterVolume === 'number' ? data.settings.masterVolume : 0.6,
+                    Boolean(data.settings.muted)
+                );
+                this.scene.tutorialManager?.loadState?.(
+                    Boolean(data.settings.tutorialCompleted),
+                    data.settings.tutorialStep
+                );
             }
 
             this.scene.uiManager.createBuildingButtons();
+            this.scene.powerManager.updatePowerGrid();
+            this.scene.powerGridDirty = true;
+            this.scene.defenseRangeDirty = true;
             this.scene.uiManager.logMessage('System: Save file loaded successfully.');
             return true;
         } catch (e) {

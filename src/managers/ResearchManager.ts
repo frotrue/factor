@@ -2,6 +2,7 @@ import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import type MainScene from '../scenes/MainScene';
 import Core from '../buildings/Core';
+import { ResearchEffects } from '../types';
 
 export default class ResearchManager {
     scene: MainScene;
@@ -58,6 +59,21 @@ export default class ResearchManager {
 
     getUnlockedResearch(): string[] {
         return Array.from(this.unlockedResearch);
+    }
+
+    getEffectValue(effect: keyof ResearchEffects, defaultValue: number): number {
+        let value = defaultValue;
+        this.unlockedResearch.forEach(id => {
+            const effectValue = CONFIG.RESEARCH[id]?.EFFECTS?.[effect];
+            if (typeof effectValue !== 'number') return;
+
+            if (effect.endsWith('MULTIPLIER')) {
+                value *= effectValue;
+            } else {
+                value += effectValue;
+            }
+        });
+        return value;
     }
 
     loadUnlockedResearch(researchIds: string[]): void {

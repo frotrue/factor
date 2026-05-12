@@ -12,12 +12,15 @@ import DefenseTower, { Classifier, Filter, Firewall } from './DefenseTower';
 import SolarPanel from './SolarPanel';
 import NeuralTrainer from './NeuralTrainer';
 import AccessPoint from './AccessPoint';
+import Conveyor, { FastLink } from './Conveyor';
+import DataDownloader from './DataDownloader';
 import { BuildingOptions } from '../types';
 
 type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
 
 const REGISTRY: Record<string, BuildingClass> = {
     MINER: Miner,
+    DATA_DOWNLOADER: DataDownloader,
     PROCESSOR: Processor,
     CORE: Core,
     POWER_PLANT: PowerPlant,
@@ -30,7 +33,9 @@ const REGISTRY: Record<string, BuildingClass> = {
     SOLAR_PANEL: SolarPanel,
     NEURAL_TRAINER: NeuralTrainer,
     WEIGHT_TRAINER: WeightTrainer,
-    ACCESS_POINT: AccessPoint
+    ACCESS_POINT: AccessPoint,
+    CONVEYOR: Conveyor,
+    FAST_LINK: FastLink
 };
 
 export function createBuilding(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}): BaseBuilding | null {

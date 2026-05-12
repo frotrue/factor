@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import './styles/main.css';
 import MainMenuScene from './scenes/MainMenuScene';
 import MainScene from './scenes/MainScene';
 

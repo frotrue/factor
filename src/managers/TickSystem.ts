@@ -32,7 +32,7 @@ export default class TickSystem {
         this.mapManager = mapManager;
         this.powerManager = powerManager;
         this.cableManager = (scene as any).cableManager || null;
-        this.tickRate = CONFIG.TICK_RATE / 2; // Run ticks twice as fast
+        this.tickRate = CONFIG.TICK_RATE * CONFIG.TIMING.TICK_RATE_MULTIPLIER;
         this.currentTick = 0;
         this.lastTickTime = 0;
         this.gridSize = CONFIG.GRID_SIZE;
@@ -73,6 +73,7 @@ export default class TickSystem {
         this.buildingManager.forEach(building => {
             if (building.hasPower === false) return;
             building.onTick(this.currentTick, occupiedPositions);
+            building.updateStatusMarkers(this.currentTick);
         });
     }
 
