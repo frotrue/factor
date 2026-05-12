@@ -1,1 +1,0 @@
-{"version":3,"file":"WeightTrainer.js","sourceRoot":"","sources":["../../../src/buildings/WeightTrainer.ts"],"names":[],"mappings":"AACA,OAAO,iBAAiB,MAAM,qBAAqB,CAAC;AAGpD,MAAM,CAAC,OAAO,OAAO,aAAc,SAAQ,iBAAiB;IACxD,YAAY,KAAmB,EAAE,CAAS,EAAE,CAAS,EAAE,SAA0B,EAAE;QAC/E,KAAK,CAAC,KAAK,EAAE,CAAC,EAAE,CAAC,EAAE,gBAAgB,EAAE,iBAAiB,EAAE,MAAM,CAAC,CAAC;IACpE,CAAC;CACJ"}
