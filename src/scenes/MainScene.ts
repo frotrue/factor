@@ -43,6 +43,8 @@ export default class MainScene extends Phaser.Scene {
 
     currentRotation: number = 0;
     gameSpeed: number = 1;
+    difficultyId: string = 'NORMAL';
+    isMobileLayout: boolean = false;
     showPowerGrid: boolean = false;
     powerGridDirty: boolean = false;
     showDefenseRange: boolean = false;
@@ -53,18 +55,30 @@ export default class MainScene extends Phaser.Scene {
     cursorContainer!: Phaser.GameObjects.Container;
     ghostGraphics!: Phaser.GameObjects.Graphics;
     cursorArrow!: Phaser.GameObjects.Triangle;
+    mobileMediaQuery: MediaQueryList | null = null;
+    mobileTouchStart: { x: number; y: number; time: number } | null = null;
+    mobileMultiTouchActive: boolean = false;
+    mobileLayoutHandler: (() => void) | null = null;
 
     constructor() {
         super('MainScene');
     }
 
+    init(data: { difficulty?: string } = {}): void {
+        this.difficultyId = CONFIG.DIFFICULTY[data.difficulty || 'NORMAL'] ? data.difficulty! : 'NORMAL';
+    }
+
     create(): void {
+        this.input.addPointer(2);
+        this.setupMobileLayoutDetection();
+
         this.mapManager = new MapManager();
         this.itemManager = new ItemManager(this);
         this.buildingManager = new BuildingManager(this);
         this.powerManager = new PowerManager(this, this.buildingManager);
         this.cableManager = new CableManager(this);
         this.waveManager = new WaveManager(this, this.buildingManager);
+        this.waveManager.setDifficulty(this.difficultyId);
         this.tickSystem = new TickSystem(this, this.buildingManager, this.itemManager, this.mapManager, this.powerManager);
         this.gridRenderer = new GridRenderer(this, this.mapManager);
         this.cameraController = new CameraController(this);
@@ -127,6 +141,11 @@ export default class MainScene extends Phaser.Scene {
         });
 
         this.events.on('shutdown', () => {
+            if (this.mobileMediaQuery && this.mobileLayoutHandler) {
+                this.mobileMediaQuery.removeEventListener('change', this.mobileLayoutHandler);
+                window.removeEventListener('resize', this.mobileLayoutHandler);
+            }
+            document.body.classList.remove('mobile-layout');
             EventBus.off('BUILDING_SELECTED');
             EventBus.off('BUILDING_PLACED');
             EventBus.off('BUILDING_REMOVED');
@@ -149,20 +168,72 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
+    setupMobileLayoutDetection(): void {
+        this.mobileMediaQuery = window.matchMedia('(pointer: coarse), (max-width: 768px), (max-height: 480px)');
+        this.mobileLayoutHandler = () => this.updateMobileLayoutState();
+        this.mobileMediaQuery.addEventListener('change', this.mobileLayoutHandler);
+        window.addEventListener('resize', this.mobileLayoutHandler);
+        this.updateMobileLayoutState();
+    }
+
+    updateMobileLayoutState(): void {
+        const matches = Boolean(this.mobileMediaQuery?.matches || window.innerWidth <= 768 || window.innerHeight <= 480);
+        const wasMobile = this.isMobileLayout;
+        this.isMobileLayout = matches;
+        document.body.classList.toggle('mobile-layout', matches);
+
+        if (this.cameraController) {
+            const currentZoom = this.cameras.main.zoom || CONFIG.CAMERA.DEFAULT_ZOOM;
+            const targetZoom = matches && !wasMobile ? 1 : currentZoom;
+            this.cameras.main.setZoom(Phaser.Math.Clamp(targetZoom, matches ? 0.45 : CONFIG.CAMERA.MIN_ZOOM, CONFIG.CAMERA.MAX_ZOOM));
+        }
+    }
+
     setupInput(): void {
         this.input.mouse!.disableContextMenu();
-        this.input.on('pointerdown', this.handlePointerDown, this);
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (this.isMobileLayout && pointer.leftButtonDown()) {
+                if (this.input.pointer2?.isDown) {
+                    this.mobileMultiTouchActive = true;
+                }
+                this.mobileTouchStart = { x: pointer.x, y: pointer.y, time: this.time.now };
+                return;
+            }
+            this.handlePointerAction(pointer, pointer.rightButtonDown() ? 'secondary' : 'primary');
+        });
+        this.input.on('pointermove', () => {
+            if (this.isMobileLayout && this.input.pointer2?.isDown) {
+                this.mobileMultiTouchActive = true;
+            }
+        });
+        this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+            if (!this.isMobileLayout || !this.mobileTouchStart) return;
+
+            const moved = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.mobileTouchStart.x, this.mobileTouchStart.y);
+            const duration = this.time.now - this.mobileTouchStart.time;
+            this.mobileTouchStart = null;
+
+            if (this.mobileMultiTouchActive || this.input.pointer2?.isDown) {
+                if (!this.input.pointer1?.isDown && !this.input.pointer2?.isDown) {
+                    this.mobileMultiTouchActive = false;
+                }
+                return;
+            }
+
+            if (moved <= 8 && duration <= 250) {
+                this.handlePointerAction(pointer, 'primary');
+            } else if (moved <= 10 && duration >= 500) {
+                const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+                const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+                const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+                if (!this.buildingManager.get(`${snappedX},${snappedY}`)) {
+                    this.cancelCurrentAction();
+                }
+            }
+        });
         this.input.keyboard!.on('keydown-R', () => this.rotateCursor());
-        this.input.keyboard!.on('keydown-F2', () => {
-            this.showPowerGrid = !this.showPowerGrid;
-            this.powerGridDirty = true;
-            this.uiManager.logMessage(`System: Power Grid Overlay ${this.showPowerGrid ? 'ON' : 'OFF'}`);
-        });
-        this.input.keyboard!.on('keydown-F1', () => {
-            this.showDefenseRange = !this.showDefenseRange;
-            this.defenseRangeDirty = true;
-            this.uiManager.logMessage(`System: Defense Range Overlay ${this.showDefenseRange ? 'ON' : 'OFF'}`);
-        });
+        this.input.keyboard!.on('keydown-F2', () => this.togglePowerGrid());
+        this.input.keyboard!.on('keydown-F1', () => this.toggleDefenseRange());
     }
 
     setupCursor(): void {
@@ -248,6 +319,32 @@ export default class MainScene extends Phaser.Scene {
     rotateCursor(): void {
         this.currentRotation = (this.currentRotation + 1) % 4;
         this.cursorArrow.setAngle(CONFIG.DIRECTIONS[this.currentRotation].angle);
+    }
+
+    toggleDefenseRange(): void {
+        this.showDefenseRange = !this.showDefenseRange;
+        this.defenseRangeDirty = true;
+        this.uiManager.updateMobileControls();
+        this.uiManager.logMessage(`System: Defense Range Overlay ${this.showDefenseRange ? 'ON' : 'OFF'}`);
+    }
+
+    togglePowerGrid(): void {
+        this.showPowerGrid = !this.showPowerGrid;
+        this.powerGridDirty = true;
+        this.uiManager.updateMobileControls();
+        this.uiManager.logMessage(`System: Power Grid Overlay ${this.showPowerGrid ? 'ON' : 'OFF'}`);
+    }
+
+    cancelCurrentAction(): void {
+        const wasCablePending = this.cableState === 'CABLE_START';
+        this.cableState = 'IDLE';
+        this.cableStartKey = null;
+        this.cableDraftGraphics?.clear();
+        if (wasCablePending) {
+            this.uiManager.logMessage('System: Cable connection cancelled.');
+        }
+        this.uiManager.setMobileActionStatus(null);
+        this.uiManager.cancelMobileAction();
     }
 
     update(time: number, delta: number): void {
@@ -359,7 +456,7 @@ export default class MainScene extends Phaser.Scene {
         const key = `${snappedX},${snappedY}`;
         const mode = this.uiManager.getSelectedBuildingType();
 
-        if (pointer.leftButtonDown() && (mode === 'CONVEYOR' || mode === 'FAST_LINK')) {
+        if (!this.isMobileLayout && pointer.leftButtonDown() && (mode === 'CONVEYOR' || mode === 'FAST_LINK')) {
             const bConfig = CONFIG.BUILDINGS[mode];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;
@@ -422,7 +519,7 @@ export default class MainScene extends Phaser.Scene {
                 content += `\nInput Buffer: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
             }
             if (existingBuilding.outputBuffer) {
-                content += `\nOutput Buffer: ${existingBuilding.outputBuffer.length}`;
+                content += `\nOutput Buffer: ${existingBuilding.outputBuffer.length} / ${existingBuilding.maxBufferSize}`;
             }
             if ((existingBuilding as any).isProcessing !== undefined) {
                 content += `\nStatus: ${(existingBuilding as any).isProcessing ? 'Processing' : 'Idle'}`;
@@ -463,7 +560,7 @@ export default class MainScene extends Phaser.Scene {
         }
     }
 
-    handlePointerDown(pointer: Phaser.Input.Pointer): void {
+    handlePointerAction(pointer: Phaser.Input.Pointer, button: 'primary' | 'secondary'): void {
         if (pointer.middleButtonDown()) return;
 
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -474,14 +571,14 @@ export default class MainScene extends Phaser.Scene {
         const normalizedKey = this.cableManager.normalizeKey(key, this.buildingManager);
         const mode = this.uiManager.getSelectedBuildingType();
 
-        if (pointer.leftButtonDown()) {
+        if (button === 'primary') {
             if (mode === 'REMOVE') {
                 if (this.buildingManager.has(key)) {
                     // 케이블이 있으면 먼저 케이블 제거, 없으면 건물 제거
                     const cables = this.cableManager.getCablesForBuilding(normalizedKey);
                     if (cables.length > 0) {
                         cables.forEach(c => this.cableManager.disconnect(c.id));
-                        this.uiManager.logMessage(`System: ${cables.length}개 케이블 해제됨.`);
+                        this.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                     } else {
                         this.buildingManager.remove(key);
                     }
@@ -494,16 +591,23 @@ export default class MainScene extends Phaser.Scene {
                     if (this.cableState === 'IDLE') {
                         this.cableState = 'CABLE_START';
                         this.cableStartKey = normalizedKey;
+                        this.uiManager.setMobileActionStatus('Cable: select endpoint');
+                        this.uiManager.logMessage('System: Cable start selected. Choose an endpoint.');
                     } else if (this.cableState === 'CABLE_START') {
+                        if (this.cableStartKey === normalizedKey) {
+                            this.uiManager.logMessage('System: Select a different building for the cable endpoint.', true);
+                            return;
+                        }
                         if (this.cableStartKey !== normalizedKey) {
                             // P3: 케이블 비용 차감
                             const costPerTile = cConfig.COST_PER_TILE || 0;
                             if (costPerTile > 0) {
                                 const canAfford = this.inventoryManager.canAfford([{ resource: 'SILICON', amount: costPerTile }]);
                                 if (!canAfford) {
-                                    this.uiManager.logMessage(`System: 실리콘이 부족합니다. (필요: ${costPerTile})`, true);
                                     this.cableState = 'IDLE';
                                     this.cableStartKey = null;
+                                    this.uiManager.setMobileActionStatus(null);
+                                    this.uiManager.logMessage(`System: Not enough Silicon for cable. Need: ${costPerTile}`, true);
                                     return;
                                 }
                             }
@@ -513,19 +617,27 @@ export default class MainScene extends Phaser.Scene {
                                 }
                                 this.uiManager.logMessage(`System: Cable connected.`);
                             } else {
-                                this.uiManager.logMessage(`System: 이미 연결되어 있습니다.`);
+                                this.uiManager.logMessage(`System: Cable connection already exists.`, true);
                             }
                         }
                         this.cableState = 'IDLE';
                         this.cableStartKey = null;
+                        this.uiManager.setMobileActionStatus(null);
                     }
                 } else if (this.cableState === 'CABLE_START') {
                     this.cableState = 'IDLE';
                     this.cableStartKey = null;
+                    this.uiManager.setMobileActionStatus(null);
+                    this.uiManager.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
+                } else if (!isUnlocked) {
+                    this.uiManager.logMessage(`System: ${cConfig.NAME} is not unlocked.`, true);
+                } else {
+                    this.uiManager.logMessage('System: Select a building to start the cable.', true);
                 }
             } else {
                 this.cableState = 'IDLE';
                 this.cableStartKey = null;
+                this.uiManager.setMobileActionStatus(null);
 
                 const existingBuilding = this.buildingManager.get(key);
                 if (existingBuilding && existingBuilding.type === 'NEURAL_TRAINER') {
@@ -544,16 +656,17 @@ export default class MainScene extends Phaser.Scene {
                     this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
                 }
             }
-        } else if (pointer.rightButtonDown()) {
+        } else if (button === 'secondary') {
             this.cableState = 'IDLE';
             this.cableStartKey = null;
+            this.uiManager.setMobileActionStatus(null);
 
             // P7: 케이블 모드에서 우클릭 시 해당 건물의 케이블 삭제
             if ((mode === 'BASIC' || mode === 'FIBER') && this.buildingManager.has(key)) {
                 const cables = this.cableManager.getCablesForBuilding(normalizedKey);
                 if (cables.length > 0) {
                     cables.forEach(c => this.cableManager.disconnect(c.id));
-                    this.uiManager.logMessage(`System: ${cables.length}개 케이블 해제됨.`);
+                    this.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                 }
             } else if (this.buildingManager.has(key)) {
                 this.buildingManager.remove(key);

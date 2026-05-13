@@ -144,7 +144,16 @@ export default class BaseEnemy {
     }
 
     createStatusVisuals(): void {
-        if (this.type === 'OVERFITTED_MODEL') {
+        if (this.type === 'DDOS_BOT') {
+            this.scene.tweens.add({
+                targets: this.sprite,
+                scaleX: 1.35,
+                scaleY: 1.35,
+                yoyo: true,
+                repeat: -1,
+                duration: 180
+            });
+        } else if (this.type === 'OVERFITTED_MODEL') {
             this.auraGraphics = this.scene.add.graphics();
             this.auraGraphics.setDepth(24);
             this.scene.tweens.add({
@@ -171,7 +180,11 @@ export default class BaseEnemy {
         if (this.auraGraphics) this.auraGraphics.clear();
         if (!this.active) return;
 
-        if (this.type === 'MALWARE') {
+        if (this.type === 'DDOS_BOT') {
+            this.statusGraphics.lineStyle(1, 0x00ff88, 0.75);
+            this.statusGraphics.lineBetween(this.x - 8, this.y, this.x + 8, this.y);
+            this.statusGraphics.lineBetween(this.x, this.y - 8, this.x, this.y + 8);
+        } else if (this.type === 'MALWARE') {
             this.statusGraphics.lineStyle(2, 0xff00aa, 0.9);
             this.statusGraphics.strokeCircle(this.x, this.y, 14);
             this.statusGraphics.fillStyle(0xff00aa, 0.9);

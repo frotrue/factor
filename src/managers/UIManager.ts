@@ -20,6 +20,12 @@ export default class UIManager {
     lastItemCount: number;
     lastScore: number;
     activeResearchTab: 'RESEARCH' | 'DEFENSE';
+    previousBuildSelection: string;
+    mobileActionBar: HTMLElement | null;
+    mobileInfoSheet: HTMLElement | null;
+    mobileBuildSummary: HTMLElement | null;
+    mobileCableMenu: HTMLElement | null;
+    mobileActionStatus: string | null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -39,6 +45,12 @@ export default class UIManager {
         this.lastItemCount = -1;
         this.lastScore = -1;
         this.activeResearchTab = 'RESEARCH';
+        this.previousBuildSelection = this.selectedBuildingType;
+        this.mobileActionBar = null;
+        this.mobileInfoSheet = null;
+        this.mobileBuildSummary = null;
+        this.mobileCableMenu = null;
+        this.mobileActionStatus = null;
 
         // Note: createBuildingButtons is now called by MainScene after ResearchManager is initialized
         this.setupEvents();
@@ -108,6 +120,110 @@ export default class UIManager {
 
         this.setupSettingsUI();
         this.setupResearchUI();
+        this.setupMobileUI();
+    }
+
+    setupMobileUI(): void {
+        this.mobileActionBar = document.getElementById('mobile-action-bar');
+        if (!this.mobileActionBar) {
+            this.mobileActionBar = document.createElement('div');
+            this.mobileActionBar.id = 'mobile-action-bar';
+            document.body.appendChild(this.mobileActionBar);
+        }
+
+        this.mobileCableMenu = document.getElementById('mobile-cable-menu');
+        if (!this.mobileCableMenu) {
+            this.mobileCableMenu = document.createElement('div');
+            this.mobileCableMenu.id = 'mobile-cable-menu';
+            this.mobileCableMenu.className = 'glass-panel';
+            this.mobileActionBar.appendChild(this.mobileCableMenu);
+        }
+
+        const actions = [
+            { id: 'rotate', label: 'Rotate', handler: () => (this.scene as MainScene).rotateCursor() },
+            { id: 'remove', label: 'Remove', handler: () => this.selectBuilding('REMOVE') },
+            { id: 'cable', label: 'Cable', handler: () => this.openMobileCableMenu() },
+            { id: 'cancel', label: 'Cancel', handler: () => (this.scene as MainScene).cancelCurrentAction() },
+            { id: 'defense', label: 'Defense', handler: () => (this.scene as MainScene).toggleDefenseRange() },
+            { id: 'power', label: 'Power', handler: () => (this.scene as MainScene).togglePowerGrid() }
+        ];
+
+        this.mobileActionBar.innerHTML = '';
+        this.mobileActionBar.appendChild(this.mobileCableMenu);
+        actions.forEach(action => {
+            const btn = document.createElement('button');
+            btn.id = `mobile-action-${action.id}`;
+            btn.className = 'mobile-action-btn';
+            btn.type = 'button';
+            btn.textContent = action.label;
+            btn.setAttribute('aria-label', action.label);
+            btn.addEventListener('pointerdown', event => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            btn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                action.handler();
+            };
+            this.mobileActionBar!.appendChild(btn);
+        });
+
+        this.mobileInfoSheet = document.getElementById('mobile-info-sheet');
+        if (!this.mobileInfoSheet) {
+            this.mobileInfoSheet = document.createElement('div');
+            this.mobileInfoSheet.id = 'mobile-info-sheet';
+            this.mobileInfoSheet.className = 'glass-panel';
+            document.body.appendChild(this.mobileInfoSheet);
+        }
+
+        this.mobileBuildSummary = document.getElementById('mobile-build-summary');
+        if (!this.mobileBuildSummary) {
+            this.mobileBuildSummary = document.createElement('div');
+            this.mobileBuildSummary.id = 'mobile-build-summary';
+            this.mobileBuildSummary.className = 'glass-panel';
+            document.body.appendChild(this.mobileBuildSummary);
+        }
+
+        this.renderMobileCableMenu();
+        this.updateMobileControls();
+        this.updateMobileBuildSummary();
+    }
+
+    renderMobileCableMenu(): void {
+        if (!this.mobileCableMenu) return;
+
+        this.mobileCableMenu.innerHTML = '';
+        (['BASIC', 'FIBER'] as const).forEach(type => {
+            const cConfig = CONFIG.CABLES[type];
+            const btn = document.createElement('button');
+            btn.className = 'mobile-cable-option';
+            btn.type = 'button';
+            btn.textContent = cConfig.NAME.split('(')[0].trim() || type;
+            btn.setAttribute('aria-label', cConfig.NAME);
+            btn.addEventListener('pointerdown', event => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            btn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.mobileCableMenu!.classList.remove('open');
+                this.selectBuilding(type);
+            };
+            this.mobileCableMenu!.appendChild(btn);
+        });
+    }
+
+    openMobileCableMenu(): void {
+        const mainScene = this.scene as MainScene;
+        const fiberUnlocked = !CONFIG.CABLES.FIBER.UNLOCK_REQUIRED || mainScene.researchManager?.isUnlocked(CONFIG.CABLES.FIBER.UNLOCK_REQUIRED);
+        if (!fiberUnlocked) {
+            this.selectBuilding('BASIC');
+            return;
+        }
+
+        this.mobileCableMenu?.classList.toggle('open');
     }
 
     setupResearchUI(): void {
@@ -133,6 +249,7 @@ export default class UIManager {
 
         EventBus.on('RESEARCH_UNLOCKED', () => {
             this.createBuildingButtons(); // Re-render build UI
+            this.renderMobileCableMenu();
             if (modalResearch && modalResearch.style.display === 'flex') {
                 this.renderResearchTree(); // Re-render tree if open
             }
@@ -440,14 +557,73 @@ export default class UIManager {
         removeBtn.onclick = () => this.selectBuilding('REMOVE');
         overlay.appendChild(removeBtn);
         this.buttons['REMOVE'] = removeBtn;
+
+        this.updateMobileBuildSummary();
+        this.updateMobileControls();
     }
 
     selectBuilding(type: string): void {
+        if (type !== 'REMOVE' && type !== 'BASIC' && type !== 'FIBER') {
+            this.previousBuildSelection = type;
+        }
         this.selectedBuildingType = type;
         Object.entries(this.buttons).forEach(([key, btn]) => {
             btn.classList.toggle('active', key === type);
         });
+        this.mobileCableMenu?.classList.remove('open');
+        this.updateMobileBuildSummary();
+        this.updateMobileControls();
         EventBus.emit('BUILDING_SELECTED', { type });
+    }
+
+    cancelMobileAction(): void {
+        this.mobileCableMenu?.classList.remove('open');
+        this.mobileActionStatus = null;
+        if (this.selectedBuildingType === 'REMOVE' || this.selectedBuildingType === 'BASIC' || this.selectedBuildingType === 'FIBER') {
+            this.selectBuilding(this.previousBuildSelection || 'DATA_DOWNLOADER');
+        } else {
+            this.updateMobileBuildSummary();
+            this.updateMobileControls();
+        }
+    }
+
+    setMobileActionStatus(status: string | null): void {
+        this.mobileActionStatus = status;
+        this.updateMobileBuildSummary();
+        this.updateMobileControls();
+    }
+
+    updateMobileControls(): void {
+        const mainScene = this.scene as MainScene;
+        const activeMap: Record<string, boolean> = {
+            remove: this.selectedBuildingType === 'REMOVE',
+            cable: this.selectedBuildingType === 'BASIC' || this.selectedBuildingType === 'FIBER',
+            defense: Boolean(mainScene.showDefenseRange),
+            power: Boolean(mainScene.showPowerGrid)
+        };
+
+        Object.entries(activeMap).forEach(([id, active]) => {
+            const btn = document.getElementById(`mobile-action-${id}`);
+            if (btn) btn.classList.toggle('active', active);
+        });
+    }
+
+    updateMobileBuildSummary(): void {
+        if (!this.mobileBuildSummary) return;
+
+        const type = this.selectedBuildingType;
+        const data = CONFIG.BUILDINGS[type] || CONFIG.CABLES[type];
+        if (!data) {
+            this.mobileBuildSummary.textContent = type === 'REMOVE' ? 'Remove mode' : '';
+            return;
+        }
+
+        const cost = (data as any).COST?.map((c: any) => `${c.amount} ${CONFIG.ITEMS[c.resource]?.NAME || c.resource}`).join(', ')
+            || ((data as any).COST_PER_TILE ? `${(data as any).COST_PER_TILE} Silicon / tile` : '');
+        this.mobileBuildSummary.innerHTML = `
+            <strong>${data.NAME.split('(')[0].trim()}</strong>
+            <span>${this.mobileActionStatus || cost || 'No build cost'}</span>
+        `;
     }
 
     update(itemCount: number): void {
@@ -467,6 +643,16 @@ export default class UIManager {
     }
 
     showTooltip(x: number, y: number, title: string, content: string): void {
+        if (document.body.classList.contains('mobile-layout')) {
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip) tooltip.style.display = 'none';
+            if (this.mobileInfoSheet) {
+                this.mobileInfoSheet.style.display = 'block';
+                this.mobileInfoSheet.innerHTML = this.formatMobileInfo(title, content);
+            }
+            return;
+        }
+
         const tooltip = document.getElementById('tooltip');
         if (!tooltip) return;
         tooltip.style.display = 'block';
@@ -478,6 +664,52 @@ export default class UIManager {
     hideTooltip(): void {
         const tooltip = document.getElementById('tooltip');
         if (tooltip) tooltip.style.display = 'none';
+        if (this.mobileInfoSheet) this.mobileInfoSheet.style.display = 'none';
+    }
+
+    formatMobileInfo(title: string, content: string): string {
+        const lines = content.split('\n').filter(Boolean);
+        const tags: string[] = [];
+        const details: string[] = [];
+
+        const powerLine = lines.find(line => line.startsWith('Power:'));
+        if (powerLine) {
+            tags.push(powerLine.includes('OK') ? 'POWER OK' : 'NO POWER');
+        }
+
+        const inputLine = lines.find(line => line.startsWith('Input Buffer:'));
+        const outputLine = lines.find(line => line.startsWith('Output Buffer:'));
+        const defenseBufferLine = lines.find(line => line.startsWith('Buffer:'));
+        const statusLine = lines.find(line => line.startsWith('Status:'));
+        const ammoLine = lines.find(line => line.startsWith('Ammo:'));
+        const recipeLine = lines.find(line => line.startsWith('Recipe:'));
+        const networkLine = lines.find(line => line.startsWith('Network Power:'));
+
+        if (statusLine?.includes('Processing')) tags.push('PROCESSING');
+        if (inputLine) {
+            details.push(inputLine);
+            const match = inputLine.match(/(\d+)\s*\/\s*(\d+)/);
+            if (match && match[1] === match[2]) tags.push('INPUT FULL');
+        }
+        if (outputLine) {
+            details.push(outputLine);
+            const match = outputLine.match(/(\d+)\s*\/\s*(\d+)/);
+            if (match && match[1] === match[2]) tags.push('OUTPUT FULL');
+        }
+        if (defenseBufferLine) {
+            details.push(defenseBufferLine);
+            const match = defenseBufferLine.match(/(\d+)\s*\/\s*(\d+)/);
+            if (ammoLine && match && Number(match[1]) === 0 && !ammoLine.includes('None')) tags.push('NO AMMO');
+        }
+        if (networkLine) details.push(networkLine);
+        if (recipeLine) details.push(recipeLine);
+
+        const tagHtml = tags.length
+            ? `<div class="mobile-status-tags">${tags.map(tag => `<span>${tag}</span>`).join('')}</div>`
+            : '';
+        const detailHtml = details.slice(0, 3).map(line => `<div>${line}</div>`).join('');
+
+        return `<div class="tooltip-title">${title}</div>${tagHtml}<div>${detailHtml || lines[0] || ''}</div>`;
     }
 
     logMessage(message: string, isAlert: boolean = false): void {

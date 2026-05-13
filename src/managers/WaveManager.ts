@@ -18,6 +18,10 @@ export default class WaveManager {
     enemyIdCounter: number;
     coreX: number;
     coreY: number;
+    difficultyId: string;
+    ddosSwarmSpawned: boolean;
+    ddosBotsToSpawn: number;
+    ddosRewardGranted: boolean;
 
     constructor(scene: Phaser.Scene, buildingManager: BuildingManager) {
         this.scene = scene;
@@ -34,10 +38,17 @@ export default class WaveManager {
         
         this.coreX = CONFIG.GRID_SIZE / 2;
         this.coreY = CONFIG.GRID_SIZE / 2;
+        this.difficultyId = 'NORMAL';
+        this.ddosSwarmSpawned = false;
+        this.ddosBotsToSpawn = 0;
+        this.ddosRewardGranted = false;
 
-        EventBus.on('ENEMY_KILLED', ({ id, rewardSilicon }: { id: string; rewardSilicon: number }) => {
+        EventBus.on('ENEMY_KILLED', ({ id, type, rewardSilicon }: { id: string; type: string; rewardSilicon: number }) => {
             this.enemies.delete(id);
             this.grantSiliconReward(rewardSilicon);
+            if (type === 'DDOS_BOT') {
+                this.tryGrantDdosSwarmReward();
+            }
             if (this.waveActive && this.enemies.size === 0 && this.enemiesSpawned >= this.enemiesToSpawn) {
                 this.endWave();
             }
@@ -52,11 +63,22 @@ export default class WaveManager {
         });
     }
 
+    setDifficulty(difficultyId: string): void {
+        this.difficultyId = CONFIG.DIFFICULTY[difficultyId] ? difficultyId : 'NORMAL';
+    }
+
+    getDifficulty() {
+        return CONFIG.DIFFICULTY[this.difficultyId] || CONFIG.DIFFICULTY.NORMAL;
+    }
+
     startWave(): void {
         this.currentWave++;
         this.waveActive = true;
         this.enemiesSpawned = 0;
         this.spawnTimer = 0;
+        this.ddosSwarmSpawned = false;
+        this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(8, 12) : 0;
+        this.ddosRewardGranted = false;
         
         if (this.currentWave <= 5) {
             this.enemiesToSpawn = 4 + this.currentWave;
@@ -74,16 +96,19 @@ export default class WaveManager {
             this.enemiesToSpawn += 1;
         }
 
+        this.enemiesToSpawn = Math.max(1, Math.round(this.enemiesToSpawn * this.getDifficulty().ENEMY_SPAWN_MULTIPLIER));
+        this.enemiesToSpawn += this.ddosBotsToSpawn;
+
         EventBus.emit('WAVE_STARTED', { wave: this.currentWave });
     }
 
     endWave(): void {
         this.waveActive = false;
-        this.waveTimer = CONFIG.TIMING.WAVE_COOLDOWN_MS;
+        this.waveTimer = this.getDifficulty().WAVE_COOLDOWN_MS;
         EventBus.emit('WAVE_ENDED', { wave: this.currentWave });
     }
 
-    spawnEnemy(): void {
+    spawnEnemy(typeOverride?: string): void {
         this.enemiesSpawned++;
         const id = `enemy_${this.enemyIdCounter++}`;
         
@@ -97,21 +122,31 @@ export default class WaveManager {
             case 3: x = -mapSize/2; y = -mapSize/2 + Math.random() * mapSize; break;
         }
 
-        let type = 'NOISE';
+        let type = typeOverride || 'NOISE';
         const isBossWave = this.currentWave % 10 === 0;
         
         // If it's a boss wave and it's the last enemy to spawn, make it a boss
-        if (isBossWave && this.enemiesSpawned === this.enemiesToSpawn) {
+        if (!typeOverride && isBossWave && this.enemiesSpawned === this.enemiesToSpawn) {
             type = 'OVERFITTED_MODEL';
             const uiManager = (this.scene as any).uiManager;
             if (uiManager) uiManager.logMessage('System: WARNING - Overfitted Model detected!', true);
-        } else {
+        } else if (!typeOverride) {
             if (this.currentWave > 5 && Math.random() < 0.3) type = 'MALWARE';
             if (this.currentWave > 15 && Math.random() < 0.2) type = 'ADVERSARIAL';
         }
 
-        const enemy = new BaseEnemy(this.scene, type, x, y, this.hpMultiplier, id, this.buildingManager);
+        const enemy = new BaseEnemy(this.scene, type, x, y, this.hpMultiplier * this.getDifficulty().ENEMY_HP_MULTIPLIER, id, this.buildingManager);
         this.enemies.set(id, enemy);
+    }
+
+    spawnDdosSwarm(): void {
+        if (this.ddosSwarmSpawned || this.ddosBotsToSpawn <= 0) return;
+        this.ddosSwarmSpawned = true;
+        const uiManager = (this.scene as any).uiManager;
+        if (uiManager) uiManager.logMessage(`System: DDoS swarm detected (${this.ddosBotsToSpawn} packets)!`, true);
+        for (let i = 0; i < this.ddosBotsToSpawn; i++) {
+            this.spawnEnemy('DDOS_BOT');
+        }
     }
 
     update(delta: number): void {
@@ -125,7 +160,11 @@ export default class WaveManager {
             if (this.enemiesSpawned < this.enemiesToSpawn) {
                 this.spawnTimer -= delta;
                 if (this.spawnTimer <= 0) {
-                    this.spawnEnemy();
+                    if (!this.ddosSwarmSpawned && this.ddosBotsToSpawn > 0 && this.enemiesSpawned >= Math.floor(this.enemiesToSpawn / 3)) {
+                        this.spawnDdosSwarm();
+                    } else {
+                        this.spawnEnemy();
+                    }
                     this.spawnTimer = CONFIG.TIMING.ENEMY_SPAWN_INTERVAL_MS;
                 }
             }
@@ -149,6 +188,7 @@ export default class WaveManager {
 
     grantSiliconReward(amount: number): void {
         if (amount <= 0) return;
+        amount = Math.max(1, Math.round(amount * this.getDifficulty().REWARD_MULTIPLIER));
         const buildingManager = (this.scene as any).buildingManager as BuildingManager;
         let remaining = amount;
 
@@ -164,6 +204,17 @@ export default class WaveManager {
         if (uiManager && remaining < amount) {
             uiManager.logMessage(`System: Recovered ${amount - remaining} Silicon from enemy residue.`);
         }
+    }
+
+    tryGrantDdosSwarmReward(): void {
+        if (this.ddosRewardGranted || this.ddosBotsToSpawn <= 0) return;
+        const activeDdos = Array.from(this.enemies.values()).some(enemy => enemy.active && enemy.type === 'DDOS_BOT');
+        if (activeDdos) return;
+
+        this.ddosRewardGranted = true;
+        this.grantSiliconReward(5);
+        const uiManager = (this.scene as any).uiManager;
+        if (uiManager) uiManager.logMessage('System: DDoS swarm scrubbed. Silicon bounty recovered.');
     }
 
     getEnemiesInRange(x: number, y: number, range: number): BaseEnemy[] {

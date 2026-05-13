@@ -111,6 +111,7 @@ export default class SaveManager {
                 gameSpeed: this.scene.gameSpeed,
                 showPowerGrid: this.scene.showPowerGrid,
                 showDefenseRange: this.scene.showDefenseRange,
+                difficulty: this.scene.difficultyId,
                 masterVolume: audioSettings.masterVolume,
                 muted: audioSettings.muted,
                 tutorialCompleted: this.scene.tutorialManager?.isCompleted?.() ?? false,
@@ -220,6 +221,8 @@ export default class SaveManager {
 
             // Load Wave
             this.scene.waveManager.currentWave = data.wave.currentWave;
+            this.scene.difficultyId = data.settings?.difficulty || this.scene.difficultyId || 'NORMAL';
+            this.scene.waveManager.setDifficulty(this.scene.difficultyId);
             this.scene.waveManager.waveTimer = data.wave.waveTimer;
             this.scene.waveManager.enemiesSpawned = data.wave.enemiesSpawned;
             this.scene.waveManager.enemiesToSpawn = data.wave.enemiesToSpawn;

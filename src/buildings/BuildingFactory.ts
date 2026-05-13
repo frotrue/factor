@@ -14,6 +14,8 @@ import NeuralTrainer from './NeuralTrainer';
 import AccessPoint from './AccessPoint';
 import Conveyor, { FastLink } from './Conveyor';
 import DataDownloader from './DataDownloader';
+import Recycler from './Recycler';
+import DataCache from './DataCache';
 import { BuildingOptions } from '../types';
 
 type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
@@ -33,9 +35,11 @@ const REGISTRY: Record<string, BuildingClass> = {
     SOLAR_PANEL: SolarPanel,
     NEURAL_TRAINER: NeuralTrainer,
     WEIGHT_TRAINER: WeightTrainer,
+    RECYCLER: Recycler,
     ACCESS_POINT: AccessPoint,
     CONVEYOR: Conveyor,
-    FAST_LINK: FastLink
+    FAST_LINK: FastLink,
+    DATA_CACHE: DataCache
 };
 
 export function createBuilding(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}): BaseBuilding | null {

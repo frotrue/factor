@@ -86,6 +86,16 @@ export const CONFIG: GameConfig = {
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 10 }]
         },
+        RECYCLER: {
+            ID: 'RECYCLER',
+            NAME: 'Recycler',
+            COLOR: 0x78716c,
+            DESCRIPTION: 'Converts any two data items into one Silicon.',
+            POWER: { CONSUMPTION: 8, PRODUCTION: 0 },
+            UNLOCK_REQUIRED: 'TECH_RECYCLING',
+            CATEGORY: 'PRODUCTION',
+            COST: [{ resource: 'SILICON', amount: 8 }]
+        },
         POWER_NODE: {
             ID: 'POWER_NODE',
             NAME: '전력 송신탑 (Power Node)',
@@ -114,6 +124,16 @@ export const CONFIG: GameConfig = {
             MAX_BUFFER: 50,
             POWER: { CONSUMPTION: 2, PRODUCTION: 0 },
             CATEGORY: 'LOGISTICS'
+        },
+        DATA_CACHE: {
+            ID: 'DATA_CACHE',
+            NAME: 'Data Cache',
+            COLOR: 0x38bdf8,
+            DESCRIPTION: 'Stores up to 20 data items as a cable-friendly buffer.',
+            MAX_BUFFER: 20,
+            POWER: { CONSUMPTION: 3, PRODUCTION: 0 },
+            CATEGORY: 'LOGISTICS',
+            COST: [{ resource: 'SILICON', amount: 6 }]
         },
         UNLOADER: {
             ID: 'UNLOADER',
@@ -272,6 +292,11 @@ export const CONFIG: GameConfig = {
             INPUTS: [{ type: 'TRAINED_MODEL', amount: 1 }, { type: 'ENERGY', amount: 1 }],
             OUTPUT: 'INFERENCE_UNIT',
             TIME: 5
+        },
+        RECYCLING: {
+            INPUTS: [{ type: 'ANY_DATA', amount: 2 }],
+            OUTPUT: 'SILICON',
+            TIME: 4
         }
     },
 
@@ -371,10 +396,27 @@ export const CONFIG: GameConfig = {
             DAMAGE: 100,
             RADIUS: 16,
             REWARD_SILICON: 20
+        },
+        DDOS_BOT: {
+            ID: 'DDOS_BOT',
+            NAME: 'DDoS Packet',
+            COLOR: 0x00ff88,
+            BASE_HP: 15,
+            SPEED: 55,
+            DAMAGE: 4,
+            RADIUS: 5,
+            REWARD_SILICON: 0
         }
     },
 
     RESEARCH: {
+        TECH_RECYCLING: {
+            ID: 'TECH_RECYCLING',
+            NAME: 'Recycling Loop',
+            COST: 80,
+            DESCRIPTION: 'Unlocks the Recycler, which converts excess data items back into Silicon.',
+            UNLOCKS: { BUILDINGS: ['RECYCLER'] }
+        },
         TECH_EFFICIENT_MINING: {
             ID: 'TECH_EFFICIENT_MINING',
             NAME: '효율적 채굴',
@@ -469,6 +511,41 @@ export const CONFIG: GameConfig = {
             DESCRIPTION: '최종 방어 타워의 탄약이 되는 추론 유닛 생산 레시피를 해금합니다.',
             REQUIREMENTS: ['TECH_ADVANCED_PROCESSING'],
             UNLOCKS: { RECIPES: ['INFERENCE_UNIT_PRODUCTION'] }
+        }
+    },
+
+    DIFFICULTY: {
+        EASY: {
+            ID: 'EASY',
+            NAME: 'Easy',
+            ENEMY_HP_MULTIPLIER: 0.7,
+            ENEMY_SPAWN_MULTIPLIER: 0.8,
+            REWARD_MULTIPLIER: 1.2,
+            WAVE_COOLDOWN_MS: 25000
+        },
+        NORMAL: {
+            ID: 'NORMAL',
+            NAME: 'Normal',
+            ENEMY_HP_MULTIPLIER: 1,
+            ENEMY_SPAWN_MULTIPLIER: 1,
+            REWARD_MULTIPLIER: 1,
+            WAVE_COOLDOWN_MS: 20000
+        },
+        HARD: {
+            ID: 'HARD',
+            NAME: 'Hard',
+            ENEMY_HP_MULTIPLIER: 1.5,
+            ENEMY_SPAWN_MULTIPLIER: 1.3,
+            REWARD_MULTIPLIER: 0.8,
+            WAVE_COOLDOWN_MS: 15000
+        },
+        NIGHTMARE: {
+            ID: 'NIGHTMARE',
+            NAME: 'Nightmare',
+            ENEMY_HP_MULTIPLIER: 2,
+            ENEMY_SPAWN_MULTIPLIER: 1.5,
+            REWARD_MULTIPLIER: 0.6,
+            WAVE_COOLDOWN_MS: 12000
         }
     }
 };

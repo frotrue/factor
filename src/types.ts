@@ -110,6 +110,16 @@ export interface GameConfig {
     RESOURCE_PATCHES: Record<string, number>;
     ENEMIES: Record<string, EnemyConfig>;
     RESEARCH: Record<string, ResearchNode>;
+    DIFFICULTY: Record<string, DifficultyConfig>;
+}
+
+export interface DifficultyConfig {
+    ID: string;
+    NAME: string;
+    ENEMY_HP_MULTIPLIER: number;
+    ENEMY_SPAWN_MULTIPLIER: number;
+    REWARD_MULTIPLIER: number;
+    WAVE_COOLDOWN_MS: number;
 }
 
 export interface ResearchEffects {
@@ -143,7 +153,7 @@ export type BuildingType =
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
-    | 'CONVEYOR' | 'FAST_LINK';
+    | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE';
 
 // ── 케이블 연결 ──
 export interface CableConnection {
@@ -292,6 +302,7 @@ export interface SaveData {
         gameSpeed: number;
         showPowerGrid: boolean;
         showDefenseRange: boolean;
+        difficulty?: string;
         masterVolume: number;
         muted?: boolean;
         tutorialCompleted?: boolean;

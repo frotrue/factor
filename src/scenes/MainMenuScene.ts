@@ -1,13 +1,18 @@
 import Phaser from 'phaser';
+import { CONFIG } from '../config';
 
 export default class MainMenuScene extends Phaser.Scene {
+    selectedDifficulty: string;
+
     constructor() {
         super('MainMenuScene');
+        this.selectedDifficulty = 'NORMAL';
     }
 
     create(): void {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+        const isCompact = width < 600 || height < 520;
 
         const graphics = this.add.graphics();
         graphics.lineStyle(1, 0x00f3ff, 0.2);
@@ -41,25 +46,66 @@ export default class MainMenuScene extends Phaser.Scene {
             });
         }
 
-        this.add.text(width / 2, height / 2 - 100, 'NEURAL FACTORY', {
+        const title = this.add.text(width / 2, height / 2 - (isCompact ? 132 : 100), 'NEURAL FACTORY', {
             fontFamily: 'Share Tech Mono',
-            fontSize: '64px',
+            fontSize: isCompact ? '40px' : '64px',
             color: '#00f3ff'
         }).setOrigin(0.5);
+        if (title.width > width - 32) {
+            title.setScale((width - 32) / title.width);
+        }
 
-        this.add.text(width / 2, height / 2 - 40, 'v1.0 - The Initial Weight', {
+        this.add.text(width / 2, height / 2 - (isCompact ? 86 : 40), 'v1.0 - The Initial Weight', {
             fontFamily: 'Share Tech Mono',
-            fontSize: '18px',
+            fontSize: isCompact ? '14px' : '18px',
             color: '#a855f7'
         }).setOrigin(0.5);
 
-        const startBtn = this.add.text(width / 2, height / 2 + 80, '> INITIALIZE SYSTEM <', {
+        const difficultyLabel = this.add.text(width / 2, height / 2 + (isCompact ? -38 : 18), 'DIFFICULTY', {
             fontFamily: 'Share Tech Mono',
-            fontSize: '28px',
+            fontSize: '14px',
+            color: '#94a3b8'
+        }).setOrigin(0.5);
+
+        const difficultyButtons = new Map<string, Phaser.GameObjects.Text>();
+        const difficultyIds = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
+        difficultyIds.forEach((id, index) => {
+            const difficulty = CONFIG.DIFFICULTY[id];
+            const col = isCompact ? index % 2 : index;
+            const row = isCompact ? Math.floor(index / 2) : 0;
+            const x = isCompact ? width / 2 - 76 + col * 152 : width / 2 - 210 + index * 140;
+            const y = isCompact ? height / 2 - 4 + row * 46 : height / 2 + 48;
+            const btn = this.add.text(x, y, difficulty.NAME.toUpperCase(), {
+                fontFamily: 'Share Tech Mono',
+                fontSize: isCompact ? '15px' : '18px',
+                color: id === this.selectedDifficulty ? '#fde047' : '#ffffff',
+                backgroundColor: id === this.selectedDifficulty ? 'rgba(253, 224, 71, 0.18)' : 'rgba(0, 243, 255, 0.08)',
+                padding: { x: isCompact ? 10 : 12, y: 8 }
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+            btn.on('pointerdown', () => {
+                this.selectedDifficulty = id;
+                difficultyButtons.forEach((otherBtn, otherId) => {
+                    const active = otherId === id;
+                    otherBtn.setColor(active ? '#fde047' : '#ffffff');
+                    otherBtn.setBackgroundColor(active ? 'rgba(253, 224, 71, 0.18)' : 'rgba(0, 243, 255, 0.08)');
+                });
+            });
+            btn.on('pointerover', () => btn.setColor('#fde047'));
+            btn.on('pointerout', () => btn.setColor(id === this.selectedDifficulty ? '#fde047' : '#ffffff'));
+            difficultyButtons.set(id, btn);
+        });
+
+        const startBtn = this.add.text(width / 2, height / 2 + (isCompact ? 112 : 120), '> INITIALIZE SYSTEM <', {
+            fontFamily: 'Share Tech Mono',
+            fontSize: isCompact ? '20px' : '28px',
             color: '#ffffff',
             backgroundColor: 'rgba(0, 243, 255, 0.1)',
             padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        if (startBtn.width > width - 32) {
+            startBtn.setScale((width - 32) / startBtn.width);
+        }
 
         startBtn.on('pointerover', () => {
             startBtn.setColor('#fde047');
@@ -80,7 +126,7 @@ export default class MainMenuScene extends Phaser.Scene {
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('MainScene');
+                this.scene.start('MainScene', { difficulty: this.selectedDifficulty });
             });
         });
     }

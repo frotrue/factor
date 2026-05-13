@@ -6,11 +6,13 @@ export default class CameraController {
     camera: Phaser.Cameras.Scene2D.Camera;
     moveSpeed: number;
     keys: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key };
+    lastPinchDistance: number | null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.camera = scene.cameras.main;
         this.moveSpeed = 10;
+        this.lastPinchDistance = null;
 
         this.keys = scene.input.keyboard!.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -23,7 +25,8 @@ export default class CameraController {
     }
 
     setup(): void {
-        this.camera.setZoom(CONFIG.CAMERA.DEFAULT_ZOOM);
+        const isMobile = Boolean((this.scene as any).isMobileLayout);
+        this.camera.setZoom(isMobile ? 1 : CONFIG.CAMERA.DEFAULT_ZOOM);
 
         this.scene.input.on('wheel', (pointer: Phaser.Input.Pointer, _gameObjects: any, _deltaX: number, deltaY: number) => {
             const cam = this.camera;
@@ -57,14 +60,51 @@ export default class CameraController {
         });
 
         this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.middleButtonDown()) {
+            if (this.handlePinchZoom()) return;
+
+            const isMobileLayout = Boolean((this.scene as any).isMobileLayout);
+            const secondPointerActive = Boolean(this.scene.input.pointer2?.isDown);
+            const shouldPan = pointer.middleButtonDown() || (isMobileLayout && pointer.isDown && !secondPointerActive);
+            if (shouldPan) {
                 this.camera.scrollX -= (pointer.x - pointer.prevPosition.x) / this.camera.zoom;
                 this.camera.scrollY -= (pointer.y - pointer.prevPosition.y) / this.camera.zoom;
             }
         });
+
+        this.scene.input.on('pointerup', () => {
+            this.lastPinchDistance = null;
+        });
+    }
+
+    handlePinchZoom(): boolean {
+        if (!Boolean((this.scene as any).isMobileLayout)) return false;
+
+        const pointer1 = this.scene.input.pointer1;
+        const pointer2 = this.scene.input.pointer2;
+        if (!pointer1?.isDown || !pointer2?.isDown) {
+            this.lastPinchDistance = null;
+            return false;
+        }
+
+        const distance = Phaser.Math.Distance.Between(pointer1.x, pointer1.y, pointer2.x, pointer2.y);
+        if (!this.lastPinchDistance) {
+            this.lastPinchDistance = distance;
+            return true;
+        }
+
+        const oldZoom = this.camera.zoom;
+        const zoomDelta = (distance - this.lastPinchDistance) * 0.006;
+        const newZoom = Phaser.Math.Clamp(oldZoom + zoomDelta, 0.45, CONFIG.CAMERA.MAX_ZOOM);
+        if (newZoom !== oldZoom) {
+            this.camera.setZoom(newZoom);
+        }
+        this.lastPinchDistance = distance;
+        return true;
     }
 
     update(): void {
+        if (Boolean((this.scene as any).isMobileLayout)) return;
+
         const zoom = this.camera.zoom;
         const speed = this.moveSpeed / zoom;
 

@@ -119,14 +119,26 @@ export default class BaseBuilding {
             case 'PROCESSOR':
             case 'WEIGHT_TRAINER':
             case 'NEURAL_TRAINER':
+            case 'RECYCLER':
                 for (let i = 0; i < 3; i++) {
                     this.graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
                 }
+                if (this.type === 'RECYCLER') {
+                    this.graphics.lineStyle(2, 0xffffff, 0.6);
+                    this.graphics.strokeCircle(cx, cy, 9);
+                    this.graphics.lineBetween(cx + 5, cy - 7, cx + 10, cy - 2);
+                    this.graphics.lineBetween(cx + 5, cy - 7, cx + 1, cy - 1);
+                }
                 break;
             case 'STORAGE':
+            case 'DATA_CACHE':
                 this.graphics.lineStyle(1, 0xffffff, 0.28);
                 this.graphics.lineBetween(left + width / 2, top + 5, left + width / 2, top + height - 5);
                 this.graphics.lineBetween(left + 5, top + height / 2, left + width - 5, top + height / 2);
+                if (this.type === 'DATA_CACHE') {
+                    this.graphics.fillStyle(0x00ffff, 0.35);
+                    this.graphics.fillCircle(cx, cy, 5);
+                }
                 break;
             case 'POWER_NODE':
             case 'POWER_PLANT':
