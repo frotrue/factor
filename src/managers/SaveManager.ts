@@ -105,6 +105,7 @@ export default class SaveManager {
                 confidenceScore: coreBuilding ? coreBuilding.confidenceScore : 0
             },
             buildings,
+            defenseModelStates: this.scene.defenseModelStates,
             items,
             cables,
             settings: {
@@ -178,6 +179,26 @@ export default class SaveManager {
                 this.scene.researchManager.loadUnlockedResearch(data.research);
             } else {
                 this.scene.researchManager.loadUnlockedResearch([]);
+            }
+
+            this.scene.initializeDefenseModelStates();
+            if (data.defenseModelStates) {
+                Object.entries(data.defenseModelStates).forEach(([type, state]) => {
+                    this.scene.defenseModelStates[type] = {
+                        modelConfidence: Math.max(0, Math.min(100, state.modelConfidence ?? 35)),
+                        modelVersion: Math.max(1, state.modelVersion ?? 1),
+                        inferenceCharge: Math.max(0, state.inferenceCharge ?? 0)
+                    };
+                });
+            } else {
+                data.buildings.forEach(b => {
+                    if (!CONFIG.BUILDINGS[b.type]?.DEFENSE || !b.customState) return;
+                    this.scene.defenseModelStates[b.type] = {
+                        modelConfidence: Math.max(0, Math.min(100, b.customState.modelConfidence ?? 35)),
+                        modelVersion: Math.max(1, b.customState.modelVersion ?? 1),
+                        inferenceCharge: Math.max(0, b.customState.inferenceCharge ?? 0)
+                    };
+                });
             }
 
             // Load Buildings

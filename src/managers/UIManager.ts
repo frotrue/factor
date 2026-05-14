@@ -3,6 +3,7 @@ import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import { CoreDataEvent, PowerUpdateData } from '../types';
 import type MainScene from '../scenes/MainScene';
+import ModelTrainingLab from '../buildings/ModelTrainingLab';
 
 export default class UIManager {
     scene: Phaser.Scene;
@@ -26,6 +27,7 @@ export default class UIManager {
     mobileBuildSummary: HTMLElement | null;
     mobileCableMenu: HTMLElement | null;
     mobileActionStatus: string | null;
+    activeTrainingLab: ModelTrainingLab | null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -51,6 +53,7 @@ export default class UIManager {
         this.mobileBuildSummary = null;
         this.mobileCableMenu = null;
         this.mobileActionStatus = null;
+        this.activeTrainingLab = null;
 
         // Note: createBuildingButtons is now called by MainScene after ResearchManager is initialized
         this.setupEvents();
@@ -121,6 +124,17 @@ export default class UIManager {
         this.setupSettingsUI();
         this.setupResearchUI();
         this.setupMobileUI();
+        this.setupTrainingLabUI();
+    }
+
+    guardDomPointer(element: HTMLElement | null): void {
+        if (!element || element.dataset.pointerGuarded === 'true') return;
+        element.dataset.pointerGuarded = 'true';
+        ['pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(eventName => {
+            element.addEventListener(eventName, event => {
+                event.stopPropagation();
+            }, { passive: false });
+        });
     }
 
     setupMobileUI(): void {
@@ -130,6 +144,7 @@ export default class UIManager {
             this.mobileActionBar.id = 'mobile-action-bar';
             document.body.appendChild(this.mobileActionBar);
         }
+        this.guardDomPointer(this.mobileActionBar);
 
         this.mobileCableMenu = document.getElementById('mobile-cable-menu');
         if (!this.mobileCableMenu) {
@@ -138,6 +153,7 @@ export default class UIManager {
             this.mobileCableMenu.className = 'glass-panel';
             this.mobileActionBar.appendChild(this.mobileCableMenu);
         }
+        this.guardDomPointer(this.mobileCableMenu);
 
         const actions = [
             { id: 'rotate', label: 'Rotate', handler: () => (this.scene as MainScene).rotateCursor() },
@@ -176,6 +192,7 @@ export default class UIManager {
             this.mobileInfoSheet.className = 'glass-panel';
             document.body.appendChild(this.mobileInfoSheet);
         }
+        this.guardDomPointer(this.mobileInfoSheet);
 
         this.mobileBuildSummary = document.getElementById('mobile-build-summary');
         if (!this.mobileBuildSummary) {
@@ -184,6 +201,7 @@ export default class UIManager {
             this.mobileBuildSummary.className = 'glass-panel';
             document.body.appendChild(this.mobileBuildSummary);
         }
+        this.guardDomPointer(this.mobileBuildSummary);
 
         this.renderMobileCableMenu();
         this.updateMobileControls();
@@ -231,10 +249,16 @@ export default class UIManager {
         const modalResearch = document.getElementById('research-modal');
         const btnClose = document.getElementById('btn-close-research');
         const container = document.getElementById('research-tree-container');
+        this.guardDomPointer(btnResearch);
+        this.guardDomPointer(modalResearch);
+        this.guardDomPointer(btnClose);
+        this.guardDomPointer(container);
 
         if (btnResearch && modalResearch) {
             btnResearch.style.display = 'flex'; // Show research button
-            btnResearch.onclick = () => {
+            btnResearch.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 modalResearch.style.display = 'flex';
                 EventBus.emit('RESEARCH_OPENED');
                 this.renderResearchTree();
@@ -242,7 +266,9 @@ export default class UIManager {
         }
 
         if (btnClose && modalResearch) {
-            btnClose.onclick = () => {
+            btnClose.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 modalResearch.style.display = 'none';
             };
         }
@@ -285,7 +311,10 @@ export default class UIManager {
             tabBtn.className = 'tab-btn';
             tabBtn.innerText = tab.label;
             tabBtn.classList.toggle('active', this.activeResearchTab === tab.id);
-            tabBtn.onclick = () => {
+            this.guardDomPointer(tabBtn);
+            tabBtn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 this.activeResearchTab = tab.id;
                 this.renderResearchTree();
             };
@@ -365,7 +394,10 @@ export default class UIManager {
             } else if (canUnlock) {
                 actionBtn.innerText = 'Research';
                 actionBtn.style.borderColor = '#fde047';
-                actionBtn.onclick = () => {
+                this.guardDomPointer(actionBtn);
+                actionBtn.onclick = event => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     rm.unlock(node.ID);
                 };
             } else {
@@ -403,26 +435,50 @@ export default class UIManager {
         const btnResetTutorial = document.getElementById('btn-reset-tutorial');
         const mainScene = this.scene as MainScene;
         const audioSettings = mainScene.soundManager?.getSettings?.();
+        [
+            btnSettings,
+            modalSettings,
+            btnClose,
+            btnSave,
+            btnLoad,
+            volumeInput,
+            mutedInput,
+            btnResetTutorial
+        ].forEach(element => this.guardDomPointer(element));
 
         if (volumeInput && audioSettings) volumeInput.value = String(Math.round(audioSettings.masterVolume * 100));
         if (mutedInput && audioSettings) mutedInput.checked = audioSettings.muted;
 
         if (btnSettings && modalSettings) {
-            btnSettings.onclick = () => {
+            btnSettings.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 modalSettings.style.display = 'flex';
             };
         }
 
         if (btnClose && modalSettings) {
-            btnClose.onclick = () => {
+            btnClose.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 modalSettings.style.display = 'none';
             };
         }
 
-        if (btnSave) btnSave.onclick = () => EventBus.emit('SAVE_REQUESTED');
-        if (btnLoad) btnLoad.onclick = () => EventBus.emit('LOAD_REQUESTED');
+        if (btnSave) btnSave.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            EventBus.emit('SAVE_REQUESTED');
+        };
+        if (btnLoad) btnLoad.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            EventBus.emit('LOAD_REQUESTED');
+        };
         if (btnResetTutorial) {
-            btnResetTutorial.onclick = () => {
+            btnResetTutorial.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 EventBus.emit('TUTORIAL_RESET');
                 this.logMessage('Tutorial: 안내를 다시 시작합니다.');
             };
@@ -439,7 +495,10 @@ export default class UIManager {
         [1, 2, 3].forEach(speed => {
             const btn = document.getElementById(`btn-speed-${speed}`);
             if (btn) {
-                btn.onclick = () => {
+                this.guardDomPointer(btn);
+                btn.onclick = event => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     const mainScene = this.scene as MainScene;
                     if (mainScene.setGameSpeed) {
                         mainScene.setGameSpeed(speed);
@@ -453,6 +512,8 @@ export default class UIManager {
         const overlay = document.getElementById('ui-overlay');
         const tabsContainer = document.getElementById('ui-tabs');
         if (!overlay || !tabsContainer) return;
+        this.guardDomPointer(overlay);
+        this.guardDomPointer(tabsContainer);
 
         // Render Tabs
         tabsContainer.innerHTML = '';
@@ -468,7 +529,10 @@ export default class UIManager {
             const tabBtn = document.createElement('button');
             tabBtn.className = `tab-btn ${this.activeCategory === cat.id ? 'active' : ''}`;
             tabBtn.innerText = cat.name;
-            tabBtn.onclick = () => {
+            this.guardDomPointer(tabBtn);
+            tabBtn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
                 this.activeCategory = cat.id;
                 this.createBuildingButtons();
             };
@@ -538,7 +602,12 @@ export default class UIManager {
                 btn.appendChild(costLabel);
             }
 
-            btn.onclick = () => this.selectBuilding(key);
+            this.guardDomPointer(btn);
+            btn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.selectBuilding(key);
+            };
             overlay.appendChild(btn);
             this.buttons[key] = btn;
             index++;
@@ -554,7 +623,12 @@ export default class UIManager {
             <div class="icon" style="background:#444; border:1px solid #ff4444"></div>
             철거
         `;
-        removeBtn.onclick = () => this.selectBuilding('REMOVE');
+        this.guardDomPointer(removeBtn);
+        removeBtn.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.selectBuilding('REMOVE');
+        };
         overlay.appendChild(removeBtn);
         this.buttons['REMOVE'] = removeBtn;
 
@@ -606,6 +680,125 @@ export default class UIManager {
             const btn = document.getElementById(`mobile-action-${id}`);
             if (btn) btn.classList.toggle('active', active);
         });
+    }
+
+    setupTrainingLabUI(): void {
+        let modal = document.getElementById('training-lab-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'training-lab-modal';
+            modal.className = 'glass-panel';
+            modal.innerHTML = `
+                <div class="training-lab-header">
+                    <div>
+                        <div class="training-lab-kicker">Target Selection</div>
+                        <h2>Model Training Lab</h2>
+                    </div>
+                    <button id="btn-close-training-lab" class="training-lab-close" type="button">Close</button>
+                </div>
+                <div id="training-lab-buffer" class="training-lab-buffer"></div>
+                <div id="training-target-list" class="training-target-list"></div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        this.guardDomPointer(modal);
+        const closeBtn = document.getElementById('btn-close-training-lab');
+        this.guardDomPointer(closeBtn);
+        if (closeBtn) {
+            closeBtn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                modal!.style.display = 'none';
+            };
+        }
+    }
+
+    openTrainingLab(lab: ModelTrainingLab): void {
+        this.activeTrainingLab = lab;
+        const modal = document.getElementById('training-lab-modal');
+        if (!modal) return;
+        modal.style.display = 'block';
+        this.renderTrainingLab();
+    }
+
+    renderTrainingLab(): void {
+        const lab = this.activeTrainingLab;
+        const buffer = document.getElementById('training-lab-buffer');
+        const list = document.getElementById('training-target-list');
+        if (!lab || !buffer || !list) return;
+
+        const counts = lab.inputBuffer.reduce<Record<string, number>>((acc, item) => {
+            acc[item] = (acc[item] || 0) + 1;
+            return acc;
+        }, {});
+        const bufferText = ['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']
+            .map(type => `${CONFIG.ITEMS[type]?.NAME || type}: ${counts[type] || 0}`)
+            .join(' | ');
+        buffer.textContent = bufferText;
+
+        list.innerHTML = '';
+        const mainScene = this.scene as MainScene;
+        const targetTypes = ['CLASSIFIER', 'FILTER', 'FIREWALL'];
+        targetTypes.forEach(type => {
+            const displayName = CONFIG.BUILDINGS[type]?.NAME.split('(')[0].trim() || type;
+            const state = mainScene.getDefenseModelState(type);
+            let onlineCount = 0;
+            mainScene.buildingManager.forEach(building => {
+                if (building.type === type) onlineCount++;
+            });
+            const selected = lab.targetType === type;
+            const row = document.createElement('button');
+            row.className = `training-target-row ${selected ? 'active' : ''}`;
+            row.type = 'button';
+            row.innerHTML = `
+                <span class="training-target-title">${displayName}</span>
+                <span>Confidence ${Math.round(state.modelConfidence)}%</span>
+                <span>v${state.modelVersion}</span>
+                <span>${onlineCount} online</span>
+            `;
+            this.guardDomPointer(row);
+            row.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                lab.setTarget(type);
+                this.logMessage(`Training: target set to all ${displayName} models.`);
+                this.renderTrainingLab();
+            };
+            list.appendChild(row);
+        });
+
+        const actions = document.createElement('div');
+        actions.className = 'training-actions';
+        const trainBtn = document.createElement('button');
+        trainBtn.className = 'training-action-btn';
+        trainBtn.type = 'button';
+        trainBtn.textContent = 'Train Once';
+        this.guardDomPointer(trainBtn);
+        trainBtn.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!lab.trainOnce()) {
+                this.logMessage('Training: select a target and provide training input first.', true);
+            }
+            this.renderTrainingLab();
+        };
+
+        const autoBtn = document.createElement('button');
+        autoBtn.className = `training-action-btn ${lab.autoTrain ? 'active' : ''}`;
+        autoBtn.type = 'button';
+        autoBtn.textContent = lab.autoTrain ? 'Auto Train: ON' : 'Auto Train: OFF';
+        this.guardDomPointer(autoBtn);
+        autoBtn.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            lab.autoTrain = !lab.autoTrain;
+            this.renderTrainingLab();
+        };
+
+        actions.appendChild(trainBtn);
+        actions.appendChild(autoBtn);
+        list.appendChild(actions);
     }
 
     updateMobileBuildSummary(): void {

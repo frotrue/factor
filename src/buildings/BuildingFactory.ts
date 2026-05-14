@@ -16,6 +16,7 @@ import Conveyor, { FastLink } from './Conveyor';
 import DataDownloader from './DataDownloader';
 import Recycler from './Recycler';
 import DataCache from './DataCache';
+import ModelTrainingLab from './ModelTrainingLab';
 import { BuildingOptions } from '../types';
 
 type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
@@ -35,6 +36,7 @@ const REGISTRY: Record<string, BuildingClass> = {
     SOLAR_PANEL: SolarPanel,
     NEURAL_TRAINER: NeuralTrainer,
     WEIGHT_TRAINER: WeightTrainer,
+    MODEL_TRAINING_LAB: ModelTrainingLab,
     RECYCLER: Recycler,
     ACCESS_POINT: AccessPoint,
     CONVEYOR: Conveyor,

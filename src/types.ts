@@ -153,6 +153,7 @@ export type BuildingType =
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
+    | 'MODEL_TRAINING_LAB'
     | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE';
 
 // ── 케이블 연결 ──
@@ -234,6 +235,12 @@ export interface DefenseTowerConfig {
     IS_AOE?: boolean;
 }
 
+export interface DefenseModelState {
+    modelConfidence: number;
+    modelVersion: number;
+    inferenceCharge: number;
+}
+
 // ── 적 (Enemy) ──
 export interface EnemyConfig {
     ID: string;
@@ -296,6 +303,7 @@ export interface SaveData {
         confidenceScore: number;
     };
     buildings: SavedBuilding[];
+    defenseModelStates?: Record<string, DefenseModelState>;
     items: SavedItem[];
     cables?: SavedCable[];
     settings: {

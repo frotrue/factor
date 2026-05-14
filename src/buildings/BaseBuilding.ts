@@ -119,9 +119,17 @@ export default class BaseBuilding {
             case 'PROCESSOR':
             case 'WEIGHT_TRAINER':
             case 'NEURAL_TRAINER':
+            case 'MODEL_TRAINING_LAB':
             case 'RECYCLER':
                 for (let i = 0; i < 3; i++) {
                     this.graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
+                }
+                if (this.type === 'MODEL_TRAINING_LAB') {
+                    this.graphics.lineStyle(2, 0x0f172a, 0.65);
+                    this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.18);
+                    this.graphics.lineStyle(1, 0xffffff, 0.45);
+                    this.graphics.lineBetween(cx - 12, cy, cx + 12, cy);
+                    this.graphics.lineBetween(cx, cy - 12, cx, cy + 12);
                 }
                 if (this.type === 'RECYCLER') {
                     this.graphics.lineStyle(2, 0xffffff, 0.6);

@@ -23,7 +23,7 @@ export default class TutorialManager {
             { id: 'RESOURCE', title: '자원 노드 확인', detail: '회색 Silicon 또는 노란 Energy 자원 노드를 확인하세요.', completed: false },
             { id: 'PRODUCTION', title: '데이터 생산 시작', detail: 'Data Downloader를 배치해 Signal Packet 다운로드를 시작하세요.', completed: false },
             { id: 'CONNECTION', title: '물류 연결', detail: '케이블을 연결하거나 컨베이어를 배치해 흐름을 만드세요.', completed: false },
-            { id: 'DEFENSE', title: '방어 준비', detail: 'Classifier, Filter, Firewall 중 하나를 배치하세요.', completed: false },
+            { id: 'DEFENSE', title: '방어 준비', detail: 'Classifier, Anomaly Detection Engine, Firewall 중 하나를 배치하세요.', completed: false },
             { id: 'WAVE', title: '첫 웨이브 대응', detail: '웨이브가 시작되면 코어를 지키세요.', completed: false },
             { id: 'RESEARCH', title: '연구 확인', detail: 'Research 창을 열거나 첫 연구를 해금하세요.', completed: false }
         ];

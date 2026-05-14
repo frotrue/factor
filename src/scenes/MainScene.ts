@@ -18,6 +18,8 @@ import EffectsManager from '../managers/EffectsManager';
 import SoundManager from '../managers/SoundManager';
 import TutorialManager from '../managers/TutorialManager';
 import EventBus from '../managers/EventBus';
+import { DefenseModelState } from '../types';
+import DefenseTower from '../buildings/DefenseTower';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -36,6 +38,7 @@ export default class MainScene extends Phaser.Scene {
     effectsManager!: EffectsManager;
     soundManager!: SoundManager;
     tutorialManager!: TutorialManager;
+    defenseModelStates: Record<string, DefenseModelState> = {};
 
     cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
     cableStartKey: string | null = null;
@@ -59,6 +62,7 @@ export default class MainScene extends Phaser.Scene {
     mobileTouchStart: { x: number; y: number; time: number } | null = null;
     mobileMultiTouchActive: boolean = false;
     mobileLayoutHandler: (() => void) | null = null;
+    mobilePointerStartedOverUI: boolean = false;
 
     constructor() {
         super('MainScene');
@@ -73,6 +77,7 @@ export default class MainScene extends Phaser.Scene {
         this.setupMobileLayoutDetection();
 
         this.mapManager = new MapManager();
+        this.initializeDefenseModelStates();
         this.itemManager = new ItemManager(this);
         this.buildingManager = new BuildingManager(this);
         this.powerManager = new PowerManager(this, this.buildingManager);
@@ -168,6 +173,53 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
+    initializeDefenseModelStates(): void {
+        ['CLASSIFIER', 'FILTER', 'FIREWALL'].forEach(type => {
+            this.defenseModelStates[type] = {
+                modelConfidence: 35,
+                modelVersion: 1,
+                inferenceCharge: 0
+            };
+        });
+    }
+
+    getDefenseModelState(type: string): DefenseModelState {
+        if (!this.defenseModelStates[type]) {
+            this.defenseModelStates[type] = {
+                modelConfidence: 35,
+                modelVersion: 1,
+                inferenceCharge: 0
+            };
+        }
+        return this.defenseModelStates[type];
+    }
+
+    trainDefenseModelType(type: string, itemType: string): boolean {
+        const state = this.getDefenseModelState(type);
+        if (itemType === 'WEIGHT_UPDATE') {
+            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 5, 0, 100);
+        } else if (itemType === 'TRAINED_MODEL') {
+            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 25, 0, 100);
+            state.modelVersion++;
+        } else if (itemType === 'INFERENCE_UNIT') {
+            state.inferenceCharge += 10;
+        } else {
+            return false;
+        }
+
+        this.syncDefenseModelType(type);
+        return true;
+    }
+
+    syncDefenseModelType(type: string): void {
+        const state = this.getDefenseModelState(type);
+        this.buildingManager?.forEach(building => {
+            if (building instanceof DefenseTower && building.type === type) {
+                building.applyModelState(state);
+            }
+        });
+    }
+
     setupMobileLayoutDetection(): void {
         this.mobileMediaQuery = window.matchMedia('(pointer: coarse), (max-width: 768px), (max-height: 480px)');
         this.mobileLayoutHandler = () => this.updateMobileLayoutState();
@@ -193,6 +245,11 @@ export default class MainScene extends Phaser.Scene {
         this.input.mouse!.disableContextMenu();
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             if (this.isMobileLayout && pointer.leftButtonDown()) {
+                this.mobilePointerStartedOverUI = this.isPointerOverDomUI(pointer);
+                if (this.mobilePointerStartedOverUI) {
+                    this.mobileTouchStart = null;
+                    return;
+                }
                 if (this.input.pointer2?.isDown) {
                     this.mobileMultiTouchActive = true;
                 }
@@ -211,9 +268,11 @@ export default class MainScene extends Phaser.Scene {
 
             const moved = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.mobileTouchStart.x, this.mobileTouchStart.y);
             const duration = this.time.now - this.mobileTouchStart.time;
+            const endedOverUI = this.isPointerOverDomUI(pointer);
             this.mobileTouchStart = null;
 
-            if (this.mobileMultiTouchActive || this.input.pointer2?.isDown) {
+            if (this.mobilePointerStartedOverUI || endedOverUI || this.mobileMultiTouchActive || this.input.pointer2?.isDown) {
+                this.mobilePointerStartedOverUI = false;
                 if (!this.input.pointer1?.isDown && !this.input.pointer2?.isDown) {
                     this.mobileMultiTouchActive = false;
                 }
@@ -234,6 +293,33 @@ export default class MainScene extends Phaser.Scene {
         this.input.keyboard!.on('keydown-R', () => this.rotateCursor());
         this.input.keyboard!.on('keydown-F2', () => this.togglePowerGrid());
         this.input.keyboard!.on('keydown-F1', () => this.toggleDefenseRange());
+    }
+
+    isPointerOverDomUI(pointer: Phaser.Input.Pointer): boolean {
+        const element = document.elementFromPoint(pointer.x, pointer.y);
+        if (!element) return false;
+
+        return Boolean(element.closest([
+            '#bottom-ui-container',
+            '#ui-overlay',
+            '#ui-tabs',
+            '#top-actions',
+            '#settings-modal',
+            '#research-modal',
+            '#training-lab-modal',
+            '#game-over-screen',
+            '#mobile-action-bar',
+            '#mobile-cable-menu',
+            '#mobile-build-summary',
+            '#mobile-info-sheet',
+            '#activity-log',
+            '#tutorial-panel',
+            '.build-btn',
+            '.tab-btn',
+            '.mobile-action-btn',
+            '.mobile-cable-option',
+            '.training-target-row'
+        ].join(',')));
     }
 
     setupCursor(): void {
@@ -456,7 +542,12 @@ export default class MainScene extends Phaser.Scene {
         const key = `${snappedX},${snappedY}`;
         const mode = this.uiManager.getSelectedBuildingType();
 
-        if (!this.isMobileLayout && pointer.leftButtonDown() && (mode === 'CONVEYOR' || mode === 'FAST_LINK')) {
+        if (
+            !this.isMobileLayout &&
+            pointer.leftButtonDown() &&
+            !this.isPointerOverDomUI(pointer) &&
+            (mode === 'CONVEYOR' || mode === 'FAST_LINK')
+        ) {
             const bConfig = CONFIG.BUILDINGS[mode];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;
@@ -534,6 +625,18 @@ export default class MainScene extends Phaser.Scene {
                 content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
                 content += `\n[Left Click to Cycle Recipe]`;
             }
+            if (existingBuilding.type === 'MODEL_TRAINING_LAB') {
+                const targetType = (existingBuilding as any).targetType;
+                const targetState = targetType ? this.getDefenseModelState(targetType) : null;
+                const targetName = targetType ? CONFIG.BUILDINGS[targetType]?.NAME.split('(')[0].trim() || targetType : 'None';
+                content += `\nTraining Target: ${targetName}`;
+                if (targetState) {
+                    content += `\nShared Confidence: ${Math.round(targetState.modelConfidence)}%`;
+                    content += `\nShared Version: v${targetState.modelVersion}`;
+                }
+                content += `\nAuto Train: ${(existingBuilding as any).autoTrain ? 'ON' : 'OFF'}`;
+                content += `\n[Left Click to Select Model Type]`;
+            }
             if (bConfig.DEFENSE) {
                 const damageMultiplier = this.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
                 const rangeBonus = this.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
@@ -541,11 +644,15 @@ export default class MainScene extends Phaser.Scene {
                 const effectiveDamage = bConfig.DEFENSE.DAMAGE * damageMultiplier;
                 const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
                 const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
-                content += `\nDamage: ${effectiveDamage.toFixed(1)}`;
+                const modelConfidence = (existingBuilding as any).modelConfidence ?? 35;
+                const confidenceFactor = 0.6 + modelConfidence / 125;
+                content += `\nModel Confidence: ${Math.round(modelConfidence)}%`;
+                content += `\nModel Version: v${(existingBuilding as any).modelVersion ?? 1}`;
+                content += `\nInference Charge: ${(existingBuilding as any).inferenceCharge ?? 0}`;
+                content += `\nDamage: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
                 content += `\nRange: ${effectiveRange} tiles`;
                 content += `\nFire Rate: ${effectiveFireRate} ticks`;
-                content += `\nAmmo: ${bConfig.DEFENSE.AMMO_TYPE || 'None'} x${bConfig.DEFENSE.AMMO_CONSUMPTION}`;
-                content += `\nBuffer: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
+                content += `\nAttack Input: Model Confidence`;
             }
 
             this.uiManager.showTooltip(pointer.x, pointer.y, bConfig.NAME, content);
@@ -562,6 +669,7 @@ export default class MainScene extends Phaser.Scene {
 
     handlePointerAction(pointer: Phaser.Input.Pointer, button: 'primary' | 'secondary'): void {
         if (pointer.middleButtonDown()) return;
+        if (this.isPointerOverDomUI(pointer)) return;
 
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
@@ -640,6 +748,10 @@ export default class MainScene extends Phaser.Scene {
                 this.uiManager.setMobileActionStatus(null);
 
                 const existingBuilding = this.buildingManager.get(key);
+                if (existingBuilding && existingBuilding.type === 'MODEL_TRAINING_LAB') {
+                    this.uiManager.openTrainingLab(existingBuilding as any);
+                    return;
+                }
                 if (existingBuilding && existingBuilding.type === 'NEURAL_TRAINER') {
                     (existingBuilding as any).cycleRecipe();
                     return;

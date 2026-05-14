@@ -274,6 +274,115 @@ body {
     display: none;
 }
 
+#training-lab-modal {
+    position: absolute;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+    z-index: 1600;
+    display: none;
+    width: min(380px, calc(100vw - 48px));
+    max-height: min(620px, calc(100vh - 48px));
+    padding: 16px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.training-lab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.training-lab-header h2 {
+    margin: 2px 0 0;
+    color: #ffffff;
+    font-size: 18px;
+}
+
+.training-lab-kicker {
+    color: var(--neon-cyan);
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.training-lab-close,
+.training-action-btn {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    background: rgba(20, 20, 25, 0.9);
+    color: #dbeafe;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 8px 10px;
+}
+
+.training-action-btn.active,
+.training-lab-close:hover,
+.training-action-btn:hover {
+    border-color: var(--neon-cyan);
+    color: #ffffff;
+}
+
+.training-lab-buffer {
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.35;
+    margin-bottom: 12px;
+}
+
+.training-target-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.training-target-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) auto auto auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(20, 20, 25, 0.86);
+    color: #cbd5e1;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 8px;
+    text-align: left;
+}
+
+.training-target-row.active {
+    border-color: #14b8a6;
+    background: rgba(20, 184, 166, 0.14);
+    color: #ffffff;
+}
+
+.training-target-title {
+    color: #99f6e4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.training-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.training-empty {
+    color: #fca5a5;
+    font-size: 12px;
+    padding: 10px 0;
+}
+
 #mobile-action-bar {
     position: absolute;
     left: 10px;
@@ -504,6 +613,7 @@ body {
 
     body.mobile-layout #settings-modal,
     body.mobile-layout #research-modal,
+    body.mobile-layout #training-lab-modal,
     body.mobile-layout #game-over-screen {
         width: calc(100vw - 24px) !important;
         min-width: 0 !important;
@@ -519,6 +629,13 @@ body {
         left: 12px !important;
         transform: none !important;
         height: calc(100vh - 24px);
+    }
+
+    body.mobile-layout #training-lab-modal {
+        top: 12px !important;
+        left: 12px !important;
+        right: auto !important;
+        transform: none !important;
     }
 
     body.mobile-layout #tooltip {

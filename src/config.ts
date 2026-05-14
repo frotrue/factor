@@ -150,18 +150,18 @@ export const CONFIG: GameConfig = {
             DESCRIPTION: '단일 대상에게 높은 피해를 주는 방어 타워입니다.',
             POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
             MAX_BUFFER: 20,
-            DEFENSE: { DAMAGE: 25, RANGE: 4, FIRE_RATE: 2, AMMO_TYPE: 'WEIGHT_UPDATE', AMMO_CONSUMPTION: 1 },
+            DEFENSE: { DAMAGE: 25, RANGE: 4, FIRE_RATE: 2, AMMO_CONSUMPTION: 0 },
             CATEGORY: 'DEFENSE',
             COST: [{ resource: 'SILICON', amount: 10 }]
         },
         FILTER: {
             ID: 'FILTER',
-            NAME: '노이즈 필터 (Filter)',
+            NAME: '이상 탐지 엔진 (Anomaly Detection Engine)',
             COLOR: 0x8b5cf6,
-            DESCRIPTION: '범위 내의 적들에게 지속적인 광역 피해를 줍니다.',
+            DESCRIPTION: 'Weight Update로 학습된 이상 탐지 모델이 주변의 비정상 트래픽 패턴을 분석하고 범위 피해를 적용합니다.',
             POWER: { CONSUMPTION: 15, PRODUCTION: 0 },
             MAX_BUFFER: 30,
-            DEFENSE: { DAMAGE: 10, RANGE: 3, FIRE_RATE: 4, AMMO_TYPE: 'WEIGHT_UPDATE', AMMO_CONSUMPTION: 2, IS_AOE: true },
+            DEFENSE: { DAMAGE: 10, RANGE: 3, FIRE_RATE: 4, AMMO_CONSUMPTION: 0, IS_AOE: true },
             CATEGORY: 'DEFENSE',
             COST: [{ resource: 'SILICON', amount: 15 }]
         },
@@ -229,6 +229,18 @@ export const CONFIG: GameConfig = {
             UNLOCK_REQUIRED: 'TECH_ADVANCED_PROCESSING',
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 30 }]
+        },
+        MODEL_TRAINING_LAB: {
+            ID: 'MODEL_TRAINING_LAB',
+            NAME: 'Model Training Lab',
+            COLOR: 0x14b8a6,
+            DESCRIPTION: 'Consumes Weight Updates and trained AI artifacts to improve a selected defense model.',
+            WIDTH: 2,
+            HEIGHT: 2,
+            MAX_BUFFER: 12,
+            POWER: { CONSUMPTION: 18, PRODUCTION: 0 },
+            CATEGORY: 'PRODUCTION',
+            COST: [{ resource: 'SILICON', amount: 24 }]
         },
         ACCESS_POINT: {
             ID: 'ACCESS_POINT',
@@ -438,7 +450,7 @@ export const CONFIG: GameConfig = {
             ID: 'TECH_PRECISION_INFERENCE',
             NAME: '정밀 추론',
             COST: 140,
-            DESCRIPTION: '분류 모델과 필터의 피해량을 30% 증가시킵니다.',
+            DESCRIPTION: '분류 모델과 이상 탐지 엔진의 피해량을 30% 증가시킵니다.',
             UNLOCKS: {},
             EFFECTS: { TOWER_DAMAGE_MULTIPLIER: 1.3 }
         },
@@ -502,7 +514,7 @@ export const CONFIG: GameConfig = {
             NAME: '고급 모델 학습',
             COST: 200,
             DESCRIPTION: '고급 아이템을 생산할 수 있는 신경망 학습기와 모델 학습 레시피를 해금합니다.',
-            UNLOCKS: { BUILDINGS: ['NEURAL_TRAINER'], RECIPES: ['MODEL_TRAINING'] }
+            UNLOCKS: { BUILDINGS: ['NEURAL_TRAINER', 'MODEL_TRAINING_LAB'], RECIPES: ['MODEL_TRAINING'] }
         },
         TECH_AUTOMATED_DEFENSE: {
             ID: 'TECH_AUTOMATED_DEFENSE',

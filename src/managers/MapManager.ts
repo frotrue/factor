@@ -26,6 +26,14 @@ export default class MapManager {
             const size = Math.floor(Math.random() * 4) + 2;
             this.addPatch(startX, startY, size, type);
         }
+
+        this.addGuaranteedSpawnPatches();
+    }
+
+    addGuaranteedSpawnPatches(): void {
+        // Keep both early-game resources inside the 10x10 spawn area without covering the core tile.
+        this.addPatch(-5, -3, 3, 'SILICON');
+        this.addPatch(2, 2, 3, 'ENERGY');
     }
 
     addPatch(startX: number, startY: number, size: number, type: string): void {
