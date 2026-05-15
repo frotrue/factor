@@ -80,12 +80,12 @@ export default class TutorialManager {
             if (type === 'DATA_DOWNLOADER') this.completeStep('PRODUCTION');
             if (type === 'CONVEYOR' || type === 'FAST_LINK') this.completeStep('CONNECTION');
             if (['CLASSIFIER', 'FILTER', 'FIREWALL'].includes(type)) this.completeStep('DEFENSE');
-        });
-        EventBus.on('CABLE_CONNECTED', () => this.completeStep('CONNECTION'));
-        EventBus.on('WAVE_STARTED', () => this.completeStep('WAVE'));
-        EventBus.on('RESEARCH_OPENED', () => this.completeStep('RESEARCH'));
-        EventBus.on('RESEARCH_UNLOCKED', () => this.completeStep('RESEARCH'));
-        EventBus.on('TUTORIAL_RESET', () => this.reset());
+        }, 'TutorialManager');
+        EventBus.on('CABLE_CONNECTED', () => this.completeStep('CONNECTION'), 'TutorialManager');
+        EventBus.on('WAVE_STARTED', () => this.completeStep('WAVE'), 'TutorialManager');
+        EventBus.on('RESEARCH_OPENED', () => this.completeStep('RESEARCH'), 'TutorialManager');
+        EventBus.on('RESEARCH_UNLOCKED', () => this.completeStep('RESEARCH'), 'TutorialManager');
+        EventBus.on('TUTORIAL_RESET', () => this.reset(), 'TutorialManager');
     }
 
     private ensurePanel(): HTMLElement {

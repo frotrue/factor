@@ -23,32 +23,46 @@ export interface EventMap {
 }
 
 type EventCallback<T = any> = (data: T) => void;
+type TaggedCallback<T = any> = { owner: string; fn: EventCallback<T> };
 
 class EventBusClass {
-    private events: { [K in keyof EventMap]?: EventCallback<EventMap[K]>[] } = {};
+    private events: { [K in keyof EventMap]?: TaggedCallback<EventMap[K]>[] } = {};
 
-    on<K extends keyof EventMap>(event: K, callback: EventCallback<EventMap[K]>): void {
+    on<K extends keyof EventMap>(event: K, callback: EventCallback<EventMap[K]>, owner = 'global'): void {
         if (!this.events[event]) {
             this.events[event] = [] as any;
         }
-        (this.events[event] as any).push(callback);
+        (this.events[event] as any).push({ owner, fn: callback });
     }
 
-    off<K extends keyof EventMap>(event: K, callback?: EventCallback<EventMap[K]>): void {
-        if (!callback) {
+    off<K extends keyof EventMap>(event: K, callbackOrOwner?: EventCallback<EventMap[K]> | string): void {
+        if (!callbackOrOwner) {
             delete this.events[event];
             return;
         }
-        const callbacks = this.events[event];
-        if (callbacks) {
-            this.events[event] = callbacks.filter((cb: any) => cb !== callback) as any;
+        const listeners = this.events[event];
+        if (!listeners) return;
+
+        if (typeof callbackOrOwner === 'string') {
+            this.events[event] = listeners.filter((listener: any) => listener.owner !== callbackOrOwner) as any;
+        } else {
+            this.events[event] = listeners.filter((listener: any) => listener.fn !== callbackOrOwner) as any;
         }
     }
 
+    offAll(owner: string): void {
+        (Object.keys(this.events) as (keyof EventMap)[]).forEach(event => {
+            const listeners = this.events[event];
+            if (listeners) {
+                this.events[event] = listeners.filter((listener: any) => listener.owner !== owner) as any;
+            }
+        });
+    }
+
     emit<K extends keyof EventMap>(event: K, data?: EventMap[K]): void {
-        const callbacks = this.events[event];
-        if (callbacks) {
-            callbacks.forEach(cb => cb(data as EventMap[K]));
+        const listeners = this.events[event];
+        if (listeners) {
+            listeners.forEach(listener => listener.fn(data as EventMap[K]));
         }
     }
 }

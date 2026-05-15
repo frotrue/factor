@@ -22,6 +22,11 @@ export default class Miner extends BaseBuilding {
             this.graphics.fillTriangle(-6, -10, 8, 0, -6, 10);
             this.graphics.lineStyle(2, 0xe2e8f0, 0.9);
             this.graphics.strokeCircle(0, 0, 9);
+        } else if (this.resourceType === 'ENERGY') {
+            this.graphics.lineStyle(2, 0xfde047, 1);
+            this.graphics.strokeCircle(0, 0, 9);
+            this.graphics.fillStyle(0xfde047, 0.9);
+            this.graphics.fillCircle(0, 0, 4);
         } else {
             this.graphics.lineStyle(2, 0xffffff, 0.5);
             this.graphics.strokeCircle(0, 0, 8);
@@ -44,6 +49,8 @@ export default class Miner extends BaseBuilding {
             const resourceType = mapManager.getResourceAt(this.x, this.y);
             if (resourceType === 'SILICON') {
                 this.outputBuffer.push('SILICON');
+            } else if (resourceType === 'ENERGY') {
+                this.outputBuffer.push('ENERGY');
             }
         }
     }

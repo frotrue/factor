@@ -142,6 +142,7 @@ export interface ResearchNode {
     UNLOCKS: {
         BUILDINGS?: string[];
         RECIPES?: string[];
+        CABLES?: string[];
     };
     REQUIREMENTS?: string[]; // IDs of required research nodes
     EFFECTS?: ResearchEffects;
@@ -162,9 +163,15 @@ export interface CableConnection {
     fromKey: string;
     toKey: string;
     bandwidth: number;
-    queue: string[];
+    queue: CablePacket[];
     cableType: 'BASIC' | 'FIBER';
     flowDirection?: 'FORWARD' | 'BACKWARD';
+}
+
+export interface CablePacket {
+    itemType: string;
+    flowDirection: 'FORWARD' | 'BACKWARD';
+    ticksRemaining: number;
 }
 
 // ── 아이템 런타임 객체 ──
@@ -282,7 +289,7 @@ export interface SavedCable {
     fromKey: string;
     toKey: string;
     cableType: string;
-    queue: string[];
+    queue: Array<string | CablePacket>;
 }
 
 export interface SaveData {

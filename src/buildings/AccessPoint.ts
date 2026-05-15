@@ -6,30 +6,44 @@ import { BuildingOptions } from '../types';
 export default class AccessPoint extends BaseBuilding {
     range: number;
     bandwidth: number;
+    statusText: Phaser.GameObjects.Text;
+    wave: Phaser.GameObjects.Arc;
+    waveTween: Phaser.Tweens.Tween;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'ACCESS_POINT', { ...config, color: CONFIG.ACCESS_POINT.COLOR });
-        
+
         this.range = CONFIG.ACCESS_POINT.RANGE;
         this.bandwidth = CONFIG.ACCESS_POINT.BANDWIDTH;
 
-        // 시각 효과: 와이파이 모양 애니메이션
         const radius = this.range * CONFIG.GRID_SIZE;
-        const wave = scene.add.circle(0, 0, 10, 0xffffff, 0.5);
-        this.container.add(wave);
+        this.wave = scene.add.circle(0, 0, 10, 0xffffff, 0.5);
+        this.container.add(this.wave);
 
-        scene.tweens.add({
-            targets: wave,
-            radius: radius,
+        this.waveTween = scene.tweens.add({
+            targets: this.wave,
+            radius,
             alpha: 0,
             duration: 2000,
             repeat: -1,
             ease: 'Sine.easeOut'
         });
+
+        this.statusText = scene.add.text(0, 0, 'AP', {
+            fontSize: '9px',
+            color: '#ffffff',
+            fontFamily: 'Share Tech Mono'
+        }).setOrigin(0.5);
+        this.container.add(this.statusText);
     }
 
-    // AP 자체는 아이템을 받지 않고, CableManager가 범위 내 노드간 데이터를 중계합니다.
     canAcceptItem(_type: string): boolean {
         return false;
+    }
+
+    destroy(): void {
+        this.waveTween?.stop();
+        this.scene.tweens.killTweensOf(this.wave);
+        super.destroy();
     }
 }

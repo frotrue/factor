@@ -5,6 +5,8 @@ import Core from '../buildings/Core';
 import { CONFIG } from '../config';
 import BaseEnemy from '../enemies/BaseEnemy';
 
+const CURRENT_SAVE_VERSION = '1.1.0';
+
 export default class SaveManager {
     scene: MainScene;
     autoSaveInterval: number;
@@ -18,8 +20,8 @@ export default class SaveManager {
         EventBus.on('SAVE_REQUESTED', () => {
             this.saveGame();
             this.scene.uiManager.logMessage('System: State saved successfully.');
-        });
-        EventBus.on('LOAD_REQUESTED', () => this.loadGame());
+        }, 'SaveManager');
+        EventBus.on('LOAD_REQUESTED', () => this.loadGame(), 'SaveManager');
     }
 
     update(delta: number): void {
@@ -88,7 +90,7 @@ export default class SaveManager {
         const audioSettings = this.scene.soundManager?.getSettings?.() ?? { masterVolume: 0.6, muted: false };
         
         const saveData: SaveData = {
-            version: '1.0.0',
+            version: CURRENT_SAVE_VERSION,
             timestamp: Date.now(),
             wave: {
                 currentWave: this.scene.waveManager.currentWave,
@@ -130,7 +132,7 @@ export default class SaveManager {
         if (!saveString) return false;
 
         try {
-            const data: SaveData = JSON.parse(saveString);
+            const data: SaveData = this.migrate(JSON.parse(saveString));
 
             // Clean up existing state
             this.scene.buildingManager.forEach(b => b.destroy());
@@ -232,7 +234,9 @@ export default class SaveManager {
                         const id = this.scene.cableManager.makeCableId(c.fromKey, c.toKey);
                         const cable = this.scene.cableManager.cables.get(id);
                         if (cable) {
-                            cable.queue = c.queue || [];
+                            cable.queue = (c.queue || []).map(packet =>
+                                this.scene.cableManager.normalizeQueuedPacket(packet, cable.flowDirection || 'FORWARD')
+                            );
                         }
                     }
                 });
@@ -294,5 +298,53 @@ export default class SaveManager {
             this.scene.uiManager.logMessage('System: Save file corrupted.', true);
             return false;
         }
+    }
+
+    migrate(rawData: any): SaveData {
+        const data = rawData || {};
+        const version = data.version || '1.0.0';
+
+        if (version === '1.0.0') {
+            data.version = CURRENT_SAVE_VERSION;
+        }
+
+        data.timestamp = data.timestamp || Date.now();
+        data.wave = {
+            currentWave: data.wave?.currentWave ?? 0,
+            waveTimer: data.wave?.waveTimer ?? CONFIG.TIMING.INITIAL_WAVE_DELAY_MS,
+            enemiesSpawned: data.wave?.enemiesSpawned ?? 0,
+            enemiesToSpawn: data.wave?.enemiesToSpawn ?? 0,
+            enemies: data.wave?.enemies ?? [],
+            hpMultiplier: data.wave?.hpMultiplier ?? 1,
+            enemyIdCounter: data.wave?.enemyIdCounter ?? 0
+        };
+        data.core = {
+            hp: data.core?.hp ?? CONFIG.BUILDINGS.CORE.HP ?? 1000,
+            totalDataReceived: data.core?.totalDataReceived ?? 0,
+            confidenceScore: data.core?.confidenceScore ?? 0
+        };
+        data.buildings = (data.buildings || []).map((building: any) => ({
+            ...building,
+            rotation: building.rotation ?? 0,
+            inputBuffer: building.inputBuffer || [],
+            outputBuffer: building.outputBuffer || []
+        }));
+        data.defenseModelStates = data.defenseModelStates || {};
+        data.items = data.items || [];
+        data.cables = data.cables || [];
+        data.settings = {
+            gameSpeed: data.settings?.gameSpeed ?? 1,
+            showPowerGrid: data.settings?.showPowerGrid ?? false,
+            showDefenseRange: data.settings?.showDefenseRange ?? false,
+            difficulty: data.settings?.difficulty ?? this.scene.difficultyId ?? 'NORMAL',
+            masterVolume: data.settings?.masterVolume ?? 0.6,
+            muted: data.settings?.muted ?? false,
+            tutorialCompleted: data.settings?.tutorialCompleted ?? false,
+            tutorialStep: data.settings?.tutorialStep ?? 0
+        };
+        data.resourceMap = data.resourceMap || [];
+        data.research = data.research || [];
+
+        return data as SaveData;
     }
 }

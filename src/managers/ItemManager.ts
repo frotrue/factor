@@ -17,7 +17,7 @@ export default class ItemManager {
             const [x, y] = key.split(',').map(Number);
             const orphanItems = this.items.filter(item => item.gridX === x && item.gridY === y);
             orphanItems.forEach(item => this.despawn(item));
-        });
+        }, 'ItemManager');
     }
 
     spawn(gridX: number, gridY: number, type: string = 'RAW_DATA'): GameItem {

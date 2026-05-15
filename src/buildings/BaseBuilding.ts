@@ -109,6 +109,12 @@ export default class BaseBuilding {
                 this.graphics.strokeCircle(cx, cy - 10, 5);
                 this.graphics.strokeCircle(cx, cy - 10, 11);
                 break;
+            case 'ACCESS_POINT':
+                this.graphics.lineStyle(2, 0xffffff, 0.55);
+                this.graphics.strokeCircle(cx, cy, 5);
+                this.graphics.strokeCircle(cx, cy, 11);
+                this.graphics.lineBetween(cx, cy + 5, cx, top + height - 7);
+                break;
             case 'CONVEYOR':
             case 'FAST_LINK':
                 this.graphics.lineStyle(2, 0xffffff, 0.55);

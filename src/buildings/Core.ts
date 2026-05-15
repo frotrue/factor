@@ -30,7 +30,7 @@ export default class Core extends BaseBuilding {
                 this.hp = 0;
                 EventBus.emit('GAME_OVER');
             }
-        });
+        }, 'Core');
     }
 
     drawHpBar(): void {

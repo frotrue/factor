@@ -52,7 +52,7 @@ export default class WaveManager {
             if (this.waveActive && this.enemies.size === 0 && this.enemiesSpawned >= this.enemiesToSpawn) {
                 this.endWave();
             }
-        });
+        }, 'WaveManager');
 
         EventBus.on('GAME_OVER', () => {
             this.waveActive = false;
@@ -60,7 +60,7 @@ export default class WaveManager {
                 if (e.active) e.die();
             });
             this.enemies.clear();
-        });
+        }, 'WaveManager');
     }
 
     setDifficulty(difficultyId: string): void {

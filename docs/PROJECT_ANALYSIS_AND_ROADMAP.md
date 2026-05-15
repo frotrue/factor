@@ -1,337 +1,249 @@
-# The Neural Factory - 프로젝트 분석 및 실행 로드맵
-> 최종 갱신: 2026-05-13  
-> 기준 상태: v1.0 "The Initial Weight" + Phase 3/4 일부 선행 구현  
-> 목적: 현재 프로젝트의 병목, 해결해야 할 문제, 다음 개발 우선순위를 정리한다.
+# The Neural Factory — 프로젝트 분석 및 로드맵
+
+> 최종 갱신: 2026-05-15
+> 기준: 소스 코드 직접 확인 (config.ts, buildings/, managers/, enemies/ 전체)
 
 ---
 
 ## 1. 결론 요약
 
-현재 프로젝트는 **공장 자동화 + 타워 디펜스**의 핵심 루프가 이미 작동하는 상태다. 최근에는 `Recycler`, `Data Cache`, `DDoS Packet`, 난이도 선택, 모바일 터치 UI까지 들어가면서 기능 폭이 빠르게 넓어졌다.
+현재 프로젝트는 **공장 자동화 + 타워 디펜스**의 핵심 루프가 실제로 동작하는 상태다. ModelTrainingLab, Recycler, Data Cache, DDoS Packet, 난이도 선택, 모바일 터치 UI까지 구현되어 있다.
 
-다만 지금 단계에서 가장 큰 위험은 **콘텐츠 부족**보다 **플레이 경험의 마찰**이다.
+가장 긴급한 문제 두 가지는 다음과 같다.
 
-따라서 다음 개발은 아래 순서를 권장한다.
+1. **Fiber 케이블 해금 불가** — `TECH_FIBER_OPTIC` 연구 노드가 CONFIG에 없음
+2. **INFERENCE_UNIT 생산 불가** — ENERGY 아이템 생산 경로 미정의
 
-1. **편의성/조작성 안정화**
-   - 모바일 터치, 케이블 연결, 건설/삭제, 정보 표시를 다듬는다.
-2. **밸런스와 진행 곡선 정리**
-   - 난이도, 웨이브, 자원 보상, 연구 비용을 실제 플레이 기준으로 조정한다.
-3. **저장/로드 및 회귀 안정성 강화**
-   - 신규 건물/적/난이도/모바일 상태가 저장과 로드에서 깨지지 않는지 검증한다.
-4. **전략 콘텐츠 2차 추가**
-   - EMP Tower, Honeypot, Ransomware, 이벤트 웨이브처럼 플레이 선택지를 늘리는 콘텐츠를 추가한다.
-5. **장기 시스템**
-   - 통계, 업적, 테스트, 코드 구조 분리를 진행한다.
-
-한 줄로 말하면, **지금은 신규 콘텐츠 러시보다 "잘 플레이되는 게임"으로 굳히는 단계**다.
+이 두 가지가 해결되어야 후반 루프가 완결된다. 그 다음은 밸런스 검증과 QoL 개선 순서다.
 
 ### 현재 활성 문서
 
 | 문서 | 역할 |
 |------|------|
 | `docs/CONCEPT.md` | 게임 콘셉트와 방향성 |
-| `docs/PROJECT_ANALYSIS_AND_ROADMAP.md` | 최신 총괄 분석 및 로드맵 |
-| `docs/PLAYABILITY_HARDENING_PLAN.md` | 다음 구현 대상: 모바일/데스크톱 플레이 QA 및 조작성 안정화 |
+| `docs/PROJECT_ANALYSIS_AND_ROADMAP.md` | 총괄 분석 및 로드맵 (이 문서) |
+| `docs/PLAYABILITY_HARDENING_PLAN.md` | 모바일/데스크톱 QA 및 조작성 안정화 계획 |
+| `docs/QA_CHECKLIST.md` | 수동 QA 체크리스트 |
+| `docs/AP_SESSION_RELAY_REWORK_PLAN.md` | AP 무선 중계 재설계 계획 |
 
-완료되었거나 최신 로드맵에 흡수된 과거 계획서는 `docs/archive/`에 보존한다.
+완료되었거나 흡수된 과거 문서는 `docs/archive/`에 보존한다.
 
 ---
 
-## 2. 현재 구현 상태
+## 2. 실제 구현 상태 (코드 기반)
 
-| 영역 | 상태 | 평가 |
+### 2.1 핵심 게임 루프
+
+```
+[자원 채굴]
+  Miner (SILICON patch) → outputBuffer → Conveyor → Storage
+
+[데이터 생산]
+  DataDownloader → RAW_DATA → 케이블 → Processor
+  → LABELED_DATA → WeightTrainer → WEIGHT_UPDATE → 케이블 → Core
+    → Confidence Score +10 → 연구 해금
+
+[고급 생산] (TECH_ADVANCED_PROCESSING 해금 후)
+  WEIGHT_UPDATE + SILICON → NeuralTrainer → TRAINED_MODEL
+  → ModelTrainingLab → 타워 modelConfidence 상승
+  ❌ INFERENCE_UNIT: ENERGY 아이템 생산 경로 없음 → 현재 불가
+
+[방어]
+  Classifier/Filter/Firewall — 탄약 없이 발사 (AMMO_CONSUMPTION: 0)
+  데미지 = base × researchMultiplier × (0.6 + confidence/125)
+  명중률 = 0.45 + confidence/180 (최대 95%)
+  → ModelTrainingLab으로 confidence를 올리면 성능 향상
+```
+
+### 2.2 구현 현황표
+
+| 영역 | 상태 | 비고 |
 |------|------|------|
-| 핵심 생산 루프 | 구현됨 | RAW_DATA → LABELED_DATA → WEIGHT_UPDATE → TRAINED_MODEL → INFERENCE_UNIT 흐름이 존재 |
-| 물류 | 구현됨 | 케이블, 광섬유, AP, 컨베이어가 존재하나 케이블/컨베이어 역할 구분이 더 명확해질 필요 있음 |
-| 전력 | 구현됨 | 전력망, 범위, 정전, 네트워크 분리까지 구현되어 있음 |
-| 방어 | 구현됨 | Classifier, Filter, Firewall, 보스/오라/감염까지 존재 |
-| 웨이브 | 구현됨 | 기본 성장 곡선과 보스, DDoS 스웜이 있음 |
-| 연구 | 구현됨 | 연구 해금과 효과 적용 구조가 있음 |
-| 저장/로드 | 구현됨 | localStorage 기반. 신규 기능 증가에 따라 회귀 테스트 필요 |
-| 메인 메뉴 | 구현됨 | 난이도 선택 포함 |
-| 모바일 | 1차 구현됨 | 터치 팬/핀치줌/모바일 액션바/반응형 HUD가 들어감. 실기기 검증 필요 |
-| 신규 콘텐츠 | 일부 구현됨 | Recycler, Data Cache, DDoS, Difficulty가 들어감 |
-| 테스트/품질 | 부족 | 자동 테스트, 린트, 회귀 체크가 아직 없음 |
+| 핵심 생산 루프 | ✅ 동작 | RAW_DATA → WEIGHT_UPDATE 정상 |
+| ModelTrainingLab | ✅ 동작 | 타워별 confidence 관리, Auto Train |
+| 물류 (케이블/AP) | ✅ 동작 | 양방향 자동 감지, AP 무선 중계 |
+| 물류 (컨베이어) | ✅ 동작 | Silicon 전용, 드래그 배치 |
+| Recycler | ✅ 동작 | 5종 데이터 2개 → Silicon 1개 |
+| Data Cache | ✅ 동작 | Storage 서브클래스, 데이터 전용 버퍼 20 |
+| 전력망 | ✅ 동작 | 네트워크 분리, 블랙아웃, 범위 병합 |
+| 방어 타워 | ✅ 동작 | Classifier(Lock-on), Filter(AoE), Firewall(차단) |
+| 적 웨이브 | ✅ 동작 | 5종 적, 보스, DDoS 스웜 |
+| 연구 트리 | ✅ 동작 | 13개 노드, Confidence Score 차감 |
+| 저장/로드 | ✅ 동작 | localStorage, 마이그레이션 없음 |
+| 메인 메뉴/난이도 | ✅ 동작 | Easy/Normal/Hard/Nightmare |
+| 모바일 지원 | ⚠️ 1차 구현 | 터치/핀치/액션바 구현됨, QA 재검증 필요 |
+| **Fiber 해금** | ❌ 막힘 | `TECH_FIBER_OPTIC` 연구 누락 |
+| **INFERENCE_UNIT** | ❌ 막힘 | ENERGY 아이템 생산 경로 없음 |
+| 자동 테스트 | ❌ 없음 | `npm run build`만 가능 |
+| 저장 마이그레이션 | ❌ 없음 | version 필드 있으나 분기 없음 |
 
 ---
 
-## 3. 해결해야 할 핵심 문제
+## 3. 핵심 문제 분석
 
-### 3.1 플레이 조작성 마찰
+### 3.1 Fiber 해금 불가 (Critical)
 
-현재 가장 먼저 다뤄야 할 문제다.
+**원인:** `config.ts:272`
+```typescript
+FIBER: { UNLOCK_REQUIRED: 'TECH_FIBER_OPTIC' }
+```
+`CONFIG.RESEARCH`에 `TECH_FIBER_OPTIC` 노드가 없다.
 
-- 모바일에서 실제 손가락 조작이 의도대로 느껴지는지 검증이 필요하다.
-- 케이블 연결, 삭제, 회전, 배치 취소가 데스크톱과 모바일에서 서로 다른 입력 모델을 가지므로 회귀 위험이 있다.
-- 툴팁/정보 시트/빌드 요약이 작은 화면에서 충분히 읽히는지 확인해야 한다.
-- 메인 메뉴와 게임 HUD가 다양한 화면비에서 겹치지 않는지 검증해야 한다.
+**영향:** 케이블 업그레이드 진행감 단절, 물류 병목 해소 수단 부재
 
-**권장 방향**
-- 모바일 뷰포트 3종을 기준 테스트 화면으로 고정한다.
-  - `390x844`
-  - `844x390`
-  - `768x1024`
-- 건설, 삭제, 케이블 연결, 취소, 회전, 줌/팬을 수동 체크리스트로 먼저 안정화한다.
-- 이후 Playwright 또는 간단한 브라우저 스모크 테스트를 추가한다.
+**해결:** `CONFIG.RESEARCH`에 노드 추가
+```typescript
+TECH_FIBER_OPTIC: {
+    ID: 'TECH_FIBER_OPTIC',
+    NAME: '광섬유 케이블',
+    COST: 150,
+    DESCRIPTION: '광섬유 케이블을 해금합니다. 대역폭 8, 큐 20으로 대용량 데이터 전송이 가능합니다.',
+    REQUIREMENTS: ['TECH_DISTRIBUTED_AP'],
+    UNLOCKS: { CABLES: ['FIBER'] }
+}
+```
 
-### 3.2 밸런스 미검증
+### 3.2 INFERENCE_UNIT 생산 불가 (Critical)
 
-난이도와 신규 적이 추가되었지만, 실제 플레이 체감 기준의 밸런스 검증은 아직 부족하다.
+**원인:** `config.ts:303-307`의 `INFERENCE_UNIT_PRODUCTION` 레시피가 `ENERGY` 아이템을 요구하나, Miner는 SILICON만 생산하고 PowerPlant는 전력만 생산한다.
 
-- Easy/Normal/Hard/Nightmare의 차이가 수치상으로만 존재한다.
-- DDoS 스웜이 Filter를 요구하는 전략적 위협으로 작동하는지 확인이 필요하다.
-- Recycler의 Silicon 회수 효율이 너무 약하거나 강하지 않은지 검증해야 한다.
-- Data Cache가 실제 병목 완화 역할을 하는지 확인해야 한다.
-- 웨이브 8 이후 적 수 증가가 모바일/초보 플레이에서 너무 가혹할 수 있다.
+**해결 방안 (택 1):**
 
-**권장 방향**
-- Normal 기준 20분 플레이를 기준으로 다음 지표를 잡는다.
-  - 웨이브 1~5: 적응 구간
-  - 웨이브 6~10: 방어 구축 구간
-  - 웨이브 11~20: 생산/방어 최적화 구간
-- 각 난이도별 첫 실패 시점, Silicon 잔량, Core HP, 방어 타워 수를 기록한다.
+| 방안 | 내용 | 권장 |
+|------|------|------|
+| A | Miner가 ENERGY 패치 위에서 ENERGY 아이템 생산 | ⭐ 권장 |
+| B | 레시피에서 ENERGY 제거, SILICON만 요구 | 빠르나 테마 약화 |
+| C | Energy Converter 신규 건물 추가 | 작업량 많음 |
 
-### 3.3 정보 가시성 부족
+### 3.3 밸런스 미검증
 
-게임은 점점 복잡해지고 있지만 플레이어에게 “왜 안 되는지” 알려주는 UI는 아직 약하다.
+실제 플레이 데이터 없이 수식만으로 조정됨.
 
-대표적으로 다음 상황을 더 명확히 보여줘야 한다.
+**주요 검증 필요 항목:**
+- Normal 기준 웨이브 1~20 난이도 곡선
+- DDoS 스웜이 Filter 없이 버틸 수 있는지 여부
+- Recycler/Data Cache가 실제로 선택되는 상황인지
+- Hard 난이도가 수치 뻥튀기 이상의 전략적 압박을 주는지
 
-- 전력 부족 때문에 건물이 멈춘 상태
-- 입력/출력 버퍼가 막힌 상태
-- 방어 타워 탄약이 부족한 상태
-- 연구 해금 조건이 부족한 상태
-- 케이블 방향/큐가 막힌 상태
-- 적 웨이브가 어떤 타입으로 구성되어 있는지
+### 3.4 저장/로드 마이그레이션 부재
 
-**권장 방향**
-- 건물 선택 정보 시트를 강화한다.
-- 빨간 경고만 늘리기보다, `Power`, `Input`, `Output`, `Ammo`, `Research`를 짧은 상태 태그로 보여준다.
-- Settings 또는 별도 패널에 간단한 `Diagnostics` 탭을 추가하는 것도 좋다.
+`SaveData.version = '1.0.0'`이지만 로드 시 버전 분기가 없다. 신규 건물/시스템 추가마다 기존 저장 파일 호환성이 깨질 수 있다.
 
-### 3.4 저장/로드 회귀 위험
+### 3.5 코드 비대화
 
-신규 건물, 신규 적, 난이도, 모바일 상태가 들어오면서 저장 데이터의 책임이 커졌다.
+- `UIManager.ts`: ~39KB — HUD/설정/연구/빌드바/모바일/툴팁 전부
+- `MainScene.ts`: ~38KB — 입력/배치/케이블/오버레이/업데이트 전부
 
-현재 위험 요소는 다음과 같다.
-
-- 저장 파일 버전은 아직 단순하다.
-- 신규 적의 특수 상태가 늘어나면 저장 구조가 따라가지 못할 수 있다.
-- 난이도는 저장되지만, 향후 설정/모바일 UI 상태까지 저장할지 기준이 필요하다.
-- 이전 버전 저장 파일과의 호환 정책이 명확하지 않다.
-
-**권장 방향**
-- `SaveData.version`을 기준으로 최소 마이그레이션 함수를 둔다.
-- 저장 대상과 비저장 대상을 문서화한다.
-- 신규 시스템을 추가할 때마다 저장/로드 체크리스트를 적용한다.
-
-### 3.5 코드 구조 비대화
-
-`MainScene`과 `UIManager`의 책임이 커지고 있다.
-
-- `MainScene`은 입력, 카메라 보조, 건설, 케이블, 오버레이, 모바일 상태까지 조율한다.
-- `UIManager`는 HUD, 설정, 연구, 빌드 버튼, 모바일 UI, 툴팁까지 담당한다.
-- `as any` 사용이 늘어 타입 안정성이 낮아지고 있다.
-
-**권장 방향**
-- 당장 대규모 리팩터링은 피한다.
-- 다음 안정화 이후 아래처럼 점진 분리한다.
-  - `InputController`
-  - `MobileUIManager`
-  - `OverlayManager`
-  - `TooltipManager`
-- 이벤트 타입에서 `any`를 줄이고, `MainScene` 참조 타입을 명확히 한다.
+점진적 분리가 필요하나 즉각적인 대규모 리팩터링은 리스크가 크다.
 
 ---
 
-## 4. 다음에 무엇을 할까?
+## 4. 게임 밸런스 수치 (코드 기반)
 
-### 최우선 추천: QoL 안정화 스프린트
+### 4.1 Confidence Score 경제
 
-신규 콘텐츠보다 먼저 추천한다.
+| 아이템 | Core 기여 | 생산 체인 |
+|--------|-----------|----------|
+| WEIGHT_UPDATE | +10 | DataDownloader → Processor(3t) → WeightTrainer(5t) |
+| LABELED_DATA | +2 | DataDownloader → Processor(3t) |
+| RAW_DATA 등 | +0.1 | — |
 
-**목표**
-- “배치하고, 연결하고, 방어하고, 저장/로드하는 기본 플레이”를 끊김 없이 만든다.
+WeightTrainer 1개 기준 분당 약 75 Confidence 생산 (8 ticks/개 × 분당 약 7.5개).
 
-**작업 목록**
-- 모바일 실기기/뷰포트 기준 조작성 점검
-- 하단 빌드바 스크롤, 액션바, 정보 시트 겹침 수정
-- 케이블 연결 UX 개선
-  - 시작점/끝점 상태 표시
-  - 취소 상태 표시
-  - 연결 실패 이유 메시지 개선
-- 건물 상태 정보 강화
-  - 전력 부족
-  - 버퍼 가득 참
-  - 탄약 부족
-  - 생산 중/대기 중
-- 저장/로드 스모크 테스트
-  - 신규 건물
-  - 케이블 큐
-  - 난이도
-  - 웨이브 중 저장
+### 4.2 타워 성능 (탄약 없음)
 
-**완료 기준**
-- 데스크톱과 모바일에서 최소 10분 플레이가 가능하다.
-- 건설/삭제/회전/케이블/오버레이가 키보드 없이 작동한다.
-- 저장 후 새로고침/로드해도 주요 상태가 유지된다.
+| 타워 | 데미지 | Fire Rate | Range | 특징 |
+|------|--------|-----------|-------|------|
+| Classifier | 25 | 2 ticks | 4 | Lock-on, 투사체 |
+| Filter | 10 | 4 ticks | 3 | AoE 범위 스캔 |
+| Firewall | 5 | 1 tick | 1 | HP 500, 적 속도 0 |
 
-### 2순위 추천: 밸런스 패스
+**데미지 공식:** `base × researchMultiplier × (0.6 + confidence/125)`  
+**명중률:** `0.45 + confidence/180` (최대 95%)
 
-**목표**
-- Normal 기준으로 초반 20웨이브가 납득 가능한 난이도 곡선을 갖도록 한다.
+초기 confidence 35 기준: 데미지 88%, 명중률 64%  
+최대 confidence 100 기준: 데미지 140%, 명중률 ~100%
 
-**작업 목록**
-- Easy/Normal/Hard/Nightmare 수치 재조정
-- 웨이브별 적 구성 테이블화
-- DDoS 스웜 출현 빈도 조정
-- Recycler/Data Cache 비용과 효율 조정
-- 적 보상과 방어 타워 비용 조정
+### 4.3 웨이브 스케일링
 
-**완료 기준**
-- 초보자가 Easy에서 웨이브 10까지 도달 가능하다.
-- Normal에서 방어 라인 구축 실패 시 패배 원인이 명확하다.
-- Hard/Nightmare는 수치만 뻥튀기된 느낌이 아니라 자원 압박이 느껴진다.
+| 구간 | 적 수 | HP 배율 |
+|------|-------|---------|
+| Wave 1~5 | 4 + wave | 1.0 |
+| Wave 6~15 | 8 + wave×1.5 | 1.25 + (wave-5)×0.04 |
+| Wave 16+ | 18 + wave×1.8 | 1.8 + (wave-15)×0.12 |
 
-### 3순위 추천: 전략 콘텐츠 2차
+10의 배수 Wave: 보스(OVERFITTED_MODEL) 추가  
+Wave 8+: DDoS 스웜 8~12마리 추가 (전체 처치 시 Silicon +5)
 
-QoL과 밸런스가 안정된 뒤 진행하는 것이 좋다.
+### 4.4 난이도 배율
 
-**추천 콘텐츠 순서**
-1. **EMP Tower**
-   - DDoS/빠른 적 대응 수단으로 명확한 역할이 있다.
-2. **Honeypot**
-   - 방어 배치 전략을 늘린다.
-3. **Ransomware**
-   - 생산 라인 위협을 만든다.
-4. **Event Wave**
-   - 웨이브 진행에 리듬을 준다.
-5. **Achievement/Stats**
-   - 장기 목표와 플레이 기록을 제공한다.
+| 난이도 | 적 HP × | 스폰 × | 보상 × | Cooldown |
+|--------|---------|--------|--------|----------|
+| Easy | 0.7 | 0.8 | 1.2 | 25s |
+| Normal | 1.0 | 1.0 | 1.0 | 20s |
+| Hard | 1.5 | 1.3 | 0.8 | 15s |
+| Nightmare | 2.0 | 1.5 | 0.6 | 12s |
 
-**주의**
-- 지금 바로 Batch Processor, Data Augmenter, Repair Drone, Overcharge Node까지 넣으면 시스템 복잡도가 UI보다 빨리 커질 수 있다.
-
-### 4순위 추천: 자동 테스트와 품질 기반
-
-**목표**
-- 기능 추가 속도가 빨라져도 기본 루프가 깨지지 않게 한다.
-
-**작업 목록**
-- `npm run build`를 기본 검증으로 유지
-- Vitest 도입 검토
-- 순수 로직부터 테스트
-  - 연구 해금 조건
-  - 난이도 배율
-  - 저장 데이터 마이그레이션
-  - 자원 패치 생성
-- GitHub Actions 또는 간단한 CI 추가
+Normal → Hard 간 HP 50% 상승이 급격하다. 검토 필요.
 
 ---
 
-## 5. 권장 개발 로드맵
+## 5. 로드맵
 
-### Phase A: 안정화와 편의성
+### Phase A: Critical 버그 수정 (즉시)
 
-- [ ] 모바일 조작 QA 및 레이아웃 수정
-- [ ] 케이블 연결 상태 UX 개선
-- [ ] 건물 상태 정보 시트 개선
-- [ ] 저장/로드 회귀 체크리스트 작성
-- [ ] 기존 데스크톱 조작 회귀 확인
+- [ ] `TECH_FIBER_OPTIC` 연구 노드 추가 (`config.ts`)
+- [ ] INFERENCE_UNIT 생산 루프 결정 및 구현 (방안 A/B 택일)
 
-### Phase B: 밸런스 패스
+### Phase B: QoL 안정화
 
-- [ ] 웨이브별 적 구성표 작성
-- [ ] 난이도별 목표 플레이 시간 정의
-- [ ] Recycler/Data Cache 비용 조정
-- [ ] DDoS 스폰 빈도와 보상 조정
-- [ ] 연구 비용과 방어 타워 비용 재검토
+- [ ] 모바일 QA 재검증 (390×844, 844×390, 768×1024)
+- [ ] 건물 상태 피드백 강화 (전력부족/버퍼막힘 시각화)
+- [ ] 저장 버전 마이그레이션 도입
+- [ ] Solar Panel RANGE 0 UI 명시 ("독립 전력 전용")
 
-### Phase C: 전략 콘텐츠 확장
+### Phase C: 밸런스 패스
 
-- [ ] EMP Tower 추가
-- [ ] Honeypot 추가
-- [ ] Ransomware 적 추가
-- [ ] 이벤트 웨이브 시스템 추가
-- [ ] 업적 또는 통계 중 하나를 먼저 추가
+- [ ] Normal 기준 Wave 1~20 실플레이 데이터로 조정
+- [ ] Hard 난이도 HP 배율 완화 검토 (1.5 → 1.25)
+- [ ] DDoS 스웜 출현 빈도와 Filter 필요성 검증
+- [ ] Recycler/Data Cache 실제 효용 검증
 
-### Phase D: 구조와 품질
+### Phase D: 전략 콘텐츠 확장
 
-- [ ] `MainScene` 입력 책임을 `InputController`로 분리
-- [ ] 모바일 UI를 `MobileUIManager`로 분리
+- [ ] EMP Tower (DDoS/고속 적 대응)
+- [ ] Honeypot (방어 배치 전략 분기)
+- [ ] AP Session Relay 방식 재설계 (`docs/AP_SESSION_RELAY_REWORK_PLAN.md` 참조)
+- [ ] 이벤트 웨이브 시스템
+- [ ] 게임오버 결과 화면 + 패인 분석
+
+### Phase E: 구조 및 품질
+
+- [ ] `InputController` 분리 (MainScene에서 입력 책임 이동)
+- [ ] `MobileUIManager` 분리
+- [ ] Vitest 단위 테스트 도입 (연구 해금, 난이도 배율, 저장 마이그레이션)
 - [ ] `as any` 사용 축소
-- [ ] Vitest 기반 테스트 추가
-- [ ] 저장 데이터 버전 마이그레이션 도입
 
-### Phase E: 출시형 마감
+### Phase F: 출시형 마감
 
-- [ ] 튜토리얼 문구 정리
+- [ ] PWA 패키징 검토 (Capacitor)
+- [ ] 튜토리얼 텍스트 최신화
 - [ ] 사운드/이펙트 품질 향상
-- [ ] PWA 패키징 검토
-- [ ] README와 조작 가이드 최신화
+- [ ] Itch.io 배포
 
 ---
 
-## 6. 지금 당장 착수하기 좋은 작업 Top 10
+## 6. 기술 부채 요약
 
-| 순위 | 작업 | 이유 |
-|------|------|------|
-| 1 | 모바일 조작 QA 및 겹침 수정 | 방금 추가된 기능이라 회귀 위험이 가장 큼 |
-| 2 | 케이블 연결 UX 개선 | 게임의 핵심 물류 경험에 직접 영향 |
-| 3 | 건물 상태 정보 시트 개선 | 플레이어가 문제 원인을 이해해야 함 |
-| 4 | 저장/로드 회귀 테스트 | 신규 콘텐츠와 난이도 추가로 위험 증가 |
-| 5 | Normal 난이도 20웨이브 밸런스 패스 | 게임의 기준 경험을 고정해야 함 |
-| 6 | DDoS 스웜 체감 조정 | 신규 적이 전략적 의미를 가져야 함 |
-| 7 | Recycler/Data Cache 효율 조정 | 신규 건물이 실제로 쓰이는지 확인 필요 |
-| 8 | EMP Tower 구현 | 현재 DDoS/고속 적 대응과 잘 맞음 |
-| 9 | 이벤트 웨이브 시스템 | 적은 작업으로 진행감 상승 |
-| 10 | StatsManager 초안 | 밸런스 판단에 필요한 데이터를 모을 수 있음 |
-
----
-
-## 7. 신규 콘텐츠 vs 편의성 개선 판단
-
-지금은 **편의성 개선 60%, 밸런스 25%, 신규 콘텐츠 15%** 비율이 적절하다.
-
-이유는 다음과 같다.
-
-- 콘텐츠는 이미 빠르게 늘었다.
-- 모바일과 난이도는 “넣었다”보다 “잘 작동한다”가 중요하다.
-- 정보 표시가 약하면 신규 콘텐츠를 추가해도 플레이어는 복잡하다고 느낀다.
-- 저장/로드와 입력이 안정적이어야 이후 콘텐츠 추가 비용이 낮아진다.
-
-따라서 다음 스프린트 제목은 아래처럼 잡는 것을 추천한다.
-
-> **Sprint 1: Playability Hardening - 모바일, 조작, 정보 표시, 저장 안정화**
-
-이 스프린트가 끝나면 그 다음에 신규 콘텐츠 2차를 진행하는 것이 가장 효율적이다.
-
----
-
-## 8. 별도 참고: 현재 문서와 실제 구현의 차이
-
-- `docs/archive/RANDOM_MAP_AND_MENU_PLAN.md`의 핵심 항목은 대부분 구현된 상태다.
-  - 랜덤 자원 패치 생성 구현됨
-  - 메인 메뉴 구현됨
-  - 게임 진입 시 DOM UI 표시 구현됨
-- `docs/archive/NEW_CONTENT_IDEAS_AND_PLAN.md`의 1순위 중 일부가 구현된 상태다.
-  - Recycler 구현됨
-  - Data Cache 구현됨
-  - DDoS Packet/Swarm 구현됨
-  - 난이도 선택 구현됨
-- 기존 `PROJECT_ANALYSIS_AND_ROADMAP.md`는 Phase 4 모바일을 미래 작업으로 보고 있었으나, 현재는 1차 구현된 상태로 갱신되었다.
-
----
-
-## 9. 최종 제안
-
-다음 작업은 신규 콘텐츠 추가보다 아래를 먼저 진행하는 것이 좋다.
-
-1. **모바일/데스크톱 플레이 QA**
-2. **케이블 및 건물 상태 UX 개선**
-3. **저장/로드 회귀 안정화**
-4. **Normal 난이도 기준 밸런스 패스**
-5. **EMP Tower부터 신규 콘텐츠 2차 시작**
-
-이 순서가 프로젝트를 가장 빨리 “재미있고 덜 불편한 게임” 쪽으로 밀어준다.
+| 항목 | 심각도 | 근거 |
+|------|--------|------|
+| Fiber 연구 누락 | 🔴 치명 | `config.ts` TECH_FIBER_OPTIC 없음 |
+| ENERGY 아이템 생산 없음 | 🔴 치명 | Miner/PowerPlant 코드 |
+| 저장 마이그레이션 없음 | 🟠 높음 | `SaveManager.ts` version 분기 없음 |
+| UIManager 과대화 | 🟠 높음 | ~39KB, 책임 과다 |
+| MainScene 과대화 | 🟠 높음 | ~38KB, 책임 과다 |
+| EventBus.off 전체 삭제 | 🟠 높음 | 이름만으로 off() 시 모든 listener 삭제 |
+| Solar Panel RANGE 0 미표시 | 🟡 중간 | 자기 타일만 커버, UI 설명 없음 |
+| AP O(n) 전체 순회 | 🟡 중간 | `transferWirelessData`: 모든 건물 순회 |
+| as any 남용 | 🟡 중간 | MainScene 참조 타입 불안정 |
+| legacy/ 빈 파일 | 🟢 낮음 | `src/buildings/legacy/` 4개 |

@@ -5,17 +5,20 @@ import { BuildingOptions } from '../types';
 import type MainScene from '../scenes/MainScene';
 
 const TRAINING_ITEMS = new Set(['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
+const TRAINING_INTERVAL_BUILDING_TICKS = 4;
 
 export default class ModelTrainingLab extends BaseBuilding {
     targetType: string | null;
     autoTrain: boolean;
     statusText: Phaser.GameObjects.Text;
+    private trainingTickCounter: number;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'MODEL_TRAINING_LAB', { ...config, color: CONFIG.BUILDINGS.MODEL_TRAINING_LAB.COLOR });
         const savedTarget = config.customState?.targetType;
         this.targetType = savedTarget && CONFIG.BUILDINGS[savedTarget]?.DEFENSE ? savedTarget : null;
         this.autoTrain = config.customState?.autoTrain ?? true;
+        this.trainingTickCounter = config.customState?.trainingTickCounter ?? 0;
 
         this.statusText = scene.add.text(0, CONFIG.GRID_SIZE * 0.35, 'NO TARGET', {
             fontFamily: 'Share Tech Mono, monospace',
@@ -34,14 +37,21 @@ export default class ModelTrainingLab extends BaseBuilding {
     onTick(tickCount: number): void {
         super.onTick(tickCount);
         if (this.isInfected(tickCount) && tickCount % 2 !== 0) return;
-        if (this.autoTrain) this.trainOnce();
+        if (this.autoTrain) {
+            this.trainingTickCounter++;
+            if (this.trainingTickCounter >= TRAINING_INTERVAL_BUILDING_TICKS) {
+                this.trainingTickCounter = 0;
+                this.trainOnce();
+            }
+        }
         this.refreshStatusText();
     }
 
     getCustomState(): object {
         return {
             targetType: this.targetType,
-            autoTrain: this.autoTrain
+            autoTrain: this.autoTrain,
+            trainingTickCounter: this.trainingTickCounter
         };
     }
 

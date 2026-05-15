@@ -148,25 +148,10 @@ export default class EffectsManager {
         const lowConfidence = confidence <= 30;
         const isAdversarial = options.targetType === 'ADVERSARIAL';
         const color = highConfidence ? 0x22c55e : lowConfidence ? 0xf97316 : 0x38bdf8;
-        const jitter = lowConfidence ? 5 : isAdversarial ? 8 : 2;
-        const boxCount = isAdversarial ? 3 : options.towerType === 'FILTER' ? 2 : 1;
-
         const scan = this.scene.add.graphics();
         scan.setDepth(39);
         scan.lineStyle(1, color, 0.45);
         scan.strokeLineShape(new Phaser.Geom.Line(options.x, options.y, options.targetX, options.targetY));
-
-        const boxes: Phaser.GameObjects.Graphics[] = [];
-        for (let i = 0; i < boxCount; i++) {
-            const box = this.scene.add.graphics();
-            box.setDepth(42);
-            const offsetX = isAdversarial ? Phaser.Math.Between(-jitter, jitter) : 0;
-            const offsetY = isAdversarial ? Phaser.Math.Between(-jitter, jitter) : 0;
-            const size = options.targetRadius * (2.4 + i * 0.25);
-            box.lineStyle(2, color, i === 0 ? 0.9 : 0.35);
-            box.strokeRect(options.targetX - size / 2 + offsetX, options.targetY - size / 2 + offsetY, size, size);
-            boxes.push(box);
-        }
 
         const labelText = isAdversarial && !options.hit
             ? 'ADV SHIFT'
@@ -191,17 +176,6 @@ export default class EffectsManager {
             if (options.hit) {
                 options.onHit();
             }
-
-            boxes.forEach(box => {
-                this.scene.tweens.add({
-                    targets: box,
-                    alpha: 0,
-                    scaleX: options.hit ? 0.75 : 1.35,
-                    scaleY: options.hit ? 0.75 : 1.35,
-                    duration: 220,
-                    onComplete: () => box.destroy()
-                });
-            });
 
             this.scene.tweens.add({
                 targets: label,
@@ -393,7 +367,7 @@ export default class EffectsManager {
         ring.setDepth(44);
         ring.setStrokeStyle(2, color, 0.9);
 
-        const label = this.scene.add.text(x, y - 22, itemType === 'WEIGHT_UPDATE' ? 'MODEL +5%' : itemType === 'TRAINED_MODEL' ? 'MODEL +25%' : 'CHARGE +10', {
+        const label = this.scene.add.text(x, y - 22, itemType === 'WEIGHT_UPDATE' ? 'MODEL +2%' : itemType === 'TRAINED_MODEL' ? 'MODEL +10%' : 'CHARGE +5', {
             fontFamily: 'Share Tech Mono, monospace',
             fontSize: '9px',
             color: '#ffffff',

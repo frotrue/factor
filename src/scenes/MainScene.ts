@@ -20,6 +20,11 @@ import TutorialManager from '../managers/TutorialManager';
 import EventBus from '../managers/EventBus';
 import { DefenseModelState } from '../types';
 import DefenseTower from '../buildings/DefenseTower';
+import OverlayController from '../controllers/OverlayController';
+import AbstractProcessor from '../buildings/AbstractProcessor';
+import NeuralTrainer from '../buildings/NeuralTrainer';
+import ModelTrainingLab from '../buildings/ModelTrainingLab';
+import AccessPoint from '../buildings/AccessPoint';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -38,6 +43,7 @@ export default class MainScene extends Phaser.Scene {
     effectsManager!: EffectsManager;
     soundManager!: SoundManager;
     tutorialManager!: TutorialManager;
+    overlayController!: OverlayController;
     defenseModelStates: Record<string, DefenseModelState> = {};
 
     cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
@@ -93,6 +99,7 @@ export default class MainScene extends Phaser.Scene {
         this.researchManager = new ResearchManager(this);
         this.inventoryManager = new InventoryManager(this.buildingManager);
         this.effectsManager = new EffectsManager(this);
+        this.overlayController = new OverlayController(this);
 
         this.mapManager.generateResourcePatches();
         this.buildingManager.place(0, 0, 'CORE', 0);
@@ -118,32 +125,32 @@ export default class MainScene extends Phaser.Scene {
     setupEvents(): void {
         EventBus.on('BUILDING_SELECTED', () => {
             this.updateCursorGraphics();
-        });
+        }, 'MainScene');
 
         EventBus.on('POWER_UPDATED', () => {
             this.powerGridDirty = true;
-        });
+        }, 'MainScene');
 
         EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
             this.effectsManager.playBuildOnline(building, type);
             this.uiManager.logMessage(`System: ${CONFIG.BUILDINGS[type].NAME} Online.`);
             this.defenseRangeDirty = true;
-        });
+        }, 'MainScene');
 
         EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
             const [x, y] = key.split(',').map(Number);
             this.effectsManager.playBuildingRemoved(x, y);
             this.uiManager.logMessage(`System: Unit disconnected at [${x}, ${y}].`, true);
             this.defenseRangeDirty = true;
-        });
+        }, 'MainScene');
 
         EventBus.on('WAVE_STARTED', () => {
             this.effectsManager.playWaveStart();
-        });
+        }, 'MainScene');
 
         EventBus.on('ENEMY_KILLED', ({ x, y }: { id: string; type: string; x: number; y: number; rewardSilicon: number }) => {
             this.effectsManager.playEnemyKilled(x, y);
-        });
+        }, 'MainScene');
 
         this.events.on('shutdown', () => {
             if (this.mobileMediaQuery && this.mobileLayoutHandler) {
@@ -151,25 +158,17 @@ export default class MainScene extends Phaser.Scene {
                 window.removeEventListener('resize', this.mobileLayoutHandler);
             }
             document.body.classList.remove('mobile-layout');
-            EventBus.off('BUILDING_SELECTED');
-            EventBus.off('BUILDING_PLACED');
-            EventBus.off('BUILDING_REMOVED');
-            EventBus.off('POWER_UPDATED');
-            EventBus.off('ENEMY_KILLED');
-            EventBus.off('GAME_OVER');
-            EventBus.off('CORE_DAMAGED');
-            EventBus.off('WAVE_STARTED');
-            EventBus.off('WAVE_UPDATE');
-            EventBus.off('WAVE_ENDED');
-            EventBus.off('CORE_DATA_RECEIVED');
-            EventBus.off('SAVE_REQUESTED');
-            EventBus.off('LOAD_REQUESTED');
-            EventBus.off('GAME_SPEED_CHANGED');
-            EventBus.off('RESEARCH_UNLOCKED');
-            EventBus.off('RESEARCH_OPENED');
-            EventBus.off('CABLE_CONNECTED');
-            EventBus.off('TUTORIAL_RESET');
-            EventBus.off('AUDIO_SETTINGS_CHANGED');
+            [
+                'MainScene',
+                'CableManager',
+                'Core',
+                'ItemManager',
+                'SaveManager',
+                'SoundManager',
+                'TutorialManager',
+                'UIManager',
+                'WaveManager'
+            ].forEach(owner => EventBus.offAll(owner));
         });
     }
 
@@ -197,12 +196,12 @@ export default class MainScene extends Phaser.Scene {
     trainDefenseModelType(type: string, itemType: string): boolean {
         const state = this.getDefenseModelState(type);
         if (itemType === 'WEIGHT_UPDATE') {
-            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 5, 0, 100);
+            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 2, 0, 100);
         } else if (itemType === 'TRAINED_MODEL') {
-            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 25, 0, 100);
+            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 10, 0, 100);
             state.modelVersion++;
         } else if (itemType === 'INFERENCE_UNIT') {
-            state.inferenceCharge += 10;
+            state.inferenceCharge += 5;
         } else {
             return false;
         }
@@ -473,52 +472,11 @@ export default class MainScene extends Phaser.Scene {
     }
 
     drawDefenseRangeOverlay(): void {
-        this.defenseRangeGraphics.clear();
-        if (!this.showDefenseRange) return;
-
-        this.defenseRangeGraphics.fillStyle(0xff4444, 0.1);
-        this.defenseRangeGraphics.lineStyle(1, 0xff4444, 0.5);
-
-        this.buildingManager.forEach(building => {
-            const bConfig = CONFIG.BUILDINGS[building.type];
-            if (bConfig && bConfig.DEFENSE && bConfig.DEFENSE.RANGE > 0) {
-                const range = bConfig.DEFENSE.RANGE + this.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
-                const centerX = building.x + CONFIG.GRID_SIZE / 2;
-                const centerY = building.y + CONFIG.GRID_SIZE / 2;
-                const radius = range * CONFIG.GRID_SIZE;
-                this.defenseRangeGraphics.fillCircle(centerX, centerY, radius);
-                this.defenseRangeGraphics.strokeCircle(centerX, centerY, radius);
-            }
-        });
+        this.overlayController.drawDefenseRangeOverlay();
     }
 
     drawPowerGridOverlay(): void {
-        this.powerGridGraphics.clear();
-        if (!this.showPowerGrid || !this.powerManager) return;
-
-        const networks = this.powerManager.networks || [];
-        if (networks.length > 0) {
-            networks.forEach(network => {
-                const color = network.isBlackout ? 0xef4444 : network.color;
-                this.powerGridGraphics.fillStyle(color, network.isBlackout ? 0.2 : 0.14);
-                this.powerGridGraphics.lineStyle(1, color, network.isBlackout ? 0.65 : 0.45);
-
-                network.tiles.forEach(key => {
-                    const [x, y] = key.split(',').map(Number);
-                    this.powerGridGraphics.fillRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-                    this.powerGridGraphics.strokeRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-                });
-            });
-            return;
-        }
-
-        this.powerGridGraphics.fillStyle(0xfde047, 0.15);
-        this.powerGridGraphics.lineStyle(1, 0xfde047, 0.5);
-        this.powerManager.poweredArea.forEach(key => {
-            const [x, y] = key.split(',').map(Number);
-            this.powerGridGraphics.fillRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-            this.powerGridGraphics.strokeRect(x, y, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-        });
+        this.overlayController.drawPowerGridOverlay();
     }
 
     isBlocked(x: number, y: number, w: number, h: number): boolean {
@@ -612,21 +570,15 @@ export default class MainScene extends Phaser.Scene {
             if (existingBuilding.outputBuffer) {
                 content += `\nOutput Buffer: ${existingBuilding.outputBuffer.length} / ${existingBuilding.maxBufferSize}`;
             }
-            if ((existingBuilding as any).isProcessing !== undefined) {
-                content += `\nStatus: ${(existingBuilding as any).isProcessing ? 'Processing' : 'Idle'}`;
+            if (existingBuilding instanceof AbstractProcessor) {
+                content += `\nStatus: ${existingBuilding.isProcessing ? 'Processing' : 'Idle'}`;
+                content += `\nRecipe: ${existingBuilding.recipe?.OUTPUT}`;
             }
-            if (existingBuilding.type === 'PROCESSOR') {
-                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
-            }
-            if (existingBuilding.type === 'WEIGHT_TRAINER') {
-                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
-            }
-            if (existingBuilding.type === 'NEURAL_TRAINER') {
-                content += `\nRecipe: ${(existingBuilding as any).recipe?.OUTPUT}`;
+            if (existingBuilding instanceof NeuralTrainer) {
                 content += `\n[Left Click to Cycle Recipe]`;
             }
-            if (existingBuilding.type === 'MODEL_TRAINING_LAB') {
-                const targetType = (existingBuilding as any).targetType;
+            if (existingBuilding instanceof ModelTrainingLab) {
+                const targetType = existingBuilding.targetType;
                 const targetState = targetType ? this.getDefenseModelState(targetType) : null;
                 const targetName = targetType ? CONFIG.BUILDINGS[targetType]?.NAME.split('(')[0].trim() || targetType : 'None';
                 content += `\nTraining Target: ${targetName}`;
@@ -634,8 +586,19 @@ export default class MainScene extends Phaser.Scene {
                     content += `\nShared Confidence: ${Math.round(targetState.modelConfidence)}%`;
                     content += `\nShared Version: v${targetState.modelVersion}`;
                 }
-                content += `\nAuto Train: ${(existingBuilding as any).autoTrain ? 'ON' : 'OFF'}`;
+                content += `\nAuto Train: ${existingBuilding.autoTrain ? 'ON' : 'OFF'}`;
                 content += `\n[Left Click to Select Model Type]`;
+            }
+            if (existingBuilding instanceof AccessPoint) {
+                const rangeBonus = this.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
+                content += `\nRelay Sessions: ${existingBuilding.bandwidth} / tick`;
+                content += `\nWireless Range: ${existingBuilding.range + rangeBonus} tiles`;
+                content += `\nMode: Session Relay`;
+                content += `\nRelays: producer output to nearby receivers`;
+            }
+            if (existingBuilding.type === 'SOLAR_PANEL') {
+                content += `\nMode: Standalone (covers self only)`;
+                content += `\nDoes NOT connect to power network`;
             }
             if (bConfig.DEFENSE) {
                 const damageMultiplier = this.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
@@ -644,11 +607,12 @@ export default class MainScene extends Phaser.Scene {
                 const effectiveDamage = bConfig.DEFENSE.DAMAGE * damageMultiplier;
                 const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
                 const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
-                const modelConfidence = (existingBuilding as any).modelConfidence ?? 35;
+                const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
+                const modelConfidence = tower?.modelConfidence ?? 35;
                 const confidenceFactor = 0.6 + modelConfidence / 125;
                 content += `\nModel Confidence: ${Math.round(modelConfidence)}%`;
-                content += `\nModel Version: v${(existingBuilding as any).modelVersion ?? 1}`;
-                content += `\nInference Charge: ${(existingBuilding as any).inferenceCharge ?? 0}`;
+                content += `\nModel Version: v${tower?.modelVersion ?? 1}`;
+                content += `\nInference Charge: ${tower?.inferenceCharge ?? 0}`;
                 content += `\nDamage: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
                 content += `\nRange: ${effectiveRange} tiles`;
                 content += `\nFire Rate: ${effectiveFireRate} ticks`;
@@ -748,12 +712,12 @@ export default class MainScene extends Phaser.Scene {
                 this.uiManager.setMobileActionStatus(null);
 
                 const existingBuilding = this.buildingManager.get(key);
-                if (existingBuilding && existingBuilding.type === 'MODEL_TRAINING_LAB') {
-                    this.uiManager.openTrainingLab(existingBuilding as any);
+                if (existingBuilding instanceof ModelTrainingLab) {
+                    this.uiManager.openTrainingLab(existingBuilding);
                     return;
                 }
-                if (existingBuilding && existingBuilding.type === 'NEURAL_TRAINER') {
-                    (existingBuilding as any).cycleRecipe();
+                if (existingBuilding instanceof NeuralTrainer) {
+                    existingBuilding.cycleRecipe();
                     return;
                 }
 

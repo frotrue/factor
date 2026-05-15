@@ -212,7 +212,7 @@ export const CONFIG: GameConfig = {
             ID: 'SOLAR_PANEL',
             NAME: '태양광 패널 (Solar Panel)',
             COLOR: 0xfde047,
-            DESCRIPTION: '자원 소비 없이 10W의 전력을 소량 생산합니다.',
+            DESCRIPTION: '독립 전력 전용. 자기 자신에게만 전력을 공급하며 전력망에는 연결되지 않습니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 10, RANGE: 0 },
             UNLOCK_REQUIRED: 'TECH_SOLAR_POWER',
             CATEGORY: 'POWER',
@@ -246,7 +246,7 @@ export const CONFIG: GameConfig = {
             ID: 'ACCESS_POINT',
             NAME: 'AP (Access Point)',
             COLOR: 0x22d3ee,
-            DESCRIPTION: '반경 5칸 이내의 건물들과 무선으로 데이터를 주고받습니다.',
+            DESCRIPTION: 'Relays data sessions between nearby producers and receivers without Ethernet cables.',
             POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
             CATEGORY: 'LOGISTICS',
             COST: [{ resource: 'SILICON', amount: 15 }]
@@ -480,6 +480,15 @@ export const CONFIG: GameConfig = {
             UNLOCKS: {},
             EFFECTS: { AP_RANGE_BONUS: 2, CABLE_BANDWIDTH_BONUS: 1 }
         },
+        TECH_FIBER_OPTIC: {
+            ID: 'TECH_FIBER_OPTIC',
+            NAME: 'Fiber Optic Cable',
+            COST: 150,
+            DESCRIPTION: 'Unlocks fiber optic cable with bandwidth 8 and queue capacity 20.',
+            REQUIREMENTS: ['TECH_DISTRIBUTED_AP'],
+            UNLOCKS: { CABLES: ['FIBER'] },
+            EFFECTS: {}
+        },
         TECH_FIREWALL_HARDENING: {
             ID: 'TECH_FIREWALL_HARDENING',
             NAME: '방화벽 경화',
@@ -506,7 +515,7 @@ export const CONFIG: GameConfig = {
             ID: 'TECH_SOLAR_POWER',
             NAME: '태양광 발전',
             COST: 100,
-            DESCRIPTION: '자원 없이 소량의 전력을 생산하는 태양광 패널을 해금합니다.',
+            DESCRIPTION: '자기 자신에게만 전력을 공급하는 독립형 태양광 패널을 해금합니다.',
             UNLOCKS: { BUILDINGS: ['SOLAR_PANEL'] }
         },
         TECH_ADVANCED_PROCESSING: {

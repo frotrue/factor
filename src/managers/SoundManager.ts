@@ -13,16 +13,16 @@ export default class SoundManager {
         window.addEventListener('pointerdown', () => this.unlock(), { once: true });
         window.addEventListener('keydown', () => this.unlock(), { once: true });
 
-        EventBus.on('BUILDING_PLACED', () => this.play('build'));
-        EventBus.on('BUILDING_REMOVED', () => this.play('remove'));
-        EventBus.on('CABLE_CONNECTED', () => this.play('connect'));
-        EventBus.on('WAVE_STARTED', () => this.play('wave'));
-        EventBus.on('ENEMY_KILLED', () => this.play('kill'));
-        EventBus.on('RESEARCH_UNLOCKED', () => this.play('research'));
-        EventBus.on('CORE_DAMAGED', () => this.play('alert'));
+        EventBus.on('BUILDING_PLACED', () => this.play('build'), 'SoundManager');
+        EventBus.on('BUILDING_REMOVED', () => this.play('remove'), 'SoundManager');
+        EventBus.on('CABLE_CONNECTED', () => this.play('connect'), 'SoundManager');
+        EventBus.on('WAVE_STARTED', () => this.play('wave'), 'SoundManager');
+        EventBus.on('ENEMY_KILLED', () => this.play('kill'), 'SoundManager');
+        EventBus.on('RESEARCH_UNLOCKED', () => this.play('research'), 'SoundManager');
+        EventBus.on('CORE_DAMAGED', () => this.play('alert'), 'SoundManager');
         EventBus.on('AUDIO_SETTINGS_CHANGED', ({ masterVolume, muted }) => {
             this.setSettings(masterVolume, muted);
-        });
+        }, 'SoundManager');
     }
 
     getSettings(): { masterVolume: number; muted: boolean } {
