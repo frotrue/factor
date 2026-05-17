@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
-import type MainScene from '../scenes/MainScene';
+import { BuildingOptions, IMainScene } from '../types';
 
 const TRAINING_ITEMS = new Set(['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
 const TRAINING_INTERVAL_BUILDING_TICKS = 4;
@@ -62,14 +61,14 @@ export default class ModelTrainingLab extends BaseBuilding {
 
     getTargetState() {
         if (!this.targetType) return null;
-        return (this.scene as MainScene).getDefenseModelState(this.targetType);
+        return (this.scene as IMainScene).getDefenseModelState(this.targetType);
     }
 
     trainOnce(): boolean {
         if (!this.targetType || this.inputBuffer.length === 0) return false;
 
         const item = this.inputBuffer.shift()!;
-        const scene = this.scene as MainScene;
+        const scene = this.scene as IMainScene;
         const trained = scene.trainDefenseModelType(this.targetType, item);
         if (!trained) return false;
 

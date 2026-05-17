@@ -1,5 +1,28 @@
 # QA Checklist
 
+## Automated Smoke
+
+- [x] Desktop Chromium: 메뉴에서 게임 시작 가능
+- [x] Desktop Chromium: 설정 모달 열기/닫기 가능
+- [x] Mobile Portrait - 390x844: 게임 시작 후 모바일 액션바 표시
+- [x] Mobile Landscape - 844x390: 게임 시작 후 모바일 액션바 표시
+- [x] Mobile Portrait - 390x844: Rotate/Remove/Cable/Cancel/Defense/Power 버튼 상태 변경 확인
+- [x] Mobile Landscape - 844x390: Rotate/Remove/Cable/Cancel/Defense/Power 버튼 상태 변경 확인
+- [x] Desktop Chromium: Data Downloader 배치 가능
+- [x] Desktop Chromium: Processor 배치 가능
+- [x] Desktop Chromium: Basic Cable 연결 가능
+- [x] Desktop Chromium: Remove 모드로 케이블 제거 가능
+- [x] Desktop Chromium: Conveyor/Storage/Weight Trainer/Classifier 배치 가능
+- [x] Desktop Chromium: `R` 회전, `F1` 방어 범위, `F2` 전력망 오버레이 토글 가능
+- [x] Desktop Chromium: 우클릭 건물 제거, 게임 속도 설정, 저장, 연구 모달 열기 가능
+- [x] Mobile Portrait - 390x844: 터치로 Data Downloader/Processor 배치 및 Basic Cable 연결 가능
+- [x] Mobile Landscape - 844x390: 터치로 Data Downloader/Processor 배치 및 Basic Cable 연결 가능
+- [x] `npm test` 통과
+- [x] `npm run test:e2e` 통과
+- [x] `npm run build` 통과
+
+> 자동 스모크는 시작/표시/모달, 주요 건물 배치, 케이블 연결/제거, 모바일 액션바/터치 배치 회귀 방지용이다. 웨이브 밸런스, 장시간 생산 루프, 실제 플레이 감각은 아래 수동 QA가 필요하다.
+
 ## Desktop
 
 - [ ] 메뉴에서 난이도 선택 후 게임 시작 가능

@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { CONFIG } from '../config';
 import EventBus from '../managers/EventBus';
 import BaseBuilding from '../buildings/BaseBuilding';
+import BuildingManager from '../managers/BuildingManager';
+import { IMainScene } from '../types';
 
 interface GridPoint {
     x: number;
@@ -23,13 +25,13 @@ export default class BaseEnemy {
     hpBar: Phaser.GameObjects.Graphics;
     statusGraphics: Phaser.GameObjects.Graphics;
     auraGraphics?: Phaser.GameObjects.Graphics;
-    buildingManager: any;
+    buildingManager: BuildingManager;
     path: GridPoint[];
     pathTimer: number;
     specialTimer: number;
     auraSpeedMultiplier: number;
 
-    constructor(scene: Phaser.Scene, type: string, x: number, y: number, hpMultiplier: number = 1, id: string, buildingManager: any) {
+    constructor(scene: Phaser.Scene, type: string, x: number, y: number, hpMultiplier: number = 1, id: string, buildingManager: BuildingManager) {
         this.scene = scene;
         this.type = type;
         this.x = x;
@@ -272,7 +274,7 @@ export default class BaseEnemy {
         const gridSize = CONFIG.GRID_SIZE;
         const gridX = Math.floor(this.x / gridSize) * gridSize;
         const gridY = Math.floor(this.y / gridSize) * gridSize;
-        const tickSystem = (this.scene as any).tickSystem;
+        const tickSystem = (this.scene as IMainScene).tickSystem;
         const untilTick = (tickSystem?.getCurrentTick?.() || 0) + 6;
         const candidates = [
             `${gridX},${gridY}`,

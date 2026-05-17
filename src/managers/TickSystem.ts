@@ -5,10 +5,10 @@ import ItemManager from './ItemManager';
 import MapManager from './MapManager';
 import PowerManager from './PowerManager';
 import CableManager from './CableManager';
-import { GameItem } from '../types';
+import { IMainScene } from '../types';
 
 export default class TickSystem {
-    scene: Phaser.Scene;
+    scene: IMainScene;
     buildingManager: BuildingManager;
     itemManager: ItemManager;
     mapManager: MapManager;
@@ -20,7 +20,7 @@ export default class TickSystem {
     gridSize: number;
 
     constructor(
-        scene: Phaser.Scene,
+        scene: IMainScene,
         buildingManager: BuildingManager,
         itemManager: ItemManager,
         mapManager: MapManager,
@@ -31,7 +31,7 @@ export default class TickSystem {
         this.itemManager = itemManager;
         this.mapManager = mapManager;
         this.powerManager = powerManager;
-        this.cableManager = (scene as any).cableManager || null;
+        this.cableManager = scene.cableManager || null;
         this.tickRate = CONFIG.TICK_RATE * CONFIG.TIMING.TICK_RATE_MULTIPLIER;
         this.currentTick = 0;
         this.lastTickTime = 0;
@@ -39,7 +39,7 @@ export default class TickSystem {
     }
 
     update(time: number): void {
-        const adjustedTickRate = this.tickRate / (this.scene as any).gameSpeed;
+        const adjustedTickRate = this.tickRate / this.scene.gameSpeed;
         if (time > this.lastTickTime + adjustedTickRate) {
             this.lastTickTime = time;
             this.runTick();

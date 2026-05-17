@@ -6,6 +6,7 @@ import { BuildingOptions } from '../types';
 export default class AccessPoint extends BaseBuilding {
     range: number;
     bandwidth: number;
+    relaysThisTick: number;
     statusText: Phaser.GameObjects.Text;
     wave: Phaser.GameObjects.Arc;
     waveTween: Phaser.Tweens.Tween;
@@ -15,6 +16,7 @@ export default class AccessPoint extends BaseBuilding {
 
         this.range = CONFIG.ACCESS_POINT.RANGE;
         this.bandwidth = CONFIG.ACCESS_POINT.BANDWIDTH;
+        this.relaysThisTick = 0;
 
         const radius = this.range * CONFIG.GRID_SIZE;
         this.wave = scene.add.circle(0, 0, 10, 0xffffff, 0.5);

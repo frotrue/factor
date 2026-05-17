@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { Recipe, BuildingOptions } from '../types';
+import { Recipe, BuildingOptions, IMainScene } from '../types';
 
 /**
  * Processor/WeightTrainer/NeuralTrainer의 공통 기반 클래스.
@@ -41,7 +41,7 @@ export default class AbstractProcessor extends BaseBuilding {
 
         if (this.isProcessing) {
             this.processingTimer++;
-            const researchManager = (this.scene as any).researchManager;
+            const researchManager = (this.scene as IMainScene).researchManager;
             const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
             const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
             if (this.processingTimer >= requiredTime) {
@@ -83,7 +83,7 @@ export default class AbstractProcessor extends BaseBuilding {
     }
 
     updateProgressDisplay(): void {
-        const researchManager = (this.scene as any).researchManager;
+        const researchManager = (this.scene as IMainScene).researchManager;
         const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
         const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
         const progress = this.isProcessing ? this.processingTimer / requiredTime : 0;

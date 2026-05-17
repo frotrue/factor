@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
-import type MainScene from '../scenes/MainScene';
+import { BuildingOptions, IMainScene } from '../types';
 
 export default class Miner extends BaseBuilding {
     productionRate: number;
@@ -11,7 +10,7 @@ export default class Miner extends BaseBuilding {
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'MINER', { ...config, color: CONFIG.BUILDINGS.MINER.COLOR });
         this.productionRate = CONFIG.BUILDINGS.MINER.PRODUCTION_RATE || 2;
-        const mapManager = (scene as MainScene).mapManager;
+        const mapManager = (scene as IMainScene).mapManager;
         this.resourceType = mapManager?.getResourceAt(x, y) || null;
         this.drawResourceMode();
     }
@@ -34,7 +33,7 @@ export default class Miner extends BaseBuilding {
     }
 
     shouldProduce(tickCount: number): boolean {
-        const researchManager = (this.scene as MainScene).researchManager;
+        const researchManager = (this.scene as IMainScene).researchManager;
         const multiplier = researchManager?.getEffectValue('MINING_RATE_MULTIPLIER', 1) ?? 1;
         const effectiveRate = Math.max(1, Math.round(this.productionRate * multiplier));
         return tickCount % effectiveRate === 0;
@@ -45,7 +44,7 @@ export default class Miner extends BaseBuilding {
 
         if (this.shouldProduce(tickCount)) {
             if (this.outputBuffer.length >= this.maxBufferSize) return;
-            const mapManager = (this.scene as MainScene).mapManager;
+            const mapManager = (this.scene as IMainScene).mapManager;
             const resourceType = mapManager.getResourceAt(this.x, this.y);
             if (resourceType === 'SILICON') {
                 this.outputBuffer.push('SILICON');

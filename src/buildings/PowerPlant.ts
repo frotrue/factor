@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
-import type MainScene from '../scenes/MainScene';
+import { BuildingOptions, IMainScene } from '../types';
 
 export default class PowerPlant extends BaseBuilding {
     coreGraphics: Phaser.GameObjects.Arc;
@@ -19,7 +18,7 @@ export default class PowerPlant extends BaseBuilding {
     }
 
     checkPlacement(): void {
-        const mapManager = (this.scene as MainScene).mapManager;
+        const mapManager = (this.scene as IMainScene).mapManager;
         const resourceType = mapManager.getResourceAt(this.x, this.y);
         this.isActive = (resourceType === 'ENERGY');
         if (!this.isActive) {

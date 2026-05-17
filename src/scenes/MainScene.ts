@@ -21,10 +21,7 @@ import EventBus from '../managers/EventBus';
 import { DefenseModelState } from '../types';
 import DefenseTower from '../buildings/DefenseTower';
 import OverlayController from '../controllers/OverlayController';
-import AbstractProcessor from '../buildings/AbstractProcessor';
-import NeuralTrainer from '../buildings/NeuralTrainer';
-import ModelTrainingLab from '../buildings/ModelTrainingLab';
-import AccessPoint from '../buildings/AccessPoint';
+import InputController from '../controllers/InputController';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -44,6 +41,7 @@ export default class MainScene extends Phaser.Scene {
     soundManager!: SoundManager;
     tutorialManager!: TutorialManager;
     overlayController!: OverlayController;
+    inputController!: InputController;
     defenseModelStates: Record<string, DefenseModelState> = {};
 
     cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
@@ -100,6 +98,7 @@ export default class MainScene extends Phaser.Scene {
         this.inventoryManager = new InventoryManager(this.buildingManager);
         this.effectsManager = new EffectsManager(this);
         this.overlayController = new OverlayController(this);
+        this.inputController = new InputController(this);
 
         this.mapManager.generateResourcePatches();
         this.buildingManager.place(0, 0, 'CORE', 0);
@@ -241,107 +240,15 @@ export default class MainScene extends Phaser.Scene {
     }
 
     setupInput(): void {
-        this.input.mouse!.disableContextMenu();
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (this.isMobileLayout && pointer.leftButtonDown()) {
-                this.mobilePointerStartedOverUI = this.isPointerOverDomUI(pointer);
-                if (this.mobilePointerStartedOverUI) {
-                    this.mobileTouchStart = null;
-                    return;
-                }
-                if (this.input.pointer2?.isDown) {
-                    this.mobileMultiTouchActive = true;
-                }
-                this.mobileTouchStart = { x: pointer.x, y: pointer.y, time: this.time.now };
-                return;
-            }
-            this.handlePointerAction(pointer, pointer.rightButtonDown() ? 'secondary' : 'primary');
-        });
-        this.input.on('pointermove', () => {
-            if (this.isMobileLayout && this.input.pointer2?.isDown) {
-                this.mobileMultiTouchActive = true;
-            }
-        });
-        this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-            if (!this.isMobileLayout || !this.mobileTouchStart) return;
-
-            const moved = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.mobileTouchStart.x, this.mobileTouchStart.y);
-            const duration = this.time.now - this.mobileTouchStart.time;
-            const endedOverUI = this.isPointerOverDomUI(pointer);
-            this.mobileTouchStart = null;
-
-            if (this.mobilePointerStartedOverUI || endedOverUI || this.mobileMultiTouchActive || this.input.pointer2?.isDown) {
-                this.mobilePointerStartedOverUI = false;
-                if (!this.input.pointer1?.isDown && !this.input.pointer2?.isDown) {
-                    this.mobileMultiTouchActive = false;
-                }
-                return;
-            }
-
-            if (moved <= 8 && duration <= 250) {
-                this.handlePointerAction(pointer, 'primary');
-            } else if (moved <= 10 && duration >= 500) {
-                const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-                const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-                const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-                if (!this.buildingManager.get(`${snappedX},${snappedY}`)) {
-                    this.cancelCurrentAction();
-                }
-            }
-        });
-        this.input.keyboard!.on('keydown-R', () => this.rotateCursor());
-        this.input.keyboard!.on('keydown-F2', () => this.togglePowerGrid());
-        this.input.keyboard!.on('keydown-F1', () => this.toggleDefenseRange());
+        this.inputController.setup();
     }
 
     isPointerOverDomUI(pointer: Phaser.Input.Pointer): boolean {
-        const element = document.elementFromPoint(pointer.x, pointer.y);
-        if (!element) return false;
-
-        return Boolean(element.closest([
-            '#bottom-ui-container',
-            '#ui-overlay',
-            '#ui-tabs',
-            '#top-actions',
-            '#settings-modal',
-            '#research-modal',
-            '#training-lab-modal',
-            '#game-over-screen',
-            '#mobile-action-bar',
-            '#mobile-cable-menu',
-            '#mobile-build-summary',
-            '#mobile-info-sheet',
-            '#activity-log',
-            '#tutorial-panel',
-            '.build-btn',
-            '.tab-btn',
-            '.mobile-action-btn',
-            '.mobile-cable-option',
-            '.training-target-row'
-        ].join(',')));
+        return this.inputController.isPointerOverDomUI(pointer);
     }
 
     setupCursor(): void {
-        this.powerGridGraphics = this.add.graphics();
-        this.powerGridGraphics.setDepth(10);
-
-        this.defenseRangeGraphics = this.add.graphics();
-        this.defenseRangeGraphics.setDepth(11);
-
-        this.cableDraftGraphics = this.add.graphics();
-        this.cableDraftGraphics.setDepth(14);
-
-        this.cursorContainer = this.add.container(0, 0);
-        this.ghostGraphics = this.add.graphics();
-        this.cursorArrow = this.add.triangle(
-            CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE / 2,
-            12, 0, 0, 12, 0, -12, 0xffffff, 1
-        );
-        this.cursorArrow.setAngle(CONFIG.DIRECTIONS[this.currentRotation].angle);
-        this.cursorContainer.add([this.ghostGraphics, this.cursorArrow]);
-        this.cursorContainer.setDepth(100);
-        this.cursorContainer.setAlpha(0.6);
-        this.updateCursorGraphics();
+        this.inputController.setupCursor();
     }
 
     updateCursorGraphics(): void {
@@ -402,8 +309,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     rotateCursor(): void {
-        this.currentRotation = (this.currentRotation + 1) % 4;
-        this.cursorArrow.setAngle(CONFIG.DIRECTIONS[this.currentRotation].angle);
+        this.inputController.rotateCursor();
     }
 
     toggleDefenseRange(): void {
@@ -421,15 +327,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     cancelCurrentAction(): void {
-        const wasCablePending = this.cableState === 'CABLE_START';
-        this.cableState = 'IDLE';
-        this.cableStartKey = null;
-        this.cableDraftGraphics?.clear();
-        if (wasCablePending) {
-            this.uiManager.logMessage('System: Cable connection cancelled.');
-        }
-        this.uiManager.setMobileActionStatus(null);
-        this.uiManager.cancelMobileAction();
+        this.inputController.cancelCurrentAction();
     }
 
     update(time: number, delta: number): void {
@@ -491,263 +389,11 @@ export default class MainScene extends Phaser.Scene {
     }
 
     updateCursorPosition(): void {
-        const pointer = this.input.activePointer;
-        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-        const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-        const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-        this.cursorContainer.setPosition(snappedX, snappedY);
-
-        const key = `${snappedX},${snappedY}`;
-        const mode = this.uiManager.getSelectedBuildingType();
-
-        if (
-            !this.isMobileLayout &&
-            pointer.leftButtonDown() &&
-            !this.isPointerOverDomUI(pointer) &&
-            (mode === 'CONVEYOR' || mode === 'FAST_LINK')
-        ) {
-            const bConfig = CONFIG.BUILDINGS[mode];
-            const w = bConfig?.WIDTH || 1;
-            const h = bConfig?.HEIGHT || 1;
-            const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-
-            if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
-                this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
-            }
-        }
-
-        const existingBuilding = this.buildingManager.get(key);
-
-        if (mode !== 'REMOVE') {
-            if (mode === 'BASIC' || mode === 'FIBER') {
-                const cConfig = CONFIG.CABLES[mode];
-                const isUnlocked = !cConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(cConfig.UNLOCK_REQUIRED);
-                if (!isUnlocked) {
-                    this.ghostGraphics.clear();
-                    this.ghostGraphics.fillStyle(0xff0000, 0.5);
-                    this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-                } else {
-                    this.updateCursorGraphics();
-                }
-            } else {
-                const bConfig = CONFIG.BUILDINGS[mode];
-                if (bConfig) {
-                    const w = bConfig.WIDTH || 1;
-                    const h = bConfig.HEIGHT || 1;
-                    
-                    const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-
-                    if (!isUnlocked || this.isBlocked(snappedX, snappedY, w, h)) {
-                        this.ghostGraphics.clear();
-                        this.ghostGraphics.fillStyle(0xff0000, 0.5);
-                        this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
-                    } else {
-                        this.updateCursorGraphics();
-                    }
-                }
-            }
-        }
-
-        if (existingBuilding) {
-            const bConfig = CONFIG.BUILDINGS[existingBuilding.type];
-            let content = `Type: ${existingBuilding.type}`;
-
-            if (bConfig.POWER) {
-                if (bConfig.POWER.CONSUMPTION > 0) {
-                    content += `\nPower: ${existingBuilding.hasPower ? 'OK' : 'OUTAGE'}`;
-                }
-                const network = this.powerManager.getNetworkForBuilding(`${existingBuilding.x},${existingBuilding.y}`);
-                if (network) {
-                    content += `\nPower Network: #${network.id}`;
-                    content += `\nNetwork Power: ${network.production} / ${network.consumption} W`;
-                } else if (bConfig.POWER.CONSUMPTION > 0 || bConfig.POWER.PRODUCTION > 0 || (bConfig.POWER.RANGE || 0) > 0) {
-                    content += `\nPower Network: None`;
-                }
-            }
-            if (existingBuilding.inputBuffer) {
-                content += `\nInput Buffer: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
-            }
-            if (existingBuilding.outputBuffer) {
-                content += `\nOutput Buffer: ${existingBuilding.outputBuffer.length} / ${existingBuilding.maxBufferSize}`;
-            }
-            if (existingBuilding instanceof AbstractProcessor) {
-                content += `\nStatus: ${existingBuilding.isProcessing ? 'Processing' : 'Idle'}`;
-                content += `\nRecipe: ${existingBuilding.recipe?.OUTPUT}`;
-            }
-            if (existingBuilding instanceof NeuralTrainer) {
-                content += `\n[Left Click to Cycle Recipe]`;
-            }
-            if (existingBuilding instanceof ModelTrainingLab) {
-                const targetType = existingBuilding.targetType;
-                const targetState = targetType ? this.getDefenseModelState(targetType) : null;
-                const targetName = targetType ? CONFIG.BUILDINGS[targetType]?.NAME.split('(')[0].trim() || targetType : 'None';
-                content += `\nTraining Target: ${targetName}`;
-                if (targetState) {
-                    content += `\nShared Confidence: ${Math.round(targetState.modelConfidence)}%`;
-                    content += `\nShared Version: v${targetState.modelVersion}`;
-                }
-                content += `\nAuto Train: ${existingBuilding.autoTrain ? 'ON' : 'OFF'}`;
-                content += `\n[Left Click to Select Model Type]`;
-            }
-            if (existingBuilding instanceof AccessPoint) {
-                const rangeBonus = this.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
-                content += `\nRelay Sessions: ${existingBuilding.bandwidth} / tick`;
-                content += `\nWireless Range: ${existingBuilding.range + rangeBonus} tiles`;
-                content += `\nMode: Session Relay`;
-                content += `\nRelays: producer output to nearby receivers`;
-            }
-            if (existingBuilding.type === 'SOLAR_PANEL') {
-                content += `\nMode: Standalone (covers self only)`;
-                content += `\nDoes NOT connect to power network`;
-            }
-            if (bConfig.DEFENSE) {
-                const damageMultiplier = this.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
-                const rangeBonus = this.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
-                const fireRateMultiplier = this.researchManager.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1);
-                const effectiveDamage = bConfig.DEFENSE.DAMAGE * damageMultiplier;
-                const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
-                const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
-                const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
-                const modelConfidence = tower?.modelConfidence ?? 35;
-                const confidenceFactor = 0.6 + modelConfidence / 125;
-                content += `\nModel Confidence: ${Math.round(modelConfidence)}%`;
-                content += `\nModel Version: v${tower?.modelVersion ?? 1}`;
-                content += `\nInference Charge: ${tower?.inferenceCharge ?? 0}`;
-                content += `\nDamage: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
-                content += `\nRange: ${effectiveRange} tiles`;
-                content += `\nFire Rate: ${effectiveFireRate} ticks`;
-                content += `\nAttack Input: Model Confidence`;
-            }
-
-            this.uiManager.showTooltip(pointer.x, pointer.y, bConfig.NAME, content);
-        } else {
-            const resourceType = this.mapManager.getResourceAt(snappedX, snappedY);
-            if (resourceType) {
-                const resourceName = CONFIG.ITEMS[resourceType]?.NAME || resourceType;
-                this.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `Type: ${resourceType}`);
-            } else {
-                this.uiManager.hideTooltip();
-            }
-        }
+        this.inputController.updateCursorPosition();
     }
 
     handlePointerAction(pointer: Phaser.Input.Pointer, button: 'primary' | 'secondary'): void {
-        if (pointer.middleButtonDown()) return;
-        if (this.isPointerOverDomUI(pointer)) return;
-
-        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-        const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-        const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-        const key = `${snappedX},${snappedY}`;
-        // P1: 2x2 건물의 원점 키로 정규화
-        const normalizedKey = this.cableManager.normalizeKey(key, this.buildingManager);
-        const mode = this.uiManager.getSelectedBuildingType();
-
-        if (button === 'primary') {
-            if (mode === 'REMOVE') {
-                if (this.buildingManager.has(key)) {
-                    // 케이블이 있으면 먼저 케이블 제거, 없으면 건물 제거
-                    const cables = this.cableManager.getCablesForBuilding(normalizedKey);
-                    if (cables.length > 0) {
-                        cables.forEach(c => this.cableManager.disconnect(c.id));
-                        this.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
-                    } else {
-                        this.buildingManager.remove(key);
-                    }
-                }
-            } else if (mode === 'BASIC' || mode === 'FIBER') {
-                const cConfig = CONFIG.CABLES[mode];
-                const isUnlocked = !cConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(cConfig.UNLOCK_REQUIRED);
-                
-                if (isUnlocked && this.buildingManager.has(key)) {
-                    if (this.cableState === 'IDLE') {
-                        this.cableState = 'CABLE_START';
-                        this.cableStartKey = normalizedKey;
-                        this.uiManager.setMobileActionStatus('Cable: select endpoint');
-                        this.uiManager.logMessage('System: Cable start selected. Choose an endpoint.');
-                    } else if (this.cableState === 'CABLE_START') {
-                        if (this.cableStartKey === normalizedKey) {
-                            this.uiManager.logMessage('System: Select a different building for the cable endpoint.', true);
-                            return;
-                        }
-                        if (this.cableStartKey !== normalizedKey) {
-                            // P3: 케이블 비용 차감
-                            const costPerTile = cConfig.COST_PER_TILE || 0;
-                            if (costPerTile > 0) {
-                                const canAfford = this.inventoryManager.canAfford([{ resource: 'SILICON', amount: costPerTile }]);
-                                if (!canAfford) {
-                                    this.cableState = 'IDLE';
-                                    this.cableStartKey = null;
-                                    this.uiManager.setMobileActionStatus(null);
-                                    this.uiManager.logMessage(`System: Not enough Silicon for cable. Need: ${costPerTile}`, true);
-                                    return;
-                                }
-                            }
-                            if (this.cableManager.connect(this.cableStartKey!, normalizedKey, mode)) {
-                                if (costPerTile > 0) {
-                                    this.inventoryManager.spend([{ resource: 'SILICON', amount: costPerTile }]);
-                                }
-                                this.uiManager.logMessage(`System: Cable connected.`);
-                            } else {
-                                this.uiManager.logMessage(`System: Cable connection already exists.`, true);
-                            }
-                        }
-                        this.cableState = 'IDLE';
-                        this.cableStartKey = null;
-                        this.uiManager.setMobileActionStatus(null);
-                    }
-                } else if (this.cableState === 'CABLE_START') {
-                    this.cableState = 'IDLE';
-                    this.cableStartKey = null;
-                    this.uiManager.setMobileActionStatus(null);
-                    this.uiManager.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
-                } else if (!isUnlocked) {
-                    this.uiManager.logMessage(`System: ${cConfig.NAME} is not unlocked.`, true);
-                } else {
-                    this.uiManager.logMessage('System: Select a building to start the cable.', true);
-                }
-            } else {
-                this.cableState = 'IDLE';
-                this.cableStartKey = null;
-                this.uiManager.setMobileActionStatus(null);
-
-                const existingBuilding = this.buildingManager.get(key);
-                if (existingBuilding instanceof ModelTrainingLab) {
-                    this.uiManager.openTrainingLab(existingBuilding);
-                    return;
-                }
-                if (existingBuilding instanceof NeuralTrainer) {
-                    existingBuilding.cycleRecipe();
-                    return;
-                }
-
-                const bConfig = CONFIG.BUILDINGS[mode];
-                if (!bConfig) return;
-                const w = bConfig.WIDTH || 1;
-                const h = bConfig.HEIGHT || 1;
-                
-                const isUnlocked = !bConfig.UNLOCK_REQUIRED || this.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-                
-                if (isUnlocked && !this.isBlocked(snappedX, snappedY, w, h)) {
-                    this.buildingManager.place(snappedX, snappedY, mode, this.currentRotation);
-                }
-            }
-        } else if (button === 'secondary') {
-            this.cableState = 'IDLE';
-            this.cableStartKey = null;
-            this.uiManager.setMobileActionStatus(null);
-
-            // P7: 케이블 모드에서 우클릭 시 해당 건물의 케이블 삭제
-            if ((mode === 'BASIC' || mode === 'FIBER') && this.buildingManager.has(key)) {
-                const cables = this.cableManager.getCablesForBuilding(normalizedKey);
-                if (cables.length > 0) {
-                    cables.forEach(c => this.cableManager.disconnect(c.id));
-                    this.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
-                }
-            } else if (this.buildingManager.has(key)) {
-                this.buildingManager.remove(key);
-            }
-        }
+        this.inputController.handlePointerAction(pointer, button);
     }
 
     setGameSpeed(speed: number): void {

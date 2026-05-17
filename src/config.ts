@@ -509,7 +509,7 @@ export const CONFIG: GameConfig = {
             NAME: '데이터 분산 처리',
             COST: 50,
             DESCRIPTION: '미래 분배기 물류 확장을 위한 레거시 연구입니다. 현재 빌드 UI에는 노출되지 않습니다.',
-            UNLOCKS: { BUILDINGS: ['SPLITTER'] }
+            UNLOCKS: {}
         },
         TECH_SOLAR_POWER: {
             ID: 'TECH_SOLAR_POWER',

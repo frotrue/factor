@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import AbstractProcessor from './AbstractProcessor';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
+import { BuildingOptions, IMainScene } from '../types';
 
 export default class NeuralTrainer extends AbstractProcessor {
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
@@ -20,7 +20,7 @@ export default class NeuralTrainer extends AbstractProcessor {
         this.processingTimer = 0;
         this.updateProgressDisplay();
         
-        const uiManager = (this.scene as any).uiManager;
+        const uiManager = (this.scene as IMainScene).uiManager;
         if (uiManager) {
             uiManager.logMessage(`System: Neural Trainer recipe updated to [${this.recipe.OUTPUT}]`);
         }

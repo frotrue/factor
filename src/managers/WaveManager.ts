@@ -3,9 +3,10 @@ import BaseEnemy from '../enemies/BaseEnemy';
 import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import BuildingManager from './BuildingManager';
+import { IMainScene } from '../types';
 
 export default class WaveManager {
-    scene: Phaser.Scene;
+    scene: IMainScene;
     buildingManager: BuildingManager;
     enemies: Map<string, BaseEnemy>;
     currentWave: number;
@@ -23,7 +24,7 @@ export default class WaveManager {
     ddosBotsToSpawn: number;
     ddosRewardGranted: boolean;
 
-    constructor(scene: Phaser.Scene, buildingManager: BuildingManager) {
+    constructor(scene: IMainScene, buildingManager: BuildingManager) {
         this.scene = scene;
         this.buildingManager = buildingManager;
         this.enemies = new Map();
@@ -128,7 +129,7 @@ export default class WaveManager {
         // If it's a boss wave and it's the last enemy to spawn, make it a boss
         if (!typeOverride && isBossWave && this.enemiesSpawned === this.enemiesToSpawn) {
             type = 'OVERFITTED_MODEL';
-            const uiManager = (this.scene as any).uiManager;
+            const uiManager = this.scene.uiManager;
             if (uiManager) uiManager.logMessage('System: WARNING - Overfitted Model detected!', true);
         } else if (!typeOverride) {
             if (this.currentWave > 5 && Math.random() < 0.3) type = 'MALWARE';
@@ -142,7 +143,7 @@ export default class WaveManager {
     spawnDdosSwarm(): void {
         if (this.ddosSwarmSpawned || this.ddosBotsToSpawn <= 0) return;
         this.ddosSwarmSpawned = true;
-        const uiManager = (this.scene as any).uiManager;
+        const uiManager = this.scene.uiManager;
         if (uiManager) uiManager.logMessage(`System: DDoS swarm detected (${this.ddosBotsToSpawn} packets)!`, true);
         for (let i = 0; i < this.ddosBotsToSpawn; i++) {
             this.spawnEnemy('DDOS_BOT');
@@ -189,7 +190,7 @@ export default class WaveManager {
     grantSiliconReward(amount: number): void {
         if (amount <= 0) return;
         amount = Math.max(1, Math.round(amount * this.getDifficulty().REWARD_MULTIPLIER));
-        const buildingManager = (this.scene as any).buildingManager as BuildingManager;
+        const buildingManager = this.scene.buildingManager;
         let remaining = amount;
 
         buildingManager.forEach(building => {
@@ -200,7 +201,7 @@ export default class WaveManager {
             }
         });
 
-        const uiManager = (this.scene as any).uiManager;
+        const uiManager = this.scene.uiManager;
         if (uiManager && remaining < amount) {
             uiManager.logMessage(`System: Recovered ${amount - remaining} Silicon from enemy residue.`);
         }
@@ -213,7 +214,7 @@ export default class WaveManager {
 
         this.ddosRewardGranted = true;
         this.grantSiliconReward(5);
-        const uiManager = (this.scene as any).uiManager;
+        const uiManager = this.scene.uiManager;
         if (uiManager) uiManager.logMessage('System: DDoS swarm scrubbed. Silicon bounty recovered.');
     }
 

@@ -1,4 +1,19 @@
 import Phaser from 'phaser';
+import type BuildingManager from './managers/BuildingManager';
+import type CableManager from './managers/CableManager';
+import type EffectsManager from './managers/EffectsManager';
+import type GridRenderer from './managers/GridRenderer';
+import type InventoryManager from './managers/InventoryManager';
+import type ItemManager from './managers/ItemManager';
+import type MapManager from './managers/MapManager';
+import type PowerManager from './managers/PowerManager';
+import type ResearchManager from './managers/ResearchManager';
+import type SaveManager from './managers/SaveManager';
+import type SoundManager from './managers/SoundManager';
+import type TickSystem from './managers/TickSystem';
+import type TutorialManager from './managers/TutorialManager';
+import type UIManager from './managers/UIManager';
+import type WaveManager from './managers/WaveManager';
 
 // ── 방향 (Direction) ──
 export interface Direction {
@@ -246,6 +261,32 @@ export interface DefenseModelState {
     modelConfidence: number;
     modelVersion: number;
     inferenceCharge: number;
+}
+
+export interface IMainScene extends Phaser.Scene {
+    researchManager: ResearchManager;
+    buildingManager: BuildingManager;
+    cableManager: CableManager;
+    powerManager: PowerManager;
+    waveManager: WaveManager;
+    uiManager: UIManager;
+    effectsManager: EffectsManager;
+    mapManager: MapManager;
+    itemManager: ItemManager;
+    gridRenderer: GridRenderer;
+    tickSystem: TickSystem;
+    inventoryManager: InventoryManager;
+    saveManager: SaveManager;
+    soundManager: SoundManager;
+    tutorialManager: TutorialManager;
+    defenseModelStates: Record<string, DefenseModelState>;
+    gameSpeed: number;
+    difficultyId: string;
+    isMobileLayout: boolean;
+    getDefenseModelState(type: string): DefenseModelState;
+    trainDefenseModelType(type: string, itemType: string): boolean;
+    syncDefenseModelType(type: string): void;
+    setGameSpeed(speed: number): void;
 }
 
 // ── 적 (Enemy) ──

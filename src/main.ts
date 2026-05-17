@@ -3,6 +3,12 @@ import './styles/main.css';
 import MainMenuScene from './scenes/MainMenuScene';
 import MainScene from './scenes/MainScene';
 
+declare global {
+    interface Window {
+        __NEURAL_FACTORY_GAME__?: Phaser.Game;
+    }
+}
+
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: window.innerWidth,
@@ -18,3 +24,4 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
+window.__NEURAL_FACTORY_GAME__ = game;

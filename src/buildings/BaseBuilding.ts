@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-import { BuildingOptions, GameItem, MoveTarget } from '../types';
+import { BuildingOptions, GameItem, IMainScene, MoveTarget } from '../types';
 
 /**
  * 모든 건물의 기반 클래스
@@ -181,7 +181,7 @@ export default class BaseBuilding {
     }
 
     isInfected(tickCount?: number): boolean {
-        const currentTick = tickCount ?? (this.scene as any).tickSystem?.getCurrentTick?.() ?? 0;
+        const currentTick = tickCount ?? (this.scene as IMainScene).tickSystem?.getCurrentTick?.() ?? 0;
         return this.infectedUntilTick > currentTick;
     }
 
@@ -190,7 +190,7 @@ export default class BaseBuilding {
         this.infectionMarker.clear();
         if (!this.isInfected(tickCount)) return;
 
-        const pulse = Math.sin((this.scene as any).time?.now / 150) * 0.25 + 0.75;
+        const pulse = Math.sin(this.scene.time.now / 150) * 0.25 + 0.75;
         this.infectionMarker.lineStyle(2, 0xff00aa, pulse);
         this.infectionMarker.strokeTriangle(-6, -CONFIG.GRID_SIZE / 2 - 12, 6, -CONFIG.GRID_SIZE / 2 - 12, 0, -CONFIG.GRID_SIZE / 2 - 2);
         this.infectionMarker.fillStyle(0xff00aa, 0.4 * pulse);

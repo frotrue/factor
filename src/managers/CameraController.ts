@@ -1,14 +1,15 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
+import { IMainScene } from '../types';
 
 export default class CameraController {
-    scene: Phaser.Scene;
+    scene: IMainScene;
     camera: Phaser.Cameras.Scene2D.Camera;
     moveSpeed: number;
     keys: { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key };
     lastPinchDistance: number | null;
 
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: IMainScene) {
         this.scene = scene;
         this.camera = scene.cameras.main;
         this.moveSpeed = 10;
@@ -19,16 +20,16 @@ export default class CameraController {
             down: Phaser.Input.Keyboard.KeyCodes.S,
             left: Phaser.Input.Keyboard.KeyCodes.A,
             right: Phaser.Input.Keyboard.KeyCodes.D
-        }) as any;
+        }) as { up: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key };
 
         this.setup();
     }
 
     setup(): void {
-        const isMobile = Boolean((this.scene as any).isMobileLayout);
+        const isMobile = this.scene.isMobileLayout;
         this.camera.setZoom(isMobile ? 1 : CONFIG.CAMERA.DEFAULT_ZOOM);
 
-        this.scene.input.on('wheel', (pointer: Phaser.Input.Pointer, _gameObjects: any, _deltaX: number, deltaY: number) => {
+        this.scene.input.on('wheel', (pointer: Phaser.Input.Pointer, _gameObjects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
             const cam = this.camera;
             const oldZoom = cam.zoom;
             
@@ -62,7 +63,7 @@ export default class CameraController {
         this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (this.handlePinchZoom()) return;
 
-            const isMobileLayout = Boolean((this.scene as any).isMobileLayout);
+            const isMobileLayout = this.scene.isMobileLayout;
             const secondPointerActive = Boolean(this.scene.input.pointer2?.isDown);
             const shouldPan = pointer.middleButtonDown() || (isMobileLayout && pointer.isDown && !secondPointerActive);
             if (shouldPan) {
@@ -77,7 +78,7 @@ export default class CameraController {
     }
 
     handlePinchZoom(): boolean {
-        if (!Boolean((this.scene as any).isMobileLayout)) return false;
+        if (!this.scene.isMobileLayout) return false;
 
         const pointer1 = this.scene.input.pointer1;
         const pointer2 = this.scene.input.pointer2;
@@ -103,7 +104,7 @@ export default class CameraController {
     }
 
     update(): void {
-        if (Boolean((this.scene as any).isMobileLayout)) return;
+        if (this.scene.isMobileLayout) return;
 
         const zoom = this.camera.zoom;
         const speed = this.moveSpeed / zoom;

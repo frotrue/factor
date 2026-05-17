@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
-import type MainScene from '../scenes/MainScene';
+import { BuildingOptions, IMainScene } from '../types';
 
 export default class DataDownloader extends BaseBuilding {
     productionRate: number;
@@ -23,7 +22,7 @@ export default class DataDownloader extends BaseBuilding {
     }
 
     shouldProduce(tickCount: number): boolean {
-        const researchManager = (this.scene as MainScene).researchManager;
+        const researchManager = (this.scene as IMainScene).researchManager;
         const multiplier = researchManager?.getEffectValue('MINING_RATE_MULTIPLIER', 1) ?? 1;
         const effectiveRate = Math.max(1, Math.round(this.productionRate * multiplier));
         return tickCount % effectiveRate === 0;

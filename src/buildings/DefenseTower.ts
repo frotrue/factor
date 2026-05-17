@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions, DefenseModelState, DefenseTowerConfig } from '../types';
+import { BuildingOptions, DefenseModelState, DefenseTowerConfig, IMainScene } from '../types';
 import BaseEnemy from '../enemies/BaseEnemy';
-import type MainScene from '../scenes/MainScene';
 
 export default class DefenseTower extends BaseBuilding {
     fireTimer: number;
@@ -18,7 +17,7 @@ export default class DefenseTower extends BaseBuilding {
     constructor(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}) {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
         this.fireTimer = 0;
-        const sharedModel = (scene as MainScene).getDefenseModelState?.(type);
+        const sharedModel = (scene as IMainScene).getDefenseModelState?.(type);
         this.modelConfidence = Phaser.Math.Clamp(config.customState?.modelConfidence ?? sharedModel?.modelConfidence ?? 35, 0, 100);
         this.modelVersion = Math.max(1, config.customState?.modelVersion ?? sharedModel?.modelVersion ?? 1);
         this.inferenceCharge = Math.max(0, config.customState?.inferenceCharge ?? sharedModel?.inferenceCharge ?? 0);
@@ -26,7 +25,7 @@ export default class DefenseTower extends BaseBuilding {
 
         const bConfig = CONFIG.BUILDINGS[type];
         if (bConfig.HP) {
-            const researchManager = (scene as MainScene).researchManager;
+            const researchManager = (scene as IMainScene).researchManager;
             const hpMultiplier = type === 'FIREWALL'
                 ? researchManager?.getEffectValue('FIREWALL_HP_MULTIPLIER', 1) ?? 1
                 : 1;
@@ -59,7 +58,7 @@ export default class DefenseTower extends BaseBuilding {
         if (this.maxHp <= 0) return;
         this.hp -= amount;
         if (this.hp <= 0) {
-            const buildingManager = (this.scene as MainScene).buildingManager;
+            const buildingManager = (this.scene as IMainScene).buildingManager;
             if (buildingManager) {
                 buildingManager.remove(`${this.x},${this.y}`);
             }
@@ -77,7 +76,7 @@ export default class DefenseTower extends BaseBuilding {
     clearLockedTarget(): void {
         if (!this.lockedTarget) return;
         this.lockedTarget = null;
-        (this.scene as MainScene).effectsManager?.clearInferenceLock(this.getLockKey());
+        (this.scene as IMainScene).effectsManager?.clearInferenceLock(this.getLockKey());
     }
 
     getLockKey(): string {
@@ -95,7 +94,7 @@ export default class DefenseTower extends BaseBuilding {
     }
 
     improveModel(itemType: string): boolean {
-        const trained = (this.scene as MainScene).trainDefenseModelType?.(this.type, itemType) ?? false;
+        const trained = (this.scene as IMainScene).trainDefenseModelType?.(this.type, itemType) ?? false;
         return trained;
     }
 
@@ -105,7 +104,7 @@ export default class DefenseTower extends BaseBuilding {
 
         if (this.isInfected(_tickCount) && _tickCount % 2 !== 0) return;
 
-        const researchManager = (this.scene as MainScene).researchManager;
+        const researchManager = (this.scene as IMainScene).researchManager;
         const fireMultiplier = researchManager?.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1) ?? 1;
         const fireRate = Math.max(1, Math.round(dConfig.FIRE_RATE * fireMultiplier));
 
@@ -116,10 +115,10 @@ export default class DefenseTower extends BaseBuilding {
     }
 
     tryFire(dConfig: DefenseTowerConfig): void {
-        const waveManager = (this.scene as MainScene).waveManager;
+        const waveManager = (this.scene as IMainScene).waveManager;
         if (!waveManager) return;
 
-        const researchManager = (this.scene as MainScene).researchManager;
+        const researchManager = (this.scene as IMainScene).researchManager;
         const range = dConfig.RANGE + (researchManager?.getEffectValue('TOWER_RANGE_BONUS', 0) ?? 0);
         const enemies = waveManager.getEnemiesInRange(
             this.x + (CONFIG.GRID_SIZE/2), 
@@ -189,7 +188,7 @@ export default class DefenseTower extends BaseBuilding {
         if (this.lockedTarget && this.lockedTarget.active) {
             const lockedInRange = enemies.includes(this.lockedTarget);
             if (!lockedInRange) {
-                (this.scene as MainScene).effectsManager?.setInferenceLock(
+                (this.scene as IMainScene).effectsManager?.setInferenceLock(
                     this.getLockKey(),
                     this.lockedTarget,
                     this.type,
@@ -202,7 +201,7 @@ export default class DefenseTower extends BaseBuilding {
 
         this.lockedTarget = enemies[0] ?? null;
         if (this.lockedTarget) {
-            (this.scene as MainScene).effectsManager?.setInferenceLock(
+            (this.scene as IMainScene).effectsManager?.setInferenceLock(
                 this.getLockKey(),
                 this.lockedTarget,
                 this.type,
@@ -225,7 +224,7 @@ export default class DefenseTower extends BaseBuilding {
     }
 
     fireAreaInference(enemies: BaseEnemy[], damage: number, hitChance: number, radius: number): void {
-        const mainScene = this.scene as MainScene;
+        const mainScene = this.scene as IMainScene;
         const x = this.x + CONFIG.GRID_SIZE / 2;
         const y = this.y + CONFIG.GRID_SIZE / 2;
         const results = enemies
@@ -268,7 +267,7 @@ export default class DefenseTower extends BaseBuilding {
         if (!target.active) return;
         const x = this.x + CONFIG.GRID_SIZE / 2;
         const y = this.y + CONFIG.GRID_SIZE / 2;
-        const mainScene = this.scene as MainScene;
+        const mainScene = this.scene as IMainScene;
         mainScene.soundManager?.play('shot');
         if (this.type === 'CLASSIFIER') {
             if (this.type === 'CLASSIFIER') {

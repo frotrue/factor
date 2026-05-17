@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions } from '../types';
-import type MainScene from '../scenes/MainScene';
+import { BuildingOptions, IMainScene } from '../types';
 
 const PHYSICAL_ITEMS = new Set(['SILICON']);
 
@@ -48,7 +47,7 @@ export default class Conveyor extends BaseBuilding {
         const dir = CONFIG.DIRECTIONS[this.rotation];
         const backX = this.x - dir.x * CONFIG.GRID_SIZE;
         const backY = this.y - dir.y * CONFIG.GRID_SIZE;
-        const buildingManager = (this.scene as MainScene).buildingManager;
+        const buildingManager = (this.scene as IMainScene).buildingManager;
         const source = buildingManager.get(`${backX},${backY}`);
         if (!source || !source.hasPower) return;
 
@@ -65,7 +64,7 @@ export default class Conveyor extends BaseBuilding {
         const dir = CONFIG.DIRECTIONS[this.rotation];
         const frontX = this.x + dir.x * CONFIG.GRID_SIZE;
         const frontY = this.y + dir.y * CONFIG.GRID_SIZE;
-        const buildingManager = (this.scene as MainScene).buildingManager;
+        const buildingManager = (this.scene as IMainScene).buildingManager;
         const dest = buildingManager.get(`${frontX},${frontY}`);
         const item = this.inputBuffer[0];
 

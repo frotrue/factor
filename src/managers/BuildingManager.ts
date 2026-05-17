@@ -3,17 +3,18 @@ import { CONFIG } from '../config';
 import { createBuilding } from '../buildings/BuildingFactory';
 import BaseBuilding from '../buildings/BaseBuilding';
 import EventBus from './EventBus';
+import { BuildingCost, BuildingOptions, IMainScene } from '../types';
 
 export default class BuildingManager {
-    scene: Phaser.Scene;
+    scene: IMainScene;
     buildings: Map<string, BaseBuilding>;
 
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: IMainScene) {
         this.scene = scene;
         this.buildings = new Map();
     }
 
-    place(x: number, y: number, type: string, rotation: number, config: import('../types').BuildingOptions = {}): BaseBuilding | null {
+    place(x: number, y: number, type: string, rotation: number, config: BuildingOptions = {}): BaseBuilding | null {
         const bConfig = CONFIG.BUILDINGS[type];
         const w = bConfig?.WIDTH || 1;
         const h = bConfig?.HEIGHT || 1;
@@ -27,11 +28,11 @@ export default class BuildingManager {
 
         // Check and deduct building costs unless restoring trusted save data.
         if (!config.skipCost && bConfig.COST && bConfig.COST.length > 0) {
-            const inventoryManager = (this.scene as any).inventoryManager;
+            const inventoryManager = this.scene.inventoryManager;
             if (inventoryManager && !inventoryManager.spend(bConfig.COST)) {
-                const uiManager = (this.scene as any).uiManager;
+                const uiManager = this.scene.uiManager;
                 if (uiManager) {
-                    const costText = bConfig.COST.map((c: any) => `${c.amount} ${c.resource}`).join(', ');
+                    const costText = bConfig.COST.map((c: BuildingCost) => `${c.amount} ${c.resource}`).join(', ');
                     uiManager.logMessage(`System: Insufficient resources. Need: ${costText}`, true);
                 }
                 return null;
@@ -55,7 +56,7 @@ export default class BuildingManager {
         const building = this.buildings.get(key);
         if (building) {
             if (building.type === 'CORE') {
-                const uiManager = (this.scene as any).uiManager;
+                const uiManager = this.scene.uiManager;
                 if (uiManager) uiManager.logMessage("System: Cannot remove Neural Core.", true);
                 return;
             }

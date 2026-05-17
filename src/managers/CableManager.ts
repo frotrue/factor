@@ -1,24 +1,25 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-import { CableConnection, CablePacket } from '../types';
+import { CableConnection, CablePacket, IMainScene } from '../types';
 import BuildingManager from './BuildingManager';
 import ItemManager from './ItemManager';
 import EventBus from './EventBus';
 import AccessPoint from '../buildings/AccessPoint';
 import BaseBuilding from '../buildings/BaseBuilding';
+import { getAvailableInputSpace, isAPAutoRelaySource, selectAPRelayTarget } from '../utils/apRelay';
 
 const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
 
 export default class CableManager {
-    scene: Phaser.Scene;
+    scene: IMainScene;
     cables: Map<string, CableConnection>;
     apConnections: Map<string, CableConnection>;
     graphics: Phaser.GameObjects.Graphics;
     dirty: boolean;
     apDirty: boolean;
 
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: IMainScene) {
         this.scene = scene;
         this.cables = new Map();
         this.apConnections = new Map();
@@ -36,7 +37,7 @@ export default class CableManager {
         }, 'CableManager');
 
         EventBus.on('RESEARCH_UNLOCKED', () => {
-            const bandwidthBonus = (this.scene as any).researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
+            const bandwidthBonus = this.scene.researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
             this.cables.forEach(cable => {
                 cable.bandwidth = CONFIG.CABLES[cable.cableType].BANDWIDTH + bandwidthBonus;
             });
@@ -65,7 +66,7 @@ export default class CableManager {
         if (this.cables.has(id)) return false;
 
         const config = CONFIG.CABLES[type];
-        const bandwidthBonus = (this.scene as any).researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
+        const bandwidthBonus = this.scene.researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
         this.cables.set(id, {
             id,
             fromKey,
@@ -125,7 +126,7 @@ export default class CableManager {
     }
 
     getCableTravelTicks(): number {
-        const gameSpeed = Math.max(0.1, (this.scene as any).gameSpeed || 1);
+        const gameSpeed = Math.max(0.1, this.scene.gameSpeed || 1);
         const tickMs = (CONFIG.TICK_RATE * CONFIG.TIMING.TICK_RATE_MULTIPLIER) / gameSpeed;
         return Math.max(1, Math.ceil(CONFIG.TIMING.DATA_PULSE_DURATION_MS / tickMs) || DEFAULT_CABLE_TRAVEL_TICKS);
     }
@@ -246,9 +247,10 @@ export default class CableManager {
 
         if (accessPoints.length === 0) return;
 
-        const rangeBonus = (this.scene as any).researchManager?.getEffectValue('AP_RANGE_BONUS', 0) ?? 0;
+        const rangeBonus = this.scene.researchManager?.getEffectValue('AP_RANGE_BONUS', 0) ?? 0;
 
         for (const ap of accessPoints) {
+            ap.relaysThisTick = 0;
             const apRange = ap.range + rangeBonus;
             const inRange = buildings.filter(building =>
                 building !== ap
@@ -257,30 +259,32 @@ export default class CableManager {
                 && Math.abs(building.x - ap.x) / CONFIG.GRID_SIZE <= apRange
                 && Math.abs(building.y - ap.y) / CONFIG.GRID_SIZE <= apRange
             );
-            const senders = inRange.filter(building => this.isDataItem(building.outputBuffer[0]));
+            const senders = inRange.filter(building => isAPAutoRelaySource(building, itemType => this.isDataItem(itemType)));
             let relayed = 0;
 
             for (const source of senders) {
                 if (relayed >= ap.bandwidth) break;
 
                 const item = source.outputBuffer[0];
-                const target = inRange.find(candidate =>
-                    candidate !== source
-                    && candidate.canAcceptItem(item)
-                );
+                const target = selectAPRelayTarget(inRange, source, item);
                 if (!target) continue;
 
                 source.outputBuffer.shift();
                 target.acceptItem(item);
                 relayed++;
+                ap.relaysThisTick = relayed;
                 this.createPulseAnimation(`${source.x},${source.y}`, `${ap.x},${ap.y}`, item);
                 this.createPulseAnimation(`${ap.x},${ap.y}`, `${target.x},${target.y}`, item);
             }
         }
     }
 
+    getAvailableInputSpace(building: BaseBuilding): number {
+        return getAvailableInputSpace(building);
+    }
+
     isBuildingInAPRange(building: BaseBuilding, ap: AccessPoint): boolean {
-        const rangeBonus = (this.scene as any).researchManager?.getEffectValue('AP_RANGE_BONUS', 0) ?? 0;
+        const rangeBonus = this.scene.researchManager?.getEffectValue('AP_RANGE_BONUS', 0) ?? 0;
         const apRange = ap.range + rangeBonus;
         const dx = Math.abs(building.x - ap.x) / CONFIG.GRID_SIZE;
         const dy = Math.abs(building.y - ap.y) / CONFIG.GRID_SIZE;
