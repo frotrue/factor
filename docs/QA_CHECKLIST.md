@@ -15,13 +15,17 @@
 - [x] Desktop Chromium: Conveyor/Storage/Weight Trainer/Classifier 배치 가능
 - [x] Desktop Chromium: `R` 회전, `F1` 방어 범위, `F2` 전력망 오버레이 토글 가능
 - [x] Desktop Chromium: 우클릭 건물 제거, 게임 속도 설정, 저장, 연구 모달 열기 가능
+- [x] Desktop Chromium: 튜토리얼 패널 표시 및 첫 목표 안내 확인
 - [x] Mobile Portrait - 390x844: 터치로 Data Downloader/Processor 배치 및 Basic Cable 연결 가능
 - [x] Mobile Landscape - 844x390: 터치로 Data Downloader/Processor 배치 및 Basic Cable 연결 가능
+- [x] Vitest: 튜토리얼 진행 순서/저장 step 계산 검증
+- [x] Vitest: Wave 1/5/10/12/20 수식, 난이도 배율, DDoS/Boss 압박 검증
+- [x] Vitest: 2,000~10,000 tick 장시간 생산 루프 시뮬레이션 검증
 - [x] `npm test` 통과
 - [x] `npm run test:e2e` 통과
 - [x] `npm run build` 통과
 
-> 자동 스모크는 시작/표시/모달, 주요 건물 배치, 케이블 연결/제거, 모바일 액션바/터치 배치 회귀 방지용이다. 웨이브 밸런스, 장시간 생산 루프, 실제 플레이 감각은 아래 수동 QA가 필요하다.
+> 자동 스모크는 시작/표시/모달, 튜토리얼 첫 안내, 주요 건물 배치, 케이블 연결/제거, 모바일 액션바/터치 배치 회귀 방지용이다. 웨이브 수식과 장시간 생산 루프는 Vitest 시뮬레이션으로 보호한다. 실제 플레이 감각과 세밀한 밸런스 조정은 아래 수동 QA가 필요하다.
 
 ## Desktop
 

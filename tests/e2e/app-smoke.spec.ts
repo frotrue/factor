@@ -91,6 +91,9 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await startGame(page);
     await expect(page.locator('#ui-overlay')).toBeVisible();
     await expect(page.locator('#btn-settings')).toBeVisible();
+    await expect(page.locator('#tutorial-panel')).toBeVisible();
+    await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', 'DATA_SOURCE');
+    await expect(page.locator('#tutorial-panel')).toContainText('Start data intake');
 
     await page.locator('#btn-settings').click();
     await expect(page.locator('#settings-modal')).toBeVisible();

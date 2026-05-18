@@ -26,6 +26,11 @@
 - 모바일 E2E 스모크를 확장했다: 세로/가로 뷰포트에서 Rotate, Remove, Cable, Cancel, Defense, Power 버튼이 scene 상태를 바꾸는지 확인한다.
 - 모바일 E2E 스모크를 실제 터치 조작까지 확장했다: 세로/가로 뷰포트에서 Data Downloader와 Processor를 배치하고 Basic Cable을 연결한다.
 - 데스크톱 E2E 스모크를 주요 상호작용까지 확장했다: Conveyor, Storage, Weight Trainer, Classifier 배치, 우클릭 제거, `R` 회전, `F1`/`F2` 오버레이, 게임 속도 설정, 저장, 연구 모달을 확인한다.
+- 튜토리얼을 새 온보딩 흐름으로 개편했다: 리소스 확인, 데이터 생산, 처리, 연결, 전력, 방어, 연구, 웨이브 순서로 진행한다.
+- 튜토리얼 진행 상태를 `tutorialFlow` 순수 유틸로 분리하고 Vitest로 저장 step 계산과 완료 상태를 검증한다.
+- 웨이브 수식을 `waveSimulation` 유틸로 분리하고 WaveManager가 같은 수식을 사용하도록 정리했다.
+- Wave 1/5/10/12/20, 난이도 배율, DDoS/Boss 압박을 Vitest 시뮬레이션으로 검증한다.
+- 2,000~10,000 tick 데이터 생산 루프 시뮬레이션을 추가해 장시간 생산량, confidence 증가, buffer 상한을 검증한다.
 
 ---
 
@@ -111,6 +116,10 @@
 - [x] 데스크톱: Data Downloader/Processor 배치
 - [x] 데스크톱: Basic Cable 연결 및 Remove 모드 케이블 제거
 - [x] 데스크톱: Conveyor/Storage/Weight Trainer/Classifier 배치, 우클릭 제거, 회전/오버레이/저장/연구 모달 스모크
+- [x] 데스크톱: 튜토리얼 패널 표시 및 첫 목표 안내 확인
+- [x] Vitest: 튜토리얼 진행 순서/저장 step 검증
+- [x] Vitest: 웨이브 수식/난이도/DDoS/Boss 시뮬레이션 검증
+- [x] Vitest: 장시간 생산 루프 2,000~10,000 tick 시뮬레이션 검증
 - [x] 런타임 console/page error 없음
 
 ---
@@ -258,7 +267,8 @@ export interface RecipeState {
 
 ### 완료 기준
 
-- [ ] Normal Wave 20까지 1회 이상 플레이 로그 확보
+- [x] Normal Wave 20까지 자동 수식/HP 압박 시뮬레이션 확보
+- [ ] Normal Wave 20까지 1회 이상 실제 플레이 로그 확보
 - [ ] Easy Wave 10까지 확인
 - [ ] Hard Wave 10까지 확인
 - [ ] 필요 수치 조정 PR/커밋 단위로 반영

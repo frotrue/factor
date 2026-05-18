@@ -44,7 +44,10 @@ npx playwright install chromium
 | `src/config.test.ts` | 연구/해금/아이템/레시피 config 무결성 |
 | `src/utils/saveMigration.test.ts` | 저장 데이터 마이그레이션 기본값/보존 |
 | `src/utils/apRelay.test.ts` | AP 자동 릴레이 source 제외 및 수신자 우선순위 |
-| `tests/e2e/app-smoke.spec.ts` | 데스크톱 시작/설정 모달/주요 빌드 상호작용, 모바일 액션바 버튼 상태, 데스크톱/모바일 배치와 케이블 조작 |
+| `src/utils/tutorialFlow.test.ts` | 튜토리얼 진행 순서, 저장 step, 완료 상태 계산 |
+| `src/utils/waveSimulation.test.ts` | 웨이브 수식, 난이도 배율, DDoS/Boss 압박 시뮬레이션 |
+| `src/utils/productionSimulation.test.ts` | 2,000~10,000 tick 장시간 생산 루프 시뮬레이션 |
+| `tests/e2e/app-smoke.spec.ts` | 데스크톱 시작/설정 모달/튜토리얼 패널/주요 빌드 상호작용, 모바일 액션바 버튼 상태, 데스크톱/모바일 배치와 케이블 조작 |
 
 ---
 
@@ -155,6 +158,9 @@ expect(errors).toEqual([]);
 - save migration
 - AP/Cable 규칙
 - 순수 함수로 분리 가능한 게임 규칙
+- tutorial flow/order/progress 계산
+- wave formula/difficulty/DDOS/boss pressure simulation
+- long-running production loop simulation
 
 ### Playwright로 추가할 것
 

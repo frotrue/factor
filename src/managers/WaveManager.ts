@@ -4,6 +4,7 @@ import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import BuildingManager from './BuildingManager';
 import { IMainScene } from '../types';
+import { createWavePlan } from '../utils/waveSimulation';
 
 export default class WaveManager {
     scene: IMainScene;
@@ -81,24 +82,13 @@ export default class WaveManager {
         this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(8, 12) : 0;
         this.ddosRewardGranted = false;
         
-        if (this.currentWave <= 5) {
-            this.enemiesToSpawn = 4 + this.currentWave;
-            this.hpMultiplier = 1;
-        } else if (this.currentWave <= 15) {
-            this.enemiesToSpawn = 8 + Math.floor(this.currentWave * 1.5);
-            this.hpMultiplier = 1.25 + (this.currentWave - 5) * 0.04;
-        } else {
-            this.enemiesToSpawn = 18 + Math.floor(this.currentWave * 1.8);
-            this.hpMultiplier = 1.8 + (this.currentWave - 15) * 0.12;
-        }
-
-        // Add 1 extra boss enemy every 10 waves
-        if (this.currentWave % 10 === 0) {
-            this.enemiesToSpawn += 1;
-        }
-
-        this.enemiesToSpawn = Math.max(1, Math.round(this.enemiesToSpawn * this.getDifficulty().ENEMY_SPAWN_MULTIPLIER));
-        this.enemiesToSpawn += this.ddosBotsToSpawn;
+        const plan = createWavePlan({
+            wave: this.currentWave,
+            difficultyId: this.difficultyId,
+            ddosBots: this.ddosBotsToSpawn
+        });
+        this.enemiesToSpawn = plan.enemiesToSpawn;
+        this.hpMultiplier = plan.hpMultiplier;
 
         EventBus.emit('WAVE_STARTED', { wave: this.currentWave });
     }
