@@ -145,8 +145,8 @@ export const TRANSLATIONS = {
         'tooltip.processing': '처리 중',
         'tooltip.idle': '대기',
         'tooltip.recipe': '레시피',
-        'tooltip.solarStandalone': '독립 전력: 자기 자신만 공급',
-        'tooltip.solarNoNetwork': '전력망에 연결하거나 전력을 공유하지 않습니다',
+        'tooltip.solarStandalone': '독립 전력: 주변 1x1 범위 공급',
+        'tooltip.solarNoNetwork': '본인을 중심으로 주변 8칸에 전력을 공급합니다.',
         'tooltip.trainingTarget': '훈련 대상',
         'tooltip.sharedConfidence': '공유 신뢰도',
         'tooltip.sharedVersion': '공유 버전',
@@ -177,7 +177,7 @@ export const TRANSLATIONS = {
         'trainingLab.autoOff': '자동 훈련: 꺼짐',
         'trainingLab.noInput': '훈련: 먼저 대상과 훈련 입력을 준비하세요.',
         'trainingLab.targetSet': '훈련: 모든 {name} 모델을 대상으로 설정했습니다.',
-        'building.SOLAR_PANEL.description': '자기 자신에게만 전력을 공급하는 독립형 패널입니다. 전력망을 확장하거나 주변 건물에 전력을 공유하지 않습니다.'
+        'building.SOLAR_PANEL.description': '주변 1x1 범위(본인을 중심으로 8칸) 내의 건물에 전력을 공급하는 독립형 태양광 패널입니다.'
     },
     en: {
         'app.title': 'NEURAL FACTORY',
@@ -318,8 +318,8 @@ export const TRANSLATIONS = {
         'tooltip.processing': 'Processing',
         'tooltip.idle': 'Idle',
         'tooltip.recipe': 'Recipe',
-        'tooltip.solarStandalone': 'Standalone power: covers self only',
-        'tooltip.solarNoNetwork': 'Does not connect to or share power with the grid',
+        'tooltip.solarStandalone': 'Standalone power: covers 1x1 area',
+        'tooltip.solarNoNetwork': 'Supplies power to 8 adjacent tiles around itself.',
         'tooltip.trainingTarget': 'Training Target',
         'tooltip.sharedConfidence': 'Shared Confidence',
         'tooltip.sharedVersion': 'Shared Version',
@@ -350,7 +350,7 @@ export const TRANSLATIONS = {
         'trainingLab.autoOff': 'Auto Train: OFF',
         'trainingLab.noInput': 'Training: select a target and provide training input first.',
         'trainingLab.targetSet': 'Training: target set to all {name} models.',
-        'building.SOLAR_PANEL.description': 'A standalone panel that powers only itself. It does not extend the power grid or share power with nearby buildings.'
+        'building.SOLAR_PANEL.description': 'A standalone panel that supplies power to buildings within a 1x1 range (8 tiles around itself).'
     }
 } as const;
 

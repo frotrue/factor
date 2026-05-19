@@ -225,8 +225,8 @@ export const CONFIG: GameConfig = {
             ID: 'SOLAR_PANEL',
             NAME: '태양광 패널 (Solar Panel)',
             COLOR: 0xfde047,
-            DESCRIPTION: '독립 전력 전용. 자기 자신에게만 전력을 공급하며 전력망을 확장하거나 주변 건물에 전력을 공유하지 않습니다.',
-            POWER: { CONSUMPTION: 0, PRODUCTION: 10, RANGE: 0 },
+            DESCRIPTION: '독립형 전력 패널. 자신의 주변 1x1(본인을 중심으로 8칸)의 전력 공급 범위를 가집니다.',
+            POWER: { CONSUMPTION: 0, PRODUCTION: 10, RANGE: 1 },
             UNLOCK_REQUIRED: 'TECH_SOLAR_POWER',
             CATEGORY: 'POWER',
             COST: [{ resource: 'SILICON', amount: 10 }]
@@ -528,7 +528,7 @@ export const CONFIG: GameConfig = {
             ID: 'TECH_SOLAR_POWER',
             NAME: '태양광 발전',
             COST: 100,
-            DESCRIPTION: '자기 자신에게만 전력을 공급하는 독립형 태양광 패널을 해금합니다.',
+            DESCRIPTION: '주변 1x1 범위(본인을 중심으로 8칸) 내의 건물에 전력을 공급하는 독립형 태양광 패널을 해금합니다.',
             UNLOCKS: { BUILDINGS: ['SOLAR_PANEL'] }
         },
         TECH_ADVANCED_PROCESSING: {

@@ -44,14 +44,13 @@ export default class WaveManager {
         this.hpMultiplier = 1;
         this.enemyIdCounter = 0;
         
-        this.coreX = CONFIG.GRID_SIZE / 2;
-        this.coreY = CONFIG.GRID_SIZE / 2;
+        this.coreX = CONFIG.GRID_SIZE * 2;
+        this.coreY = CONFIG.GRID_SIZE * 2;
         this.difficultyId = 'NORMAL';
         this.ddosSwarmSpawned = false;
         this.ddosBotsToSpawn = 0;
         this.ddosRewardGranted = false;
         this.activeRoutes = selectActiveIntrusionRoutes(1, this.difficultyId);
-
         EventBus.on('ENEMY_KILLED', ({ id, type, rewardSilicon }: { id: string; type: string; rewardSilicon: number }) => {
             this.enemies.delete(id);
             this.grantSiliconReward(rewardSilicon);

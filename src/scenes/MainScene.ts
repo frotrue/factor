@@ -351,9 +351,9 @@ export default class MainScene extends Phaser.Scene {
             this.cableDraftGraphics.clear();
             const pointer = this.input.activePointer;
             const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-            const [startX, startY] = this.cableStartKey.split(',').map(Number);
-            const cx1 = startX + CONFIG.GRID_SIZE / 2;
-            const cy1 = startY + CONFIG.GRID_SIZE / 2;
+            const center = this.cableManager.getBuildingCenter(this.cableStartKey);
+            const cx1 = center.x;
+            const cy1 = center.y;
             this.cableDraftGraphics.lineStyle(2, 0xffffff, 0.5);
             this.cableDraftGraphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, worldPoint.x, worldPoint.y));
         } else {

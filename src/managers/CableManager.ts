@@ -54,6 +54,24 @@ export default class CableManager {
         return key;
     }
 
+    getBuildingCenter(key: string): { x: number; y: number } {
+        const [bx, by] = key.split(',').map(Number);
+        const building = this.scene.buildingManager.get(key);
+        if (building) {
+            const bConfig = CONFIG.BUILDINGS[building.type];
+            const w = bConfig?.WIDTH || 1;
+            const h = bConfig?.HEIGHT || 1;
+            return {
+                x: building.x + (w * CONFIG.GRID_SIZE) / 2,
+                y: building.y + (h * CONFIG.GRID_SIZE) / 2
+            };
+        }
+        return {
+            x: bx + CONFIG.GRID_SIZE / 2,
+            y: by + CONFIG.GRID_SIZE / 2
+        };
+    }
+
     makeCableId(keyA: string, keyB: string): string {
         const sorted = [keyA, keyB].sort();
         return `cable_${sorted[0]}_${sorted[1]}`;
@@ -292,13 +310,12 @@ export default class CableManager {
     }
 
     createPulseAnimation(fromKey: string, toKey: string, itemType: string): void {
-        const [fx, fy] = fromKey.split(',').map(Number);
-        const [tx, ty] = toKey.split(',').map(Number);
-
-        const cx1 = fx + CONFIG.GRID_SIZE / 2;
-        const cy1 = fy + CONFIG.GRID_SIZE / 2;
-        const cx2 = tx + CONFIG.GRID_SIZE / 2;
-        const cy2 = ty + CONFIG.GRID_SIZE / 2;
+        const center1 = this.getBuildingCenter(fromKey);
+        const center2 = this.getBuildingCenter(toKey);
+        const cx1 = center1.x;
+        const cy1 = center1.y;
+        const cx2 = center2.x;
+        const cy2 = center2.y;
 
         const itemConfig = CONFIG.ITEMS[itemType] || CONFIG.ITEMS.RAW_DATA;
 
@@ -334,13 +351,12 @@ export default class CableManager {
         this.graphics.clear();
 
         for (const cable of this.cables.values()) {
-            const [fx, fy] = cable.fromKey.split(',').map(Number);
-            const [tx, ty] = cable.toKey.split(',').map(Number);
-
-            const cx1 = fx + CONFIG.GRID_SIZE / 2;
-            const cy1 = fy + CONFIG.GRID_SIZE / 2;
-            const cx2 = tx + CONFIG.GRID_SIZE / 2;
-            const cy2 = ty + CONFIG.GRID_SIZE / 2;
+            const center1 = this.getBuildingCenter(cable.fromKey);
+            const center2 = this.getBuildingCenter(cable.toKey);
+            const cx1 = center1.x;
+            const cy1 = center1.y;
+            const cx2 = center2.x;
+            const cy2 = center2.y;
 
             const config = CONFIG.CABLES[cable.cableType];
             const color = config ? config.COLOR : 0xaaaaaa;

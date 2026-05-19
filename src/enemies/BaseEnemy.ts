@@ -138,8 +138,9 @@ export default class BaseEnemy {
         this.drawHpBar();
         this.updateStatusVisuals();
 
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
-        if (dist < CONFIG.GRID_SIZE) {
+
+        const inCoreBounds = (this.x >= 0 && this.x <= 128 && this.y >= 0 && this.y <= 128);
+        if (inCoreBounds || (building && building.type === 'CORE')) {
             EventBus.emit('CORE_DAMAGED', { amount: this.damage });
             this.die();
         }
@@ -247,7 +248,7 @@ export default class BaseEnemy {
                 const worldKey = `${next.x * gridSize},${next.y * gridSize}`;
                 const blockingBuilding = this.buildingManager.get(worldKey) as BaseBuilding | null;
                 const isTarget = key === targetKey;
-                if (blockingBuilding && blockingBuilding.type !== 'FIREWALL' && !isTarget) continue;
+                if (blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget) continue;
 
                 visited.add(key);
                 cameFrom.set(key, `${current.x},${current.y}`);
