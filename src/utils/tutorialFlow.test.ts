@@ -6,6 +6,7 @@ import {
     getTutorialProgressIndex,
     TUTORIAL_STEP_DEFINITIONS
 } from './tutorialFlow';
+import { setLanguage } from '../i18n';
 
 describe('tutorial flow', () => {
     it('defines a complete onboarding path for the factory loop', () => {
@@ -27,6 +28,16 @@ describe('tutorial flow', () => {
         expect(steps.slice(0, 3).every(step => step.completed)).toBe(true);
         expect(steps[3].completed).toBe(false);
         expect(getTutorialProgressIndex(steps)).toBe(3);
+    });
+
+    it('uses Korean by default and refreshes created steps when language changes', () => {
+        setLanguage('ko');
+        expect(createTutorialSteps()[1].title).toBe('데이터 수집 시작');
+
+        setLanguage('en');
+        expect(createTutorialSteps()[1].title).toBe('Start data intake');
+
+        setLanguage('ko');
     });
 
     it('returns the step count when all tutorial steps are complete', () => {

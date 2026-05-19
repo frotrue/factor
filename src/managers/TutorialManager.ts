@@ -7,6 +7,7 @@ import {
     TutorialStep,
     TutorialStepId
 } from '../utils/tutorialFlow';
+import { t } from '../i18n';
 import EventBus from './EventBus';
 
 const STORAGE_COMPLETED = 'neural_factory_tutorial_completed';
@@ -81,6 +82,7 @@ export default class TutorialManager {
         EventBus.on('RESEARCH_OPENED', () => this.completeStep('RESEARCH'), 'TutorialManager');
         EventBus.on('RESEARCH_UNLOCKED', () => this.completeStep('RESEARCH'), 'TutorialManager');
         EventBus.on('TUTORIAL_RESET', () => this.reset(), 'TutorialManager');
+        window.addEventListener('languagechange', () => this.refreshLanguage());
     }
 
     private ensurePanel(): HTMLElement {
@@ -111,8 +113,17 @@ export default class TutorialManager {
         if (this.steps.every(item => item.completed)) {
             this.completed = true;
             this.persistProgress();
-            this.scene.uiManager.logMessage('Tutorial: core factory loop complete.');
+            this.scene.uiManager.logMessage(t('tutorial.completeDetail'));
         }
+        this.render();
+    }
+
+    private refreshLanguage(): void {
+        const completedById = new Set(this.steps.filter(step => step.completed).map(step => step.id));
+        this.steps = createTutorialSteps().map(step => ({
+            ...step,
+            completed: this.completed || completedById.has(step.id)
+        }));
         this.render();
     }
 
@@ -136,16 +147,16 @@ export default class TutorialManager {
         this.panel.innerHTML = `
             <div class="tutorial-header">
                 <div>
-                    <div class="tutorial-kicker">Tutorial ${completeCount}/${this.steps.length}</div>
+                    <div class="tutorial-kicker">${t('tutorial.kicker', { current: completeCount, total: this.steps.length })}</div>
                     <div class="tutorial-title">${activeStep.title}</div>
                 </div>
-                <button id="btn-skip-tutorial" class="tutorial-skip">Skip</button>
+                <button id="btn-skip-tutorial" class="tutorial-skip">${t('tutorial.skip')}</button>
             </div>
             <div class="tutorial-detail">${activeStep.detail}</div>
             <div class="tutorial-steps">
                 ${this.steps.map((step, index) => `
                     <div class="tutorial-step ${step.completed ? 'complete' : index === activeIndex ? 'active' : ''}" data-step-id="${step.id}">
-                        <span class="tutorial-check">${step.completed ? 'OK' : index + 1}</span>
+                        <span class="tutorial-check">${step.completed ? t('tutorial.ok') : index + 1}</span>
                         <span>${step.title}</span>
                     </div>
                 `).join('')}
@@ -156,4 +167,3 @@ export default class TutorialManager {
         if (skip) skip.onclick = () => this.completeAll();
     }
 }
-

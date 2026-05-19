@@ -3,6 +3,7 @@ import { SaveData, SavedBuilding, SavedItem, SavedEnemy } from '../types';
 import EventBus from './EventBus';
 import Core from '../buildings/Core';
 import { CONFIG } from '../config';
+import { getLanguage, setLanguage } from '../i18n';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
 
@@ -18,7 +19,7 @@ export default class SaveManager {
 
         EventBus.on('SAVE_REQUESTED', () => {
             this.saveGame();
-            this.scene.uiManager.logMessage('System: State saved successfully.');
+            this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.saved'));
         }, 'SaveManager');
         EventBus.on('LOAD_REQUESTED', () => this.loadGame(), 'SaveManager');
     }
@@ -114,6 +115,7 @@ export default class SaveManager {
                 showPowerGrid: this.scene.showPowerGrid,
                 showDefenseRange: this.scene.showDefenseRange,
                 difficulty: this.scene.difficultyId,
+                language: getLanguage(),
                 masterVolume: audioSettings.masterVolume,
                 muted: audioSettings.muted,
                 tutorialCompleted: this.scene.tutorialManager?.isCompleted?.() ?? false,
@@ -280,6 +282,9 @@ export default class SaveManager {
                     typeof data.settings.masterVolume === 'number' ? data.settings.masterVolume : 0.6,
                     Boolean(data.settings.muted)
                 );
+                if (data.settings.language) {
+                    setLanguage(data.settings.language);
+                }
                 this.scene.tutorialManager?.loadState?.(
                     Boolean(data.settings.tutorialCompleted),
                     data.settings.tutorialStep
@@ -290,11 +295,11 @@ export default class SaveManager {
             this.scene.powerManager.updatePowerGrid();
             this.scene.powerGridDirty = true;
             this.scene.defenseRangeDirty = true;
-            this.scene.uiManager.logMessage('System: Save file loaded successfully.');
+            this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.loaded'));
             return true;
         } catch (e) {
             console.error('Failed to load save', e);
-            this.scene.uiManager.logMessage('System: Save file corrupted.', true);
+            this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.corrupted'), true);
             return false;
         }
     }

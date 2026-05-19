@@ -21,48 +21,53 @@ export interface TutorialStep extends TutorialStepDefinition {
 export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
     {
         id: 'RESOURCE',
-        title: 'Find resource patches',
-        detail: 'Locate Silicon and Energy patches near the Neural Core. These are the roots of the factory.'
+        title: t('tutorial.RESOURCE.title'),
+        detail: t('tutorial.RESOURCE.detail')
     },
     {
         id: 'DATA_SOURCE',
-        title: 'Start data intake',
-        detail: 'Place a Data Downloader to produce Signal Packets for the processing chain.'
+        title: t('tutorial.DATA_SOURCE.title'),
+        detail: t('tutorial.DATA_SOURCE.detail')
     },
     {
         id: 'PROCESSING',
-        title: 'Process raw data',
-        detail: 'Place a Processor or Weight Trainer so raw data can become useful model material.'
+        title: t('tutorial.PROCESSING.title'),
+        detail: t('tutorial.PROCESSING.detail')
     },
     {
         id: 'CONNECTION',
-        title: 'Connect the flow',
-        detail: 'Use Ethernet cable, AP relays, or conveyors to move items between producers and receivers.'
+        title: t('tutorial.CONNECTION.title'),
+        detail: t('tutorial.CONNECTION.detail')
     },
     {
         id: 'POWER',
-        title: 'Keep the grid powered',
-        detail: 'The core powers nearby machines. Add power buildings when the network starts to run short.'
+        title: t('tutorial.POWER.title'),
+        detail: t('tutorial.POWER.detail')
     },
     {
         id: 'DEFENSE',
-        title: 'Prepare defense',
-        detail: 'Place a Classifier, Filter, or Firewall before incoming traffic reaches the core.'
+        title: t('tutorial.DEFENSE.title'),
+        detail: t('tutorial.DEFENSE.detail')
     },
     {
         id: 'RESEARCH',
-        title: 'Open research',
-        detail: 'Use confidence score to unlock better logistics, production, and defense upgrades.'
+        title: t('tutorial.RESEARCH.title'),
+        detail: t('tutorial.RESEARCH.detail')
     },
     {
         id: 'WAVE',
-        title: 'Survive a wave',
-        detail: 'When the next wave starts, keep the core online and watch which part of the factory is under pressure.'
+        title: t('tutorial.WAVE.title'),
+        detail: t('tutorial.WAVE.detail')
     }
 ];
 
 export function createTutorialSteps(): TutorialStep[] {
-    return TUTORIAL_STEP_DEFINITIONS.map(step => ({ ...step, completed: false }));
+    return TUTORIAL_STEP_DEFINITIONS.map(step => ({
+        ...step,
+        title: t(`tutorial.${step.id}.title` as any),
+        detail: t(`tutorial.${step.id}.detail` as any),
+        completed: false
+    }));
 }
 
 export function getTutorialProgressIndex(steps: TutorialStep[]): number {
@@ -81,3 +86,4 @@ export function applyTutorialProgress(steps: TutorialStep[], completed: boolean,
 export function completeTutorialStep(steps: TutorialStep[], id: TutorialStepId): TutorialStep[] {
     return steps.map(step => step.id === id ? { ...step, completed: true } : step);
 }
+import { t } from '../i18n';

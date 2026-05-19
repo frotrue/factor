@@ -3,6 +3,7 @@ import EventBus from './EventBus';
 import type MainScene from '../scenes/MainScene';
 import Core from '../buildings/Core';
 import { ResearchEffects } from '../types';
+import { textForKey, t } from '../i18n';
 
 export default class ResearchManager {
     scene: MainScene;
@@ -53,7 +54,7 @@ export default class ResearchManager {
         this.unlockedResearch.add(researchId);
         EventBus.emit('RESEARCH_UNLOCKED', { id: researchId });
         
-        this.scene.uiManager.logMessage(`System: Research [${research.NAME}] complete!`);
+        this.scene.uiManager.logMessage(t('log.researchComplete', { name: textForKey(`research.${researchId}.name`) }));
         return true;
     }
 

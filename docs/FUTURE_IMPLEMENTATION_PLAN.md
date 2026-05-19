@@ -8,6 +8,20 @@
 
 ## 진행 로그
 
+### 2026-05-19
+
+- Implemented P0/P1 UX hardening: modal close canvas focus restore, safer `EventBus.off(event)`, Solar Panel wording, localized tooltip/training lab strings, tooltip viewport clamping, and blackout/buffer visual warnings.
+- Added low-risk P2 placement range preview for power/defense/AP ghost placement and wave route edge warnings from active intrusion routes.
+- Verification: `npm test`, `npm run test:e2e`, and `npm run build` passed.
+
+### 2026-05-18
+
+- Fixed game startup camera positioning so the initial viewport centers on the Neural Core, and added Playwright regression coverage across desktop/mobile projects.
+- Added a Korean-first language toggle with local i18n helpers, settings controls, save migration, and default Korean UI coverage.
+- Added Vitest coverage for translation defaults/key parity and save language migration.
+- Added Playwright coverage for default Korean UI and switching to English from settings.
+- Verification: `npm test`, `npm run test:e2e`, and `npm run build` passed.
+
 ### 2026-05-17
 
 - `vitest`를 도입하고 `npm test` 스크립트를 추가했다.

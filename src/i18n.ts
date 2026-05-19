@@ -1,0 +1,425 @@
+export type Language = 'ko' | 'en';
+
+export type TranslationKey = keyof typeof TRANSLATIONS.ko;
+
+export const DEFAULT_LANGUAGE: Language = 'ko';
+export const LANGUAGE_STORAGE_KEY = 'neural_factory_language';
+
+export const TRANSLATIONS = {
+    ko: {
+        'app.title': 'NEURAL FACTORY',
+        'menu.subtitle': 'v1.0 - 초기 가중치',
+        'menu.difficulty': '난이도',
+        'menu.start': '> 시스템 초기화 <',
+        'difficulty.EASY': '쉬움',
+        'difficulty.NORMAL': '보통',
+        'difficulty.HARD': '어려움',
+        'difficulty.NIGHTMARE': '나이트메어',
+        'top.research': '연구',
+        'top.settings': '설정',
+        'settings.title': '시스템 설정',
+        'settings.speed': '클럭 속도',
+        'settings.audio': '오디오',
+        'settings.mute': '음소거',
+        'settings.tutorial': '튜토리얼',
+        'settings.restartTutorial': '튜토리얼 다시 시작',
+        'settings.save': '저장',
+        'settings.load': '불러오기',
+        'settings.close': '닫기',
+        'settings.language': '언어',
+        'settings.language.ko': '한국어',
+        'settings.language.en': 'English',
+        'research.title': '연구 트리',
+        'research.availableScore': '사용 가능한 신뢰도',
+        'research.tab.research': '연구',
+        'research.tab.defense': '방어 업그레이드',
+        'research.action.research': '연구',
+        'research.action.unlocked': '완료됨',
+        'research.action.locked': '잠김',
+        'research.cost': '비용: {cost} CS',
+        'research.effect.precision': '효과: 타워 피해량 +30%',
+        'research.effect.range': '효과: 타워 사거리 +1 타일',
+        'research.effect.rapid': '효과: 발사 속도 20% 증가',
+        'research.effect.firewall': '효과: 방화벽 HP +50%',
+        'research.effect.automated': '효과: Inference Unit 생산 해금',
+        'hud.power': '전력 출력',
+        'hud.silicon': '실리콘',
+        'hud.confidence': '신뢰도',
+        'hud.packets': '데이터 패킷',
+        'hud.wave': '웨이브',
+        'hud.nextWave': '다음 웨이브',
+        'hud.waveActive': '진행 중',
+        'gameOver.title': '시스템 실패',
+        'gameOver.message': 'Neural Core가 침투당했습니다.',
+        'gameOver.restart': '시스템 재부팅',
+        'info.pan': '카메라 이동',
+        'info.zoom': '줌',
+        'info.rotate': '회전',
+        'info.defenseRange': '방어 범위',
+        'info.powerGrid': '전력망',
+        'info.demolish': '철거',
+        'category.EXTRACTION': '추출',
+        'category.LOGISTICS': '물류',
+        'category.PRODUCTION': '생산',
+        'category.POWER': '전력',
+        'category.DEFENSE': '방어',
+        'action.rotate': '회전',
+        'action.remove': '철거',
+        'action.cable': '케이블',
+        'action.cancel': '취소',
+        'action.defense': '방어',
+        'action.power': '전력',
+        'action.removeMode': '철거 모드',
+        'action.noCost': '비용 없음',
+        'action.costPerTile': '{amount} 실리콘 / 타일',
+        'action.cableEndpoint': '케이블: 끝 지점 선택',
+        'log.waveIncoming': '시스템: 웨이브 {wave} 진입!',
+        'log.tutorialRestarted': '튜토리얼: 안내를 다시 시작합니다.',
+        'log.saved': '시스템: 상태를 저장했습니다.',
+        'log.autoSaved': '시스템: 자동 저장했습니다.',
+        'log.loaded': '시스템: 저장 파일을 불러왔습니다.',
+        'log.corrupted': '시스템: 저장 파일이 손상되었습니다.',
+        'log.researchComplete': '시스템: 연구 [{name}] 완료!',
+        'log.buildingOnline': '시스템: {name} 가동.',
+        'log.cableLocked': '시스템: {name}이 아직 해금되지 않았습니다.',
+        'tutorial.kicker': '튜토리얼 {current}/{total}',
+        'tutorial.complete': '튜토리얼 완료',
+        'tutorial.completeDetail': '핵심 공장 루프가 준비되었습니다. 이제 확장과 방어 최적화에 집중하세요.',
+        'tutorial.skip': '건너뛰기',
+        'tutorial.ok': '완료',
+        'tutorial.RESOURCE.title': '자원 지대 찾기',
+        'tutorial.RESOURCE.detail': 'Neural Core 근처의 실리콘과 에너지 지대를 확인하세요. 공장의 출발점입니다.',
+        'tutorial.DATA_SOURCE.title': '데이터 수집 시작',
+        'tutorial.DATA_SOURCE.detail': 'Data Downloader를 배치해 처리 라인에 필요한 Signal Packet을 생산하세요.',
+        'tutorial.PROCESSING.title': '원시 데이터 처리',
+        'tutorial.PROCESSING.detail': 'Processor나 Weight Trainer를 배치해 데이터를 모델 재료로 바꾸세요.',
+        'tutorial.CONNECTION.title': '흐름 연결',
+        'tutorial.CONNECTION.detail': 'Ethernet 케이블, AP 릴레이, 컨베이어로 생산자와 수신자를 연결하세요.',
+        'tutorial.POWER.title': '전력 유지',
+        'tutorial.POWER.detail': '코어는 주변 기계에 전력을 공급합니다. 전력이 부족하면 전력 건물을 추가하세요.',
+        'tutorial.DEFENSE.title': '방어 준비',
+        'tutorial.DEFENSE.detail': '적 트래픽이 코어에 닿기 전에 Classifier, Filter, Firewall을 배치하세요.',
+        'tutorial.RESEARCH.title': '연구 열기',
+        'tutorial.RESEARCH.detail': '신뢰도를 사용해 물류, 생산, 방어 업그레이드를 해금하세요.',
+        'tutorial.WAVE.title': '웨이브 생존',
+        'tutorial.WAVE.detail': '다음 웨이브가 시작되면 코어를 지키고 공장의 압박 지점을 확인하세요.',
+        'building.MINER.name': '자원 추출기',
+        'building.DATA_DOWNLOADER.name': '데이터 다운로더',
+        'building.CONVEYOR.name': '컨베이어 벨트',
+        'building.CORE.name': 'Neural Core',
+        'building.PROCESSOR.name': '데이터 가공소',
+        'building.WEIGHT_TRAINER.name': '가중치 학습기',
+        'building.RECYCLER.name': '재활용기',
+        'building.POWER_NODE.name': '전력 송신기',
+        'building.POWER_PLANT.name': '발전소',
+        'building.STORAGE.name': '자원 창고',
+        'building.DATA_CACHE.name': '데이터 캐시',
+        'building.UNLOADER.name': '하역기',
+        'building.CLASSIFIER.name': '분류 모델',
+        'building.FILTER.name': '이상 탐지 엔진',
+        'building.FIREWALL.name': '방화벽',
+        'building.FAST_LINK.name': '고속 컨베이어',
+        'building.SOLAR_PANEL.name': '태양광 패널',
+        'building.NEURAL_TRAINER.name': '신경망 학습기',
+        'building.MODEL_TRAINING_LAB.name': '모델 훈련 연구소',
+        'building.ACCESS_POINT.name': 'AP',
+        'cable.BASIC.name': '이더넷 케이블',
+        'cable.FIBER.name': '광섬유 케이블',
+        'item.SILICON.name': '실리콘',
+        'item.RAW_DATA.name': '원시 데이터',
+        'item.FILTERED_DATA.name': '정제 데이터',
+        'item.WEIGHT_UPDATE.name': '가중치 업데이트',
+        'item.ENERGY_CELL.name': '에너지 셀',
+        'item.INFERENCE_UNIT.name': '추론 유닛'
+        ,'tooltip.type': '유형',
+        'tooltip.power': '전력',
+        'tooltip.powerOk': '정상',
+        'tooltip.powerOutage': '차단',
+        'tooltip.powerNetwork': '전력망',
+        'tooltip.networkPower': '망 전력',
+        'tooltip.none': '없음',
+        'tooltip.inputBuffer': '입력 버퍼',
+        'tooltip.outputBuffer': '출력 버퍼',
+        'tooltip.bufferFull': '가득참',
+        'tooltip.status': '상태',
+        'tooltip.processing': '처리 중',
+        'tooltip.idle': '대기',
+        'tooltip.recipe': '레시피',
+        'tooltip.solarStandalone': '독립 전력: 자기 자신만 공급',
+        'tooltip.solarNoNetwork': '전력망에 연결하거나 전력을 공유하지 않습니다',
+        'tooltip.trainingTarget': '훈련 대상',
+        'tooltip.sharedConfidence': '공유 신뢰도',
+        'tooltip.sharedVersion': '공유 버전',
+        'tooltip.autoTrain': '자동 훈련',
+        'tooltip.on': '켜짐',
+        'tooltip.off': '꺼짐',
+        'tooltip.relaySessions': '릴레이 세션',
+        'tooltip.relayedThisTick': '이번 틱 릴레이',
+        'tooltip.wirelessRange': '무선 범위',
+        'tooltip.mode': '모드',
+        'tooltip.relays': '릴레이',
+        'tooltip.modelConfidence': '모델 신뢰도',
+        'tooltip.modelVersion': '모델 버전',
+        'tooltip.inferenceCharge': '추론 충전',
+        'tooltip.damage': '피해',
+        'tooltip.range': '사거리',
+        'tooltip.fireRate': '발사 주기',
+        'tooltip.attackInput': '공격 입력',
+        'tooltip.leftClickCycleRecipe': '[좌클릭: 레시피 전환]',
+        'tooltip.leftClickSelectModel': '[좌클릭: 모델 유형 선택]',
+        'trainingLab.kicker': '대상 선택',
+        'trainingLab.title': '모델 훈련 연구소',
+        'trainingLab.close': '닫기',
+        'trainingLab.confidence': '신뢰도',
+        'trainingLab.online': '온라인',
+        'trainingLab.trainOnce': '1회 훈련',
+        'trainingLab.autoOn': '자동 훈련: 켜짐',
+        'trainingLab.autoOff': '자동 훈련: 꺼짐',
+        'trainingLab.noInput': '훈련: 먼저 대상과 훈련 입력을 준비하세요.',
+        'trainingLab.targetSet': '훈련: 모든 {name} 모델을 대상으로 설정했습니다.',
+        'building.SOLAR_PANEL.description': '자기 자신에게만 전력을 공급하는 독립형 패널입니다. 전력망을 확장하거나 주변 건물에 전력을 공유하지 않습니다.'
+    },
+    en: {
+        'app.title': 'NEURAL FACTORY',
+        'menu.subtitle': 'v1.0 - The Initial Weight',
+        'menu.difficulty': 'Difficulty',
+        'menu.start': '> Initialize System <',
+        'difficulty.EASY': 'Easy',
+        'difficulty.NORMAL': 'Normal',
+        'difficulty.HARD': 'Hard',
+        'difficulty.NIGHTMARE': 'Nightmare',
+        'top.research': 'Research',
+        'top.settings': 'Settings',
+        'settings.title': 'System Settings',
+        'settings.speed': 'Clock Speed',
+        'settings.audio': 'Audio',
+        'settings.mute': 'Mute',
+        'settings.tutorial': 'Tutorial',
+        'settings.restartTutorial': 'Restart Tutorial',
+        'settings.save': 'Save',
+        'settings.load': 'Load',
+        'settings.close': 'Close',
+        'settings.language': 'Language',
+        'settings.language.ko': '한국어',
+        'settings.language.en': 'English',
+        'research.title': 'Research Tree',
+        'research.availableScore': 'Available Confidence Score',
+        'research.tab.research': 'Research',
+        'research.tab.defense': 'Defense Upgrades',
+        'research.action.research': 'Research',
+        'research.action.unlocked': 'Unlocked',
+        'research.action.locked': 'Locked',
+        'research.cost': 'Cost: {cost} CS',
+        'research.effect.precision': 'Effect: Tower Damage +30%',
+        'research.effect.range': 'Effect: Tower Range +1 tile',
+        'research.effect.rapid': 'Effect: Fire Rate 20% faster',
+        'research.effect.firewall': 'Effect: Firewall HP +50%',
+        'research.effect.automated': 'Effect: Unlocks Inference Unit production',
+        'hud.power': 'Power Output',
+        'hud.silicon': 'Silicon',
+        'hud.confidence': 'Confidence Score',
+        'hud.packets': 'Data Packets',
+        'hud.wave': 'Wave',
+        'hud.nextWave': 'Next Wave In',
+        'hud.waveActive': 'ACTIVE',
+        'gameOver.title': 'SYSTEM FAILURE',
+        'gameOver.message': 'The Neural Core has been compromised.',
+        'gameOver.restart': 'REBOOT SYSTEM',
+        'info.pan': 'Pan Camera',
+        'info.zoom': 'Zoom',
+        'info.rotate': 'Rotate',
+        'info.defenseRange': 'Defense Range',
+        'info.powerGrid': 'Power Grid',
+        'info.demolish': 'Demolish',
+        'category.EXTRACTION': 'Extraction',
+        'category.LOGISTICS': 'Logistics',
+        'category.PRODUCTION': 'Production',
+        'category.POWER': 'Power',
+        'category.DEFENSE': 'Defense',
+        'action.rotate': 'Rotate',
+        'action.remove': 'Remove',
+        'action.cable': 'Cable',
+        'action.cancel': 'Cancel',
+        'action.defense': 'Defense',
+        'action.power': 'Power',
+        'action.removeMode': 'Remove mode',
+        'action.noCost': 'No build cost',
+        'action.costPerTile': '{amount} Silicon / tile',
+        'action.cableEndpoint': 'Cable: select endpoint',
+        'log.waveIncoming': 'System: Wave {wave} incoming!',
+        'log.tutorialRestarted': 'Tutorial: guide restarted.',
+        'log.saved': 'System: State saved successfully.',
+        'log.autoSaved': 'System: Auto-saved successfully.',
+        'log.loaded': 'System: Save file loaded successfully.',
+        'log.corrupted': 'System: Save file corrupted.',
+        'log.researchComplete': 'System: Research [{name}] complete!',
+        'log.buildingOnline': 'System: {name} Online.',
+        'log.cableLocked': 'System: {name} is not unlocked.',
+        'tutorial.kicker': 'Tutorial {current}/{total}',
+        'tutorial.complete': 'Tutorial complete',
+        'tutorial.completeDetail': 'The core factory loop is ready. Keep expanding and tune the defense network.',
+        'tutorial.skip': 'Skip',
+        'tutorial.ok': 'OK',
+        'tutorial.RESOURCE.title': 'Find resource patches',
+        'tutorial.RESOURCE.detail': 'Locate Silicon and Energy patches near the Neural Core. These are the roots of the factory.',
+        'tutorial.DATA_SOURCE.title': 'Start data intake',
+        'tutorial.DATA_SOURCE.detail': 'Place a Data Downloader to produce Signal Packets for the processing chain.',
+        'tutorial.PROCESSING.title': 'Process raw data',
+        'tutorial.PROCESSING.detail': 'Place a Processor or Weight Trainer so raw data can become useful model material.',
+        'tutorial.CONNECTION.title': 'Connect the flow',
+        'tutorial.CONNECTION.detail': 'Use Ethernet cable, AP relays, or conveyors to move items between producers and receivers.',
+        'tutorial.POWER.title': 'Keep the grid powered',
+        'tutorial.POWER.detail': 'The core powers nearby machines. Add power buildings when the network starts to run short.',
+        'tutorial.DEFENSE.title': 'Prepare defense',
+        'tutorial.DEFENSE.detail': 'Place a Classifier, Filter, or Firewall before incoming traffic reaches the core.',
+        'tutorial.RESEARCH.title': 'Open research',
+        'tutorial.RESEARCH.detail': 'Use confidence score to unlock better logistics, production, and defense upgrades.',
+        'tutorial.WAVE.title': 'Survive a wave',
+        'tutorial.WAVE.detail': 'When the next wave starts, keep the core online and watch which part of the factory is under pressure.',
+        'building.MINER.name': 'Extractor',
+        'building.DATA_DOWNLOADER.name': 'Data Downloader',
+        'building.CONVEYOR.name': 'Conveyor',
+        'building.CORE.name': 'Neural Core',
+        'building.PROCESSOR.name': 'Data Processor',
+        'building.WEIGHT_TRAINER.name': 'Weight Trainer',
+        'building.RECYCLER.name': 'Recycler',
+        'building.POWER_NODE.name': 'Power Node',
+        'building.POWER_PLANT.name': 'Power Plant',
+        'building.STORAGE.name': 'Storage',
+        'building.DATA_CACHE.name': 'Data Cache',
+        'building.UNLOADER.name': 'Unloader',
+        'building.CLASSIFIER.name': 'Classifier',
+        'building.FILTER.name': 'Anomaly Engine',
+        'building.FIREWALL.name': 'Firewall',
+        'building.FAST_LINK.name': 'Fast Link',
+        'building.SOLAR_PANEL.name': 'Solar Panel',
+        'building.NEURAL_TRAINER.name': 'Neural Trainer',
+        'building.MODEL_TRAINING_LAB.name': 'Model Training Lab',
+        'building.ACCESS_POINT.name': 'AP',
+        'cable.BASIC.name': 'Ethernet Cable',
+        'cable.FIBER.name': 'Fiber Cable',
+        'item.SILICON.name': 'Silicon',
+        'item.RAW_DATA.name': 'Raw Data',
+        'item.FILTERED_DATA.name': 'Filtered Data',
+        'item.WEIGHT_UPDATE.name': 'Weight Update',
+        'item.ENERGY_CELL.name': 'Energy Cell',
+        'item.INFERENCE_UNIT.name': 'Inference Unit',
+        'tooltip.type': 'Type',
+        'tooltip.power': 'Power',
+        'tooltip.powerOk': 'OK',
+        'tooltip.powerOutage': 'OUTAGE',
+        'tooltip.powerNetwork': 'Power Network',
+        'tooltip.networkPower': 'Network Power',
+        'tooltip.none': 'None',
+        'tooltip.inputBuffer': 'Input Buffer',
+        'tooltip.outputBuffer': 'Output Buffer',
+        'tooltip.bufferFull': 'FULL',
+        'tooltip.status': 'Status',
+        'tooltip.processing': 'Processing',
+        'tooltip.idle': 'Idle',
+        'tooltip.recipe': 'Recipe',
+        'tooltip.solarStandalone': 'Standalone power: covers self only',
+        'tooltip.solarNoNetwork': 'Does not connect to or share power with the grid',
+        'tooltip.trainingTarget': 'Training Target',
+        'tooltip.sharedConfidence': 'Shared Confidence',
+        'tooltip.sharedVersion': 'Shared Version',
+        'tooltip.autoTrain': 'Auto Train',
+        'tooltip.on': 'ON',
+        'tooltip.off': 'OFF',
+        'tooltip.relaySessions': 'Relay Sessions',
+        'tooltip.relayedThisTick': 'Relayed this tick',
+        'tooltip.wirelessRange': 'Wireless Range',
+        'tooltip.mode': 'Mode',
+        'tooltip.relays': 'Relays',
+        'tooltip.modelConfidence': 'Model Confidence',
+        'tooltip.modelVersion': 'Model Version',
+        'tooltip.inferenceCharge': 'Inference Charge',
+        'tooltip.damage': 'Damage',
+        'tooltip.range': 'Range',
+        'tooltip.fireRate': 'Fire Rate',
+        'tooltip.attackInput': 'Attack Input',
+        'tooltip.leftClickCycleRecipe': '[Left Click to Cycle Recipe]',
+        'tooltip.leftClickSelectModel': '[Left Click to Select Model Type]',
+        'trainingLab.kicker': 'Target Selection',
+        'trainingLab.title': 'Model Training Lab',
+        'trainingLab.close': 'Close',
+        'trainingLab.confidence': 'Confidence',
+        'trainingLab.online': 'online',
+        'trainingLab.trainOnce': 'Train Once',
+        'trainingLab.autoOn': 'Auto Train: ON',
+        'trainingLab.autoOff': 'Auto Train: OFF',
+        'trainingLab.noInput': 'Training: select a target and provide training input first.',
+        'trainingLab.targetSet': 'Training: target set to all {name} models.',
+        'building.SOLAR_PANEL.description': 'A standalone panel that powers only itself. It does not extend the power grid or share power with nearby buildings.'
+    }
+} as const;
+
+let currentLanguage: Language = readStoredLanguage();
+
+function readStoredLanguage(): Language {
+    if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return isLanguage(stored) ? stored : DEFAULT_LANGUAGE;
+}
+
+export function isLanguage(value: unknown): value is Language {
+    return value === 'ko' || value === 'en';
+}
+
+export function getLanguage(): Language {
+    return currentLanguage;
+}
+
+export function setLanguage(language: Language): void {
+    currentLanguage = language;
+    if (typeof window !== 'undefined') {
+        window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+        window.dispatchEvent(new CustomEvent('languagechange', { detail: { language } }));
+    }
+}
+
+export function getTranslations(language: Language): Record<string, string> {
+    return TRANSLATIONS[language] as unknown as Record<string, string>;
+}
+
+export function t(key: TranslationKey, values: Record<string, string | number> = {}): string {
+    const selected = getTranslations(currentLanguage)[key];
+    const fallback = getTranslations(DEFAULT_LANGUAGE)[key] ?? key;
+    return interpolate(selected ?? fallback, values);
+}
+
+export function textForKey(key: string, values: Record<string, string | number> = {}): string {
+    const selected = getTranslations(currentLanguage)[key];
+    const fallback = getTranslations(DEFAULT_LANGUAGE)[key] ?? key;
+    return interpolate(selected ?? fallback, values);
+}
+
+export function translateStaticDom(root: ParentNode = document): void {
+    root.querySelectorAll<HTMLElement>('[data-i18n]').forEach(element => {
+        element.innerText = textForKey(element.dataset.i18n || '');
+    });
+    document.documentElement.lang = currentLanguage;
+}
+
+export function getBuildingName(type: string): string {
+    return textForKey(`building.${type}.name`);
+}
+
+export function getCableName(type: string): string {
+    return textForKey(`cable.${type}.name`);
+}
+
+export function getItemName(type: string): string {
+    return textForKey(`item.${type}.name`);
+}
+
+export function getDifficultyName(type: string): string {
+    return textForKey(`difficulty.${type}`);
+}
+
+function interpolate(text: string, values: Record<string, string | number>): string {
+    return Object.entries(values).reduce(
+        (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+        text
+    );
+}

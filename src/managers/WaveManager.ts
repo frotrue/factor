@@ -4,7 +4,12 @@ import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import BuildingManager from './BuildingManager';
 import { IMainScene } from '../types';
-import { createWavePlan } from '../utils/waveSimulation';
+import {
+    createWavePlan,
+    getSpawnPointForRoute,
+    selectActiveIntrusionRoutes
+} from '../utils/waveSimulation';
+import type { IntrusionRoute } from '../utils/waveSimulation';
 
 export default class WaveManager {
     scene: IMainScene;
@@ -24,6 +29,7 @@ export default class WaveManager {
     ddosSwarmSpawned: boolean;
     ddosBotsToSpawn: number;
     ddosRewardGranted: boolean;
+    activeRoutes: IntrusionRoute[];
 
     constructor(scene: IMainScene, buildingManager: BuildingManager) {
         this.scene = scene;
@@ -44,6 +50,7 @@ export default class WaveManager {
         this.ddosSwarmSpawned = false;
         this.ddosBotsToSpawn = 0;
         this.ddosRewardGranted = false;
+        this.activeRoutes = selectActiveIntrusionRoutes(1, this.difficultyId);
 
         EventBus.on('ENEMY_KILLED', ({ id, type, rewardSilicon }: { id: string; type: string; rewardSilicon: number }) => {
             this.enemies.delete(id);
@@ -67,6 +74,7 @@ export default class WaveManager {
 
     setDifficulty(difficultyId: string): void {
         this.difficultyId = CONFIG.DIFFICULTY[difficultyId] ? difficultyId : 'NORMAL';
+        this.activeRoutes = selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
     }
 
     getDifficulty() {
@@ -81,6 +89,7 @@ export default class WaveManager {
         this.ddosSwarmSpawned = false;
         this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(8, 12) : 0;
         this.ddosRewardGranted = false;
+        this.activeRoutes = selectActiveIntrusionRoutes(this.currentWave, this.difficultyId);
         
         const plan = createWavePlan({
             wave: this.currentWave,
@@ -90,7 +99,7 @@ export default class WaveManager {
         this.enemiesToSpawn = plan.enemiesToSpawn;
         this.hpMultiplier = plan.hpMultiplier;
 
-        EventBus.emit('WAVE_STARTED', { wave: this.currentWave });
+        EventBus.emit('WAVE_STARTED', { wave: this.currentWave, routes: this.activeRoutes.map(route => route.id) });
     }
 
     endWave(): void {
@@ -103,15 +112,10 @@ export default class WaveManager {
         this.enemiesSpawned++;
         const id = `enemy_${this.enemyIdCounter++}`;
         
-        const edge = Math.floor(Math.random() * 4);
-        const mapSize = 60 * CONFIG.GRID_SIZE;
-        let x = 0, y = 0;
-        switch(edge) {
-            case 0: x = -mapSize/2 + Math.random() * mapSize; y = -mapSize/2; break;
-            case 1: x = mapSize/2; y = -mapSize/2 + Math.random() * mapSize; break;
-            case 2: x = -mapSize/2 + Math.random() * mapSize; y = mapSize/2; break;
-            case 3: x = -mapSize/2; y = -mapSize/2 + Math.random() * mapSize; break;
-        }
+        const routes = selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
+        this.activeRoutes = routes;
+        const route = routes[Math.floor(Math.random() * routes.length)];
+        const { x, y } = getSpawnPointForRoute(route.id, Math.random());
 
         let type = typeOverride || 'NOISE';
         const isBossWave = this.currentWave % 10 === 0;

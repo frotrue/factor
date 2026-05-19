@@ -16,6 +16,7 @@ describe('migrateSaveData', () => {
         expect(migrated.resourceMap).toEqual([]);
         expect(migrated.research).toEqual([]);
         expect(migrated.settings.difficulty).toBe('HARD');
+        expect(migrated.settings.language).toBe('ko');
     });
 
     it('normalizes building buffers and rotations', () => {
@@ -48,6 +49,7 @@ describe('migrateSaveData', () => {
                 gameSpeed: 3,
                 showPowerGrid: true,
                 difficulty: 'EASY',
+                language: 'en',
                 muted: true
             }
         });
@@ -57,6 +59,7 @@ describe('migrateSaveData', () => {
         expect(migrated.settings.showPowerGrid).toBe(true);
         expect(migrated.settings.showDefenseRange).toBe(false);
         expect(migrated.settings.difficulty).toBe('EASY');
+        expect(migrated.settings.language).toBe('en');
         expect(migrated.settings.masterVolume).toBe(0.6);
         expect(migrated.settings.muted).toBe(true);
     });

@@ -65,6 +65,19 @@ async function getMainSceneState(page: Page): Promise<{
     });
 }
 
+async function getCameraCoreOffset(page: Page): Promise<{ dx: number; dy: number }> {
+    return page.evaluate(() => {
+        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const cameraCenter = scene.cameras.main.midPoint;
+        const core = scene.buildingManager.get('0,0');
+
+        return {
+            dx: cameraCenter.x - core.container.x,
+            dy: cameraCenter.y - core.container.y
+        };
+    });
+}
+
 async function expectBuildingCount(page: Page, type: string, count: number): Promise<void> {
     await expect.poll(async () => {
         const state = await getMainSceneState(page);
@@ -84,6 +97,19 @@ function getMobileBuildPoints(page: Page): { sourcePoint: { x: number; y: number
     };
 }
 
+test('starts with the camera centered on the core', async ({ page }) => {
+    const runtimeErrors = collectRuntimeErrors(page);
+
+    await startGame(page);
+
+    await expect.poll(async () => {
+        const offset = await getCameraCoreOffset(page);
+        return Math.hypot(offset.dx, offset.dy);
+    }).toBeLessThan(1);
+
+    expect(runtimeErrors).toEqual([]);
+});
+
 test('desktop starts the game and opens settings', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only smoke');
     const runtimeErrors = collectRuntimeErrors(page);
@@ -93,13 +119,48 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.locator('#btn-settings')).toBeVisible();
     await expect(page.locator('#tutorial-panel')).toBeVisible();
     await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', 'DATA_SOURCE');
-    await expect(page.locator('#tutorial-panel')).toContainText('Start data intake');
+    await expect(page.locator('#tutorial-panel')).toContainText('데이터 수집 시작');
 
     await page.locator('#btn-settings').click();
     await expect(page.locator('#settings-modal')).toBeVisible();
     await page.locator('#btn-close-settings').click();
     await expect(page.locator('#settings-modal')).toBeHidden();
 
+    expect(runtimeErrors).toEqual([]);
+});
+
+test('desktop restores keyboard focus to the canvas after closing modals', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only focus smoke');
+    const runtimeErrors = collectRuntimeErrors(page);
+
+    await startGame(page);
+    await page.locator('#btn-settings').click();
+    await expect(page.locator('#settings-modal')).toBeVisible();
+    await page.locator('#btn-close-settings').click();
+    await expect(page.locator('#settings-modal')).toBeHidden();
+
+    await expect.poll(async () => page.evaluate(() => document.activeElement?.tagName)).toBe('CANVAS');
+
+    expect(runtimeErrors).toEqual([]);
+});
+
+test('desktop defaults to Korean and switches to English', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only language smoke');
+    const runtimeErrors = collectRuntimeErrors(page);
+
+    await startGame(page);
+    await expect(page.locator('#tutorial-panel')).toContainText('데이터 수집 시작');
+    await expect(page.locator('.hud-label').filter({ hasText: '전력 출력' })).toBeVisible();
+
+    await page.locator('#btn-settings').click();
+    await expect(page.locator('#settings-modal')).toContainText('시스템 설정');
+    await page.locator('#btn-language-en').click();
+
+    await expect(page.locator('#settings-modal')).toContainText('System Settings');
+    await expect(page.locator('.hud-label').filter({ hasText: 'Power Output' })).toBeVisible();
+    await expect(page.locator('#tutorial-panel')).toContainText('Start data intake');
+
+    await page.locator('#btn-close-settings').click();
     expect(runtimeErrors).toEqual([]);
 });
 
@@ -181,7 +242,7 @@ test('mobile taps place buildings and connect a cable', async ({ page }, testInf
 
     await page.touchscreen.tap(sourcePoint.x, sourcePoint.y);
     await expect.poll(async () => (await getMainSceneState(page)).cableState).toBe('CABLE_START');
-    await expect.poll(async () => (await getMainSceneState(page)).mobileActionStatus).toBe('Cable: select endpoint');
+    await expect.poll(async () => (await getMainSceneState(page)).mobileActionStatus).toBe('케이블: 끝 지점 선택');
 
     await page.touchscreen.tap(targetPoint.x, targetPoint.y);
     await expect.poll(async () => (await getMainSceneState(page)).cableCount).toBe(1);
@@ -272,7 +333,7 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
 
     await page.locator('#btn-research').click();
     await expect(page.locator('#research-modal')).toBeVisible();
-    await expect(page.locator('#research-tree-container')).toContainText('Research');
+    await expect(page.locator('#research-tree-container')).toContainText('연구');
     await page.locator('#btn-close-research').click();
     await expect(page.locator('#research-modal')).toBeHidden();
 

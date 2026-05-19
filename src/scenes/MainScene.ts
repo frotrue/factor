@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
+import { getBuildingName, t } from '../i18n';
 
 import BuildingManager from '../managers/BuildingManager';
 import ItemManager from '../managers/ItemManager';
@@ -102,6 +103,7 @@ export default class MainScene extends Phaser.Scene {
 
         this.mapManager.generateResourcePatches();
         this.buildingManager.place(0, 0, 'CORE', 0);
+        this.cameraController.centerOnCore();
 
         // 시작 시 일정량의 실리콘 제공을 위한 창고 설치
         const startStorage = this.buildingManager.place(-64, 0, 'STORAGE', 0);
@@ -132,7 +134,7 @@ export default class MainScene extends Phaser.Scene {
 
         EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
             this.effectsManager.playBuildOnline(building, type);
-            this.uiManager.logMessage(`System: ${CONFIG.BUILDINGS[type].NAME} Online.`);
+            this.uiManager.logMessage(t('log.buildingOnline', { name: getBuildingName(type) }));
             this.defenseRangeDirty = true;
         }, 'MainScene');
 
@@ -143,8 +145,8 @@ export default class MainScene extends Phaser.Scene {
             this.defenseRangeDirty = true;
         }, 'MainScene');
 
-        EventBus.on('WAVE_STARTED', () => {
-            this.effectsManager.playWaveStart();
+        EventBus.on('WAVE_STARTED', ({ routes }) => {
+            this.effectsManager.playWaveStart(routes);
         }, 'MainScene');
 
         EventBus.on('ENEMY_KILLED', ({ x, y }: { id: string; type: string; x: number; y: number; rewardSilicon: number }) => {

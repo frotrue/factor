@@ -6,6 +6,8 @@ import AccessPoint from '../buildings/AccessPoint';
 import DefenseTower from '../buildings/DefenseTower';
 import ModelTrainingLab from '../buildings/ModelTrainingLab';
 import NeuralTrainer from '../buildings/NeuralTrainer';
+import { getBuildingName, getCableName, getItemName, t, textForKey } from '../i18n';
+import { getSquareCoverageOffsets } from '../utils/powerPreview';
 
 export default class InputController {
     constructor(private scene: MainScene) {}
@@ -188,6 +190,7 @@ export default class InputController {
                         scene.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
                     } else {
                         scene.updateCursorGraphics();
+                        this.drawPlacementRangePreview(mode, w, h);
                     }
                 }
             }
@@ -195,56 +198,56 @@ export default class InputController {
 
         if (existingBuilding) {
             const bConfig = CONFIG.BUILDINGS[existingBuilding.type];
-            let content = `Type: ${existingBuilding.type}`;
+            let content = `${textForKey('tooltip.type')}: ${existingBuilding.type}`;
 
             if (bConfig.POWER) {
                 if (bConfig.POWER.CONSUMPTION > 0) {
-                    content += `\nPower: ${existingBuilding.hasPower ? 'OK' : 'OUTAGE'}`;
+                    content += `\n${textForKey('tooltip.power')}: ${existingBuilding.hasPower ? textForKey('tooltip.powerOk') : textForKey('tooltip.powerOutage')}`;
                 }
                 const network = scene.powerManager.getNetworkForBuilding(`${existingBuilding.x},${existingBuilding.y}`);
                 if (network) {
-                    content += `\nPower Network: #${network.id}`;
-                    content += `\nNetwork Power: ${network.production} / ${network.consumption} W`;
+                    content += `\n${textForKey('tooltip.powerNetwork')}: #${network.id}`;
+                    content += `\n${textForKey('tooltip.networkPower')}: ${network.production} / ${network.consumption} W`;
                 } else if (bConfig.POWER.CONSUMPTION > 0 || bConfig.POWER.PRODUCTION > 0 || (bConfig.POWER.RANGE || 0) > 0) {
-                    content += `\nPower Network: None`;
+                    content += `\n${textForKey('tooltip.powerNetwork')}: ${textForKey('tooltip.none')}`;
                 }
             }
             if (existingBuilding.inputBuffer) {
-                content += `\nInput Buffer: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
+                content += `\n${textForKey('tooltip.inputBuffer')}: ${existingBuilding.inputBuffer.length} / ${existingBuilding.maxBufferSize}`;
             }
             if (existingBuilding.outputBuffer) {
-                content += `\nOutput Buffer: ${existingBuilding.outputBuffer.length} / ${existingBuilding.maxBufferSize}`;
+                content += `\n${textForKey('tooltip.outputBuffer')}: ${existingBuilding.outputBuffer.length} / ${existingBuilding.maxBufferSize}`;
             }
             if (existingBuilding instanceof AbstractProcessor) {
-                content += `\nStatus: ${existingBuilding.isProcessing ? 'Processing' : 'Idle'}`;
-                content += `\nRecipe: ${existingBuilding.recipe?.OUTPUT}`;
+                content += `\n${textForKey('tooltip.status')}: ${existingBuilding.isProcessing ? textForKey('tooltip.processing') : textForKey('tooltip.idle')}`;
+                content += `\n${textForKey('tooltip.recipe')}: ${existingBuilding.recipe?.OUTPUT}`;
             }
             if (existingBuilding instanceof NeuralTrainer) {
-                content += `\n[Left Click to Cycle Recipe]`;
+                content += `\n${textForKey('tooltip.leftClickCycleRecipe')}`;
             }
             if (existingBuilding instanceof ModelTrainingLab) {
                 const targetType = existingBuilding.targetType;
                 const targetState = targetType ? scene.getDefenseModelState(targetType) : null;
-                const targetName = targetType ? CONFIG.BUILDINGS[targetType]?.NAME.split('(')[0].trim() || targetType : 'None';
-                content += `\nTraining Target: ${targetName}`;
+                const targetName = targetType ? getBuildingName(targetType) : textForKey('tooltip.none');
+                content += `\n${textForKey('tooltip.trainingTarget')}: ${targetName}`;
                 if (targetState) {
-                    content += `\nShared Confidence: ${Math.round(targetState.modelConfidence)}%`;
-                    content += `\nShared Version: v${targetState.modelVersion}`;
+                    content += `\n${textForKey('tooltip.sharedConfidence')}: ${Math.round(targetState.modelConfidence)}%`;
+                    content += `\n${textForKey('tooltip.sharedVersion')}: v${targetState.modelVersion}`;
                 }
-                content += `\nAuto Train: ${existingBuilding.autoTrain ? 'ON' : 'OFF'}`;
-                content += `\n[Left Click to Select Model Type]`;
+                content += `\n${textForKey('tooltip.autoTrain')}: ${existingBuilding.autoTrain ? textForKey('tooltip.on') : textForKey('tooltip.off')}`;
+                content += `\n${textForKey('tooltip.leftClickSelectModel')}`;
             }
             if (existingBuilding instanceof AccessPoint) {
                 const rangeBonus = scene.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
-                content += `\nRelay Sessions: ${existingBuilding.bandwidth} / tick`;
-                content += `\nRelayed this tick: ${existingBuilding.relaysThisTick}`;
-                content += `\nWireless Range: ${existingBuilding.range + rangeBonus} tiles`;
-                content += `\nMode: Session Relay`;
-                content += `\nRelays: producer output to nearby receivers`;
+                content += `\n${textForKey('tooltip.relaySessions')}: ${existingBuilding.bandwidth} / tick`;
+                content += `\n${textForKey('tooltip.relayedThisTick')}: ${existingBuilding.relaysThisTick}`;
+                content += `\n${textForKey('tooltip.wirelessRange')}: ${existingBuilding.range + rangeBonus} tiles`;
+                content += `\n${textForKey('tooltip.mode')}: Session Relay`;
+                content += `\n${textForKey('tooltip.relays')}: producer output to nearby receivers`;
             }
             if (existingBuilding.type === 'SOLAR_PANEL') {
-                content += `\nMode: Standalone (covers self only)`;
-                content += `\nDoes NOT connect to power network`;
+                content += `\n${textForKey('tooltip.solarStandalone')}`;
+                content += `\n${textForKey('tooltip.solarNoNetwork')}`;
             }
             if (bConfig.DEFENSE) {
                 const damageMultiplier = scene.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
@@ -256,25 +259,66 @@ export default class InputController {
                 const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
                 const modelConfidence = tower?.modelConfidence ?? 35;
                 const confidenceFactor = 0.6 + modelConfidence / 125;
-                content += `\nModel Confidence: ${Math.round(modelConfidence)}%`;
-                content += `\nModel Version: v${tower?.modelVersion ?? 1}`;
-                content += `\nInference Charge: ${tower?.inferenceCharge ?? 0}`;
-                content += `\nDamage: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
-                content += `\nRange: ${effectiveRange} tiles`;
-                content += `\nFire Rate: ${effectiveFireRate} ticks`;
-                content += `\nAttack Input: Model Confidence`;
+                content += `\n${textForKey('tooltip.modelConfidence')}: ${Math.round(modelConfidence)}%`;
+                content += `\n${textForKey('tooltip.modelVersion')}: v${tower?.modelVersion ?? 1}`;
+                content += `\n${textForKey('tooltip.inferenceCharge')}: ${tower?.inferenceCharge ?? 0}`;
+                content += `\n${textForKey('tooltip.damage')}: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
+                content += `\n${textForKey('tooltip.range')}: ${effectiveRange} tiles`;
+                content += `\n${textForKey('tooltip.fireRate')}: ${effectiveFireRate} ticks`;
+                content += `\n${textForKey('tooltip.attackInput')}: ${textForKey('tooltip.modelConfidence')}`;
             }
 
-            scene.uiManager.showTooltip(pointer.x, pointer.y, bConfig.NAME, content);
+            scene.uiManager.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
         } else {
             const resourceType = scene.mapManager.getResourceAt(snappedX, snappedY);
             if (resourceType) {
-                const resourceName = CONFIG.ITEMS[resourceType]?.NAME || resourceType;
-                scene.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `Type: ${resourceType}`);
+                const resourceName = getItemName(resourceType);
+                scene.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `${textForKey('tooltip.type')}: ${resourceType}`);
             } else {
                 scene.uiManager.hideTooltip();
             }
         }
+    }
+
+    private drawPlacementRangePreview(type: string, width: number, height: number): void {
+        const { scene } = this;
+        const bConfig = CONFIG.BUILDINGS[type];
+        if (!bConfig) return;
+
+        let range = 0;
+        let color = 0x00f3ff;
+        if (bConfig.DEFENSE?.RANGE) {
+            range = bConfig.DEFENSE.RANGE + scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
+            color = 0xff4444;
+        } else if ((bConfig.POWER?.RANGE || 0) > 0) {
+            range = bConfig.POWER.RANGE || 0;
+            color = 0xfde047;
+            this.drawSquareCoveragePreview(range, color);
+            return;
+        } else if (type === 'ACCESS_POINT') {
+            range = CONFIG.ACCESS_POINT.RANGE + scene.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
+            color = 0x38bdf8;
+        }
+
+        if (range <= 0) return;
+
+        const centerX = (CONFIG.GRID_SIZE * width) / 2;
+        const centerY = (CONFIG.GRID_SIZE * height) / 2;
+        const radius = range * CONFIG.GRID_SIZE;
+        scene.ghostGraphics.fillStyle(color, 0.08);
+        scene.ghostGraphics.fillCircle(centerX, centerY, radius);
+        scene.ghostGraphics.lineStyle(2, color, 0.45);
+        scene.ghostGraphics.strokeCircle(centerX, centerY, radius);
+    }
+
+    private drawSquareCoveragePreview(range: number, color: number): void {
+        const { scene } = this;
+        scene.ghostGraphics.fillStyle(color, 0.12);
+        scene.ghostGraphics.lineStyle(1, color, 0.5);
+        getSquareCoverageOffsets(range).forEach(({ dx, dy }) => {
+            scene.ghostGraphics.fillRect(dx * CONFIG.GRID_SIZE, dy * CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+            scene.ghostGraphics.strokeRect(dx * CONFIG.GRID_SIZE, dy * CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+        });
     }
 
     handlePointerAction(pointer: Phaser.Input.Pointer, button: 'primary' | 'secondary'): void {
@@ -308,7 +352,7 @@ export default class InputController {
                     if (scene.cableState === 'IDLE') {
                         scene.cableState = 'CABLE_START';
                         scene.cableStartKey = normalizedKey;
-                        scene.uiManager.setMobileActionStatus('Cable: select endpoint');
+                        scene.uiManager.setMobileActionStatus(t('action.cableEndpoint'));
                         scene.uiManager.logMessage('System: Cable start selected. Choose an endpoint.');
                     } else if (scene.cableState === 'CABLE_START') {
                         if (scene.cableStartKey === normalizedKey) {
@@ -346,7 +390,7 @@ export default class InputController {
                     scene.uiManager.setMobileActionStatus(null);
                     scene.uiManager.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
                 } else if (!isUnlocked) {
-                    scene.uiManager.logMessage(`System: ${cConfig.NAME} is not unlocked.`, true);
+                    scene.uiManager.logMessage(t('log.cableLocked', { name: getCableName(mode) }), true);
                 } else {
                     scene.uiManager.logMessage('System: Select a building to start the cable.', true);
                 }

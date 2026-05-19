@@ -12,15 +12,15 @@
     <div id="game-container"></div>
 
     <div id="top-actions" style="position: absolute; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
-        <button id="btn-research" class="build-btn" style="width: 50px; height: 50px; font-size: 13px; display: none;">연구</button>
-        <button id="btn-settings" class="build-btn" style="width: 50px; height: 50px; font-size: 13px;">설정</button>
+        <button id="btn-research" class="build-btn" style="width: 50px; height: 50px; font-size: 13px; display: none;" data-i18n="top.research">연구</button>
+        <button id="btn-settings" class="build-btn" style="width: 50px; height: 50px; font-size: 13px;" data-i18n="top.settings">설정</button>
     </div>
 
     <div id="settings-modal" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; z-index: 2000; padding: 30px; min-width: 300px;">
-        <h2 style="color: var(--neon-cyan); margin-top: 0; text-align: center;">System Settings</h2>
+        <h2 style="color: var(--neon-cyan); margin-top: 0; text-align: center;" data-i18n="settings.title">시스템 설정</h2>
 
         <div style="margin-bottom: 20px;">
-            <label style="color: #aaa; font-size: 14px;">Clock Speed</label>
+            <label style="color: #aaa; font-size: 14px;" data-i18n="settings.speed">클럭 속도</label>
             <div style="display: flex; gap: 10px; margin-top: 8px;">
                 <button id="btn-speed-1" class="build-btn active" style="width: 60px; height: 35px; flex-direction: row;">1x</button>
                 <button id="btn-speed-2" class="build-btn" style="width: 60px; height: 35px; flex-direction: row;">2x</button>
@@ -29,84 +29,92 @@
         </div>
 
         <div style="margin-bottom: 20px;">
-            <label style="color: #aaa; font-size: 14px;">Audio</label>
+            <label style="color: #aaa; font-size: 14px;" data-i18n="settings.audio">오디오</label>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
                 <input id="audio-volume" type="range" min="0" max="100" value="60" style="flex: 1;">
                 <label style="display: flex; align-items: center; gap: 6px; color: #ddd; font-size: 13px;">
                     <input id="audio-muted" type="checkbox">
-                    Mute
+                    <span data-i18n="settings.mute">음소거</span>
                 </label>
             </div>
         </div>
 
         <div style="margin-bottom: 20px;">
-            <label style="color: #aaa; font-size: 14px;">Tutorial</label>
-            <button id="btn-reset-tutorial" class="build-btn" style="width: 100%; height: 38px; flex-direction: row; margin-top: 8px;">Restart Tutorial</button>
+            <label style="color: #aaa; font-size: 14px;" data-i18n="settings.language">언어</label>
+            <div style="display: flex; gap: 10px; margin-top: 8px;">
+                <button id="btn-language-ko" class="build-btn" style="flex: 1; height: 35px; flex-direction: row;" data-language="ko" data-i18n="settings.language.ko">한국어</button>
+                <button id="btn-language-en" class="build-btn" style="flex: 1; height: 35px; flex-direction: row;" data-language="en" data-i18n="settings.language.en">English</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="color: #aaa; font-size: 14px;" data-i18n="settings.tutorial">튜토리얼</label>
+            <button id="btn-reset-tutorial" class="build-btn" style="width: 100%; height: 38px; flex-direction: row; margin-top: 8px;" data-i18n="settings.restartTutorial">튜토리얼 다시 시작</button>
         </div>
 
         <div style="margin-bottom: 30px; display: flex; gap: 10px;">
-            <button id="btn-save" class="build-btn" style="flex: 1; height: 45px; color: #fff; flex-direction: row;">Save State</button>
-            <button id="btn-load" class="build-btn" style="flex: 1; height: 45px; color: #fff; flex-direction: row;">Load State</button>
+            <button id="btn-save" class="build-btn" style="flex: 1; height: 45px; color: #fff; flex-direction: row;" data-i18n="settings.save">저장</button>
+            <button id="btn-load" class="build-btn" style="flex: 1; height: 45px; color: #fff; flex-direction: row;" data-i18n="settings.load">불러오기</button>
         </div>
 
-        <button id="btn-close-settings" class="build-btn" style="width: 100%; height: 40px; flex-direction: row;">Close</button>
+        <button id="btn-close-settings" class="build-btn" style="width: 100%; height: 40px; flex-direction: row;" data-i18n="settings.close">닫기</button>
     </div>
 
     <div id="research-modal" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; z-index: 2000; padding: 30px; width: 600px; max-height: 80vh;">
-        <h2 style="color: #6366f1; margin-top: 0; text-align: center; font-size: 28px; text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);">Research Tree</h2>
+        <h2 style="color: #6366f1; margin-top: 0; text-align: center; font-size: 28px; text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);" data-i18n="research.title">연구 트리</h2>
 
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
-            <span style="color: #aaa; font-size: 16px;">Available Confidence Score:</span>
+            <span style="color: #aaa; font-size: 16px;" data-i18n="research.availableScore">사용 가능한 신뢰도</span>
             <span id="research-score" style="color: #fde047; font-size: 20px; font-weight: bold;">0.00</span>
         </div>
 
         <div id="research-tree-container" style="flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 15px;">
         </div>
 
-        <button id="btn-close-research" class="build-btn" style="width: 100%; height: 40px; flex-direction: row; margin-top: 20px;">Close</button>
+        <button id="btn-close-research" class="build-btn" style="width: 100%; height: 40px; flex-direction: row; margin-top: 20px;" data-i18n="settings.close">닫기</button>
     </div>
 
     <div id="top-hud" class="glass-panel" style="display: none;">
         <div class="hud-stat">
-            <div class="hud-label">Power Output</div>
+            <div class="hud-label" data-i18n="hud.power">전력 출력</div>
             <div class="hud-value" id="hud-power" style="color: #fde047; text-shadow: 0 0 10px #fde047;">0 W</div>
         </div>
         <div class="hud-stat">
-            <div class="hud-label">Silicon</div>
+            <div class="hud-label" data-i18n="hud.silicon">실리콘</div>
             <div class="hud-value" id="hud-silicon" style="color: #94a3b8; text-shadow: 0 0 10px #94a3b8;">0</div>
         </div>
         <div class="hud-stat">
-            <div class="hud-label">Confidence Score</div>
+            <div class="hud-label" data-i18n="hud.confidence">신뢰도</div>
             <div class="hud-value" id="hud-score">0.00</div>
         </div>
         <div class="hud-stat">
-            <div class="hud-label">Data Packets</div>
+            <div class="hud-label" data-i18n="hud.packets">데이터 패킷</div>
             <div class="hud-value" id="hud-packets">0</div>
         </div>
         <div class="hud-stat">
-            <div class="hud-label">Wave</div>
+            <div class="hud-label" data-i18n="hud.wave">웨이브</div>
             <div class="hud-value" id="hud-wave" style="color: #ff4444; text-shadow: 0 0 10px #ff4444;">0</div>
         </div>
         <div class="hud-stat">
-            <div class="hud-label">Next Wave In</div>
+            <div class="hud-label" data-i18n="hud.nextWave">다음 웨이브</div>
             <div class="hud-value" id="hud-wave-timer">30s</div>
         </div>
     </div>
 
     <div id="game-over-screen" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; align-items: center; z-index: 1000; padding: 40px; pointer-events: all;">
-        <h1 style="color: #ff4444; font-family: 'Share Tech Mono'; font-size: 48px; margin: 0 0 20px 0; text-shadow: 0 0 20px #ff4444;">SYSTEM FAILURE</h1>
-        <p style="color: #ffffff; font-size: 18px; margin-bottom: 30px;">The Neural Core has been compromised.</p>
-        <button id="btn-restart" class="build-btn" style="width: auto; height: auto; padding: 10px 30px; font-size: 20px;">REBOOT SYSTEM</button>
+        <h1 style="color: #ff4444; font-family: 'Share Tech Mono'; font-size: 48px; margin: 0 0 20px 0; text-shadow: 0 0 20px #ff4444;" data-i18n="gameOver.title">시스템 실패</h1>
+        <p style="color: #ffffff; font-size: 18px; margin-bottom: 30px;" data-i18n="gameOver.message">Neural Core가 침투당했습니다.</p>
+        <button id="btn-restart" class="build-btn" style="width: auto; height: auto; padding: 10px 30px; font-size: 20px;" data-i18n="gameOver.restart">시스템 재부팅</button>
     </div>
 
     <div id="info-layer" class="glass-panel" style="display: none;">
         <h2>Neural.OS v1.0</h2>
-        <div class="control-hint"><span class="control-key">W A S D</span> Pan Camera</div>
-        <div class="control-key" style="margin-top:4px; display:inline-block">Scroll</div> <span class="control-hint">Zoom</span><br>
-        <div class="control-key" style="margin-top:4px; display:inline-block">R</div> <span class="control-hint">Rotate</span><br>
-        <div class="control-key" style="margin-top:4px; display:inline-block">F1</div> <span class="control-hint">Defense Range</span><br>
-        <div class="control-key" style="margin-top:4px; display:inline-block">F2</div> <span class="control-hint">Power Grid</span><br>
-        <div class="control-key" style="margin-top:4px; display:inline-block">R-Click</div> <span class="control-hint">Demolish</span>
+        <div class="control-hint"><span class="control-key">W A S D</span> <span data-i18n="info.pan">카메라 이동</span></div>
+        <div class="control-key" style="margin-top:4px; display:inline-block">Scroll</div> <span class="control-hint" data-i18n="info.zoom">줌</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">R</div> <span class="control-hint" data-i18n="info.rotate">회전</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">F1</div> <span class="control-hint" data-i18n="info.defenseRange">방어 범위</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">F2</div> <span class="control-hint" data-i18n="info.powerGrid">전력망</span><br>
+        <div class="control-key" style="margin-top:4px; display:inline-block">R-Click</div> <span class="control-hint" data-i18n="info.demolish">철거</span>
     </div>
 
     <div id="bottom-ui-container" style="display: none;">

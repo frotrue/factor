@@ -14,6 +14,7 @@ import type TickSystem from './managers/TickSystem';
 import type TutorialManager from './managers/TutorialManager';
 import type UIManager from './managers/UIManager';
 import type WaveManager from './managers/WaveManager';
+import type { Language } from './i18n';
 
 // ── 방향 (Direction) ──
 export interface Direction {
@@ -359,6 +360,7 @@ export interface SaveData {
         showPowerGrid: boolean;
         showDefenseRange: boolean;
         difficulty?: string;
+        language?: Language;
         masterVolume: number;
         muted?: boolean;
         tutorialCompleted?: boolean;

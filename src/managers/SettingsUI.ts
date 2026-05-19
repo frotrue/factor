@@ -1,6 +1,7 @@
 import EventBus from './EventBus';
 import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
+import { getLanguage, isLanguage, setLanguage, t } from '../i18n';
 
 export default class SettingsUI {
     constructor(
@@ -17,6 +18,7 @@ export default class SettingsUI {
         const volumeInput = document.getElementById('audio-volume') as HTMLInputElement | null;
         const mutedInput = document.getElementById('audio-muted') as HTMLInputElement | null;
         const btnResetTutorial = document.getElementById('btn-reset-tutorial');
+        const languageButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-language]'));
         const audioSettings = this.scene.soundManager?.getSettings?.();
 
         [
@@ -27,7 +29,8 @@ export default class SettingsUI {
             btnLoad,
             volumeInput,
             mutedInput,
-            btnResetTutorial
+            btnResetTutorial,
+            ...languageButtons
         ].forEach(element => this.uiManager.guardDomPointer(element));
 
         if (volumeInput && audioSettings) volumeInput.value = String(Math.round(audioSettings.masterVolume * 100));
@@ -46,6 +49,7 @@ export default class SettingsUI {
                 event.preventDefault();
                 event.stopPropagation();
                 modalSettings.style.display = 'none';
+                this.uiManager.restoreCanvasFocus();
             };
         }
 
@@ -64,9 +68,28 @@ export default class SettingsUI {
                 event.preventDefault();
                 event.stopPropagation();
                 EventBus.emit('TUTORIAL_RESET');
-                this.uiManager.logMessage('Tutorial: guide restarted.');
+                this.uiManager.logMessage(t('log.tutorialRestarted'));
             };
         }
+
+        const updateLanguageButtons = () => {
+            languageButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.language === getLanguage());
+            });
+        };
+        languageButtons.forEach(button => {
+            button.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                const language = button.dataset.language;
+                if (isLanguage(language)) {
+                    setLanguage(language);
+                    updateLanguageButtons();
+                }
+            };
+        });
+        window.addEventListener('languagechange', updateLanguageButtons);
+        updateLanguageButtons();
 
         const emitAudioSettings = () => {
             const volume = volumeInput ? Number(volumeInput.value) / 100 : audioSettings?.masterVolume ?? 0.6;

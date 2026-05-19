@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CONFIG } from '../config';
+import { getDifficultyName, t } from '../i18n';
 
 export default class MainMenuScene extends Phaser.Scene {
     selectedDifficulty: string;
@@ -46,7 +46,7 @@ export default class MainMenuScene extends Phaser.Scene {
             });
         }
 
-        const title = this.add.text(width / 2, height / 2 - (isCompact ? 132 : 100), 'NEURAL FACTORY', {
+        const title = this.add.text(width / 2, height / 2 - (isCompact ? 132 : 100), t('app.title'), {
             fontFamily: 'Share Tech Mono',
             fontSize: isCompact ? '40px' : '64px',
             color: '#00f3ff'
@@ -55,13 +55,13 @@ export default class MainMenuScene extends Phaser.Scene {
             title.setScale((width - 32) / title.width);
         }
 
-        this.add.text(width / 2, height / 2 - (isCompact ? 86 : 40), 'v1.0 - The Initial Weight', {
+        this.add.text(width / 2, height / 2 - (isCompact ? 86 : 40), t('menu.subtitle'), {
             fontFamily: 'Share Tech Mono',
             fontSize: isCompact ? '14px' : '18px',
             color: '#a855f7'
         }).setOrigin(0.5);
 
-        const difficultyLabel = this.add.text(width / 2, height / 2 + (isCompact ? -38 : 18), 'DIFFICULTY', {
+        const difficultyLabel = this.add.text(width / 2, height / 2 + (isCompact ? -38 : 18), t('menu.difficulty'), {
             fontFamily: 'Share Tech Mono',
             fontSize: '14px',
             color: '#94a3b8'
@@ -70,12 +70,11 @@ export default class MainMenuScene extends Phaser.Scene {
         const difficultyButtons = new Map<string, Phaser.GameObjects.Text>();
         const difficultyIds = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
         difficultyIds.forEach((id, index) => {
-            const difficulty = CONFIG.DIFFICULTY[id];
             const col = isCompact ? index % 2 : index;
             const row = isCompact ? Math.floor(index / 2) : 0;
             const x = isCompact ? width / 2 - 76 + col * 152 : width / 2 - 210 + index * 140;
             const y = isCompact ? height / 2 - 4 + row * 46 : height / 2 + 48;
-            const btn = this.add.text(x, y, difficulty.NAME.toUpperCase(), {
+            const btn = this.add.text(x, y, getDifficultyName(id).toUpperCase(), {
                 fontFamily: 'Share Tech Mono',
                 fontSize: isCompact ? '15px' : '18px',
                 color: id === this.selectedDifficulty ? '#fde047' : '#ffffff',
@@ -96,7 +95,7 @@ export default class MainMenuScene extends Phaser.Scene {
             difficultyButtons.set(id, btn);
         });
 
-        const startBtn = this.add.text(width / 2, height / 2 + (isCompact ? 112 : 120), '> INITIALIZE SYSTEM <', {
+        const startBtn = this.add.text(width / 2, height / 2 + (isCompact ? 112 : 120), t('menu.start'), {
             fontFamily: 'Share Tech Mono',
             fontSize: isCompact ? '20px' : '28px',
             color: '#ffffff',

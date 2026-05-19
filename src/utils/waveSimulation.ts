@@ -1,5 +1,32 @@
 import { CONFIG } from '../config';
 
+export type IntrusionRouteId = 'NORTH' | 'EAST' | 'SOUTH' | 'WEST';
+
+export interface IntrusionRoute {
+    id: IntrusionRouteId;
+    label: string;
+}
+
+export interface SpawnPoint {
+    x: number;
+    y: number;
+}
+
+const MAP_TILE_SPAN = 60;
+const INTRUSION_ROUTES: IntrusionRoute[] = [
+    { id: 'NORTH', label: 'North Port' },
+    { id: 'EAST', label: 'East Port' },
+    { id: 'SOUTH', label: 'South Port' },
+    { id: 'WEST', label: 'West Port' }
+];
+
+const ROUTE_COUNT_BY_DIFFICULTY: Record<string, number> = {
+    EASY: 1,
+    NORMAL: 2,
+    HARD: 3,
+    NIGHTMARE: 4
+};
+
 export interface WavePlanOptions {
     wave: number;
     difficultyId?: string;
@@ -21,6 +48,42 @@ export interface WavePlan {
 
 export function getDifficultyConfig(difficultyId = 'NORMAL') {
     return CONFIG.DIFFICULTY[difficultyId] || CONFIG.DIFFICULTY.NORMAL;
+}
+
+export function getIntrusionRoutesForDifficulty(difficultyId = 'NORMAL'): IntrusionRoute[] {
+    const difficulty = getDifficultyConfig(difficultyId);
+    const routeCount = ROUTE_COUNT_BY_DIFFICULTY[difficulty.ID] ?? ROUTE_COUNT_BY_DIFFICULTY.NORMAL;
+    return INTRUSION_ROUTES.slice(0, routeCount);
+}
+
+export function selectActiveIntrusionRoutes(wave: number, difficultyId = 'NORMAL'): IntrusionRoute[] {
+    const routes = getIntrusionRoutesForDifficulty(difficultyId);
+    const currentWave = Math.max(1, Math.floor(wave));
+    if (routes.length <= 1) return routes;
+
+    const rotation = currentWave % routes.length;
+    return routes.map((_, index) => routes[(index + rotation) % routes.length]);
+}
+
+export function getSpawnPointForRoute(routeId: IntrusionRouteId, progress: number): SpawnPoint {
+    const mapSize = MAP_TILE_SPAN * CONFIG.GRID_SIZE;
+    const halfMap = mapSize / 2;
+    const offset = -halfMap + clampUnit(progress) * mapSize;
+
+    switch (routeId) {
+        case 'NORTH':
+            return { x: offset, y: -halfMap };
+        case 'EAST':
+            return { x: halfMap, y: offset };
+        case 'SOUTH':
+            return { x: offset, y: halfMap };
+        case 'WEST':
+            return { x: -halfMap, y: offset };
+    }
+}
+
+function clampUnit(value: number): number {
+    return Math.max(0, Math.min(1, value));
 }
 
 export function getBaseWaveStats(wave: number): { baseEnemyCount: number; hpMultiplier: number } {
@@ -79,4 +142,3 @@ export function estimateWaveHitPoints(plan: WavePlan): number {
     const bossHp = plan.bossCount * CONFIG.ENEMIES.OVERFITTED_MODEL.BASE_HP * plan.effectiveHpMultiplier;
     return Math.round(regularHp + ddosHp + bossHp);
 }
-

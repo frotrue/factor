@@ -10,7 +10,7 @@ export interface EventMap {
     'CORE_DATA_RECEIVED': CoreDataEvent;
     'ENEMY_KILLED': { id: string; type: string; x: number; y: number; rewardSilicon: number };
     'GAME_OVER': void;
-    'WAVE_STARTED': { wave: number };
+    'WAVE_STARTED': { wave: number; routes?: string[] };
     'WAVE_UPDATE': { timer: number };
     'WAVE_ENDED': { wave: number };
     'GAME_SPEED_CHANGED': { speed: number };
@@ -37,7 +37,7 @@ class EventBusClass {
 
     off<K extends keyof EventMap>(event: K, callbackOrOwner?: EventCallback<EventMap[K]> | string): void {
         if (!callbackOrOwner) {
-            delete this.events[event];
+            console.warn(`EventBus.off("${String(event)}") ignored: pass an owner, callback, or use offAll(owner).`);
             return;
         }
         const listeners = this.events[event];
@@ -62,7 +62,7 @@ class EventBusClass {
     emit<K extends keyof EventMap>(event: K, data?: EventMap[K]): void {
         const listeners = this.events[event];
         if (listeners) {
-            listeners.forEach(listener => listener.fn(data as EventMap[K]));
+            listeners.slice().forEach(listener => listener.fn(data as EventMap[K]));
         }
     }
 }

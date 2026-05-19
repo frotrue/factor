@@ -212,7 +212,7 @@ export const CONFIG: GameConfig = {
             ID: 'SOLAR_PANEL',
             NAME: '태양광 패널 (Solar Panel)',
             COLOR: 0xfde047,
-            DESCRIPTION: '독립 전력 전용. 자기 자신에게만 전력을 공급하며 전력망에는 연결되지 않습니다.',
+            DESCRIPTION: '독립 전력 전용. 자기 자신에게만 전력을 공급하며 전력망을 확장하거나 주변 건물에 전력을 공유하지 않습니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 10, RANGE: 0 },
             UNLOCK_REQUIRED: 'TECH_SOLAR_POWER',
             CATEGORY: 'POWER',

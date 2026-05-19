@@ -2,6 +2,20 @@
 
 ## Automated Smoke
 
+### 2026-05-19 P0/P1/P2 UX hardening automated check
+
+- [x] Vitest: EventBus owner/callback removal and no-arg `off(event)` guard
+- [x] Vitest: tooltip/training-lab/Solar Panel i18n keys
+- [x] Vitest: full output buffer warning marker
+- [x] Playwright: settings modal close restores focus to Phaser canvas
+- [x] `npm test` passed
+- [x] `npm run test:e2e` passed
+- [x] `npm run build` passed
+
+- [x] Desktop/Mobile Playwright: game startup centers the camera on the Neural Core.
+
+- [x] Desktop Chromium: default Korean UI is shown, settings language selector switches to English, and HUD/tutorial/settings labels update.
+
 - [x] Desktop Chromium: 메뉴에서 게임 시작 가능
 - [x] Desktop Chromium: 설정 모달 열기/닫기 가능
 - [x] Mobile Portrait - 390x844: 게임 시작 후 모바일 액션바 표시

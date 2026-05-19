@@ -77,6 +77,13 @@ export default class CameraController {
         });
     }
 
+    centerOnCore(): void {
+        const core = this.scene.buildingManager.get('0,0');
+        if (!core) return;
+
+        this.camera.centerOn(core.container.x, core.container.y);
+    }
+
     handlePinchZoom(): boolean {
         if (!this.scene.isMobileLayout) return false;
 

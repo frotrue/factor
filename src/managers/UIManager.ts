@@ -7,6 +7,15 @@ import TrainingLabUI from './TrainingLabUI';
 import ResearchUI from './ResearchUI';
 import SettingsUI from './SettingsUI';
 import MobileUIManager from './MobileUIManager';
+import {
+    getBuildingName,
+    getCableName,
+    getItemName,
+    t,
+    textForKey,
+    translateStaticDom,
+    type TranslationKey
+} from '../i18n';
 
 export default class UIManager {
     scene: MainScene;
@@ -90,8 +99,8 @@ export default class UIManager {
 
         EventBus.on('WAVE_STARTED', ({ wave }: { wave: number }) => {
             if (this.waveEl) this.waveEl.innerText = String(wave);
-            if (this.waveTimerEl) this.waveTimerEl.innerText = 'ACTIVE';
-            this.logMessage(`System: Wave ${wave} incoming!`, true);
+            if (this.waveTimerEl) this.waveTimerEl.innerText = t('hud.waveActive');
+            this.logMessage(t('log.waveIncoming', { wave }), true);
         }, 'UIManager');
         
         EventBus.on('WAVE_UPDATE', ({ timer }: { timer: number }) => {
@@ -120,8 +129,11 @@ export default class UIManager {
             } else if (key === 'Escape') {
                 const modalSettings = document.getElementById('settings-modal');
                 const modalResearch = document.getElementById('research-modal');
+                const modalTrainingLab = document.getElementById('training-lab-modal');
                 if (modalSettings) modalSettings.style.display = 'none';
                 if (modalResearch) modalResearch.style.display = 'none';
+                if (modalTrainingLab) modalTrainingLab.style.display = 'none';
+                this.restoreCanvasFocus();
             }
         });
 
@@ -136,6 +148,15 @@ export default class UIManager {
         this.setupResearchUI();
         this.setupMobileUI();
         this.setupTrainingLabUI();
+        translateStaticDom();
+        window.addEventListener('languagechange', () => {
+            translateStaticDom();
+            this.createBuildingButtons();
+            this.renderResearchTree();
+            this.setupMobileUI();
+            this.updateMobileBuildSummary();
+            this.updateMobileControls();
+        });
     }
 
     guardDomPointer(element: HTMLElement | null): void {
@@ -276,6 +297,7 @@ export default class UIManager {
         ];
 
         categories.forEach(cat => {
+            cat.name = textForKey(`category.${cat.id}`);
             const tabBtn = document.createElement('button');
             tabBtn.className = `tab-btn ${this.activeCategory === cat.id ? 'active' : ''}`;
             tabBtn.innerText = cat.name;
@@ -330,7 +352,7 @@ export default class UIManager {
             icon.className = 'icon';
             icon.style.background = `#${data.COLOR.toString(16).padStart(6, '0')}`;
 
-            const label = document.createTextNode(data.NAME.split('(')[0].trim());
+            const label = document.createTextNode(CONFIG.BUILDINGS[key] ? getBuildingName(key) : getCableName(key));
 
             if (index < this.hotkeys.length) {
                 const hotkeyLabel = document.createElement('div');
@@ -348,7 +370,7 @@ export default class UIManager {
                 costLabel.style.fontSize = '9px';
                 costLabel.style.color = '#94a3b8';
                 costLabel.style.marginTop = '2px';
-                costLabel.innerText = data.COST.map((c: any) => `${c.amount} ${CONFIG.ITEMS[c.resource]?.NAME || c.resource}`).join(', ');
+                costLabel.innerText = data.COST.map((c: any) => `${c.amount} ${getItemName(c.resource)}`).join(', ');
                 btn.appendChild(costLabel);
             }
 
@@ -458,9 +480,29 @@ export default class UIManager {
         const tooltip = document.getElementById('tooltip');
         if (!tooltip) return;
         tooltip.style.display = 'block';
-        tooltip.style.left = `${x + 15}px`;
-        tooltip.style.top = `${y + 15}px`;
         tooltip.innerHTML = `<div class="tooltip-title">${title}</div><div>${content}</div>`;
+        tooltip.style.left = '0px';
+        tooltip.style.top = '0px';
+
+        const rect = tooltip.getBoundingClientRect();
+        const margin = 12;
+        const offset = 15;
+        let left = x + offset;
+        let top = y + offset;
+        const bottomUi = document.getElementById('bottom-ui-container')?.getBoundingClientRect();
+
+        if (left + rect.width > window.innerWidth - margin) {
+            left = x - rect.width - offset;
+        }
+        if (top + rect.height > window.innerHeight - margin) {
+            top = y - rect.height - offset;
+        }
+        if (bottomUi && top + rect.height > bottomUi.top - margin && y < bottomUi.top) {
+            top = bottomUi.top - rect.height - margin;
+        }
+
+        tooltip.style.left = `${Math.max(margin, Math.min(left, window.innerWidth - rect.width - margin))}px`;
+        tooltip.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - rect.height - margin))}px`;
     }
 
     hideTooltip(): void {
@@ -469,25 +511,33 @@ export default class UIManager {
         if (this.mobileInfoSheet) this.mobileInfoSheet.style.display = 'none';
     }
 
+    restoreCanvasFocus(): void {
+        const canvas = document.querySelector<HTMLCanvasElement>('#game-container canvas');
+        if (!canvas) return;
+        if (canvas.tabIndex < 0) canvas.tabIndex = 0;
+        requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
+    }
+
     formatMobileInfo(title: string, content: string): string {
         const lines = content.split('\n').filter(Boolean);
         const tags: string[] = [];
         const details: string[] = [];
+        const findLine = (...labels: string[]) => lines.find(line => labels.some(label => line.startsWith(`${label}:`)));
 
-        const powerLine = lines.find(line => line.startsWith('Power:'));
+        const powerLine = findLine('Power', textForKey('tooltip.power'));
         if (powerLine) {
-            tags.push(powerLine.includes('OK') ? 'POWER OK' : 'NO POWER');
+            tags.push(powerLine.includes('OK') || powerLine.includes(textForKey('tooltip.powerOk')) ? 'POWER OK' : 'NO POWER');
         }
 
-        const inputLine = lines.find(line => line.startsWith('Input Buffer:'));
-        const outputLine = lines.find(line => line.startsWith('Output Buffer:'));
+        const inputLine = findLine('Input Buffer', textForKey('tooltip.inputBuffer'));
+        const outputLine = findLine('Output Buffer', textForKey('tooltip.outputBuffer'));
         const defenseBufferLine = lines.find(line => line.startsWith('Buffer:'));
-        const statusLine = lines.find(line => line.startsWith('Status:'));
+        const statusLine = findLine('Status', textForKey('tooltip.status'));
         const ammoLine = lines.find(line => line.startsWith('Ammo:'));
-        const recipeLine = lines.find(line => line.startsWith('Recipe:'));
-        const networkLine = lines.find(line => line.startsWith('Network Power:'));
+        const recipeLine = findLine('Recipe', textForKey('tooltip.recipe'));
+        const networkLine = findLine('Network Power', textForKey('tooltip.networkPower'));
 
-        if (statusLine?.includes('Processing')) tags.push('PROCESSING');
+        if (statusLine?.includes('Processing') || statusLine?.includes(textForKey('tooltip.processing'))) tags.push('PROCESSING');
         if (inputLine) {
             details.push(inputLine);
             const match = inputLine.match(/(\d+)\s*\/\s*(\d+)/);
@@ -536,5 +586,13 @@ export default class UIManager {
 
     getSelectedBuildingType(): string {
         return this.selectedBuildingType;
+    }
+
+    getText(key: TranslationKey, values: Record<string, string | number> = {}): string {
+        return t(key, values);
+    }
+
+    getDynamicText(key: string, values: Record<string, string | number> = {}): string {
+        return textForKey(key, values);
     }
 }

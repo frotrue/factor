@@ -15,6 +15,7 @@ interface InferenceLockMarker {
 export default class EffectsManager {
     private scene: MainScene;
     private outageMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
+    private bufferMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
     private inferenceLocks = new Map<string, InferenceLockMarker>();
 
     constructor(scene: MainScene) {
@@ -61,7 +62,7 @@ export default class EffectsManager {
         });
     }
 
-    playWaveStart(): void {
+    playWaveStart(routes: string[] = []): void {
         this.scene.cameras.main.shake(160, 0.004);
         const flash = this.scene.add.rectangle(
             this.scene.cameras.main.midPoint.x,
@@ -77,6 +78,41 @@ export default class EffectsManager {
             alpha: 0,
             duration: 260,
             onComplete: () => flash.destroy()
+        });
+        this.playRouteWarnings(routes);
+    }
+
+    private playRouteWarnings(routes: string[]): void {
+        if (routes.length === 0) return;
+
+        const positions: Record<string, { x: number; y: number }> = {
+            NORTH: { x: this.scene.scale.width / 2, y: 72 },
+            EAST: { x: this.scene.scale.width - 92, y: this.scene.scale.height / 2 },
+            SOUTH: { x: this.scene.scale.width / 2, y: this.scene.scale.height - 92 },
+            WEST: { x: 92, y: this.scene.scale.height / 2 }
+        };
+
+        routes.forEach(route => {
+            const position = positions[route];
+            if (!position) return;
+            const label = this.scene.add.text(position.x, position.y, `INTRUSION ${route}`, {
+                fontSize: '14px',
+                color: '#ffdddd',
+                fontFamily: 'Share Tech Mono',
+                backgroundColor: 'rgba(127, 29, 29, 0.72)',
+                padding: { x: 8, y: 4 }
+            });
+            label.setOrigin(0.5);
+            label.setScrollFactor(0);
+            label.setDepth(95);
+            this.scene.tweens.add({
+                targets: label,
+                alpha: 0,
+                y: position.y - 10,
+                delay: 900,
+                duration: 420,
+                onComplete: () => label.destroy()
+            });
         });
     }
 
@@ -395,36 +431,64 @@ export default class EffectsManager {
     updatePowerWarnings(): void {
         this.updateInferenceLocks();
 
-        const active = new Set<BaseBuilding>();
+        const activeOutages = new Set<BaseBuilding>();
+        const activeBuffers = new Set<BaseBuilding>();
         this.scene.buildingManager.forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
-            if (!pConfig || pConfig.CONSUMPTION <= 0 || building.hasPower) {
-                building.container.setAlpha(1);
-                return;
+            const hasOutage = Boolean(pConfig && pConfig.CONSUMPTION > 0 && !building.hasPower);
+
+            building.container.setAlpha(hasOutage ? 0.62 : 1);
+
+            if (hasOutage) {
+                activeOutages.add(building);
+                let marker = this.outageMarkers.get(building);
+                if (!marker) {
+                    marker = this.scene.add.graphics();
+                    marker.setDepth(34);
+                    building.container.add(marker);
+                    this.outageMarkers.set(building, marker);
+                }
+
+                const pulse = Math.sin(this.scene.time.now / 170) * 0.25 + 0.65;
+                marker.clear();
+                marker.lineStyle(2, 0xfde047, pulse);
+                marker.strokeCircle(0, 0, CONFIG.GRID_SIZE * 0.58);
+                marker.fillStyle(0xfde047, pulse * 0.25);
+                marker.fillTriangle(-5, -CONFIG.GRID_SIZE / 2 - 10, 5, -CONFIG.GRID_SIZE / 2 - 10, 0, -CONFIG.GRID_SIZE / 2 - 1);
             }
 
-            active.add(building);
-            building.container.setAlpha(0.62);
-            let marker = this.outageMarkers.get(building);
-            if (!marker) {
-                marker = this.scene.add.graphics();
-                marker.setDepth(34);
-                building.container.add(marker);
-                this.outageMarkers.set(building, marker);
-            }
+            const inputFull = building.maxBufferSize > 0 && building.inputBuffer?.length >= building.maxBufferSize;
+            const outputFull = building.maxBufferSize > 0 && building.outputBuffer?.length >= building.maxBufferSize;
+            if (inputFull || outputFull) {
+                activeBuffers.add(building);
+                let marker = this.bufferMarkers.get(building);
+                if (!marker) {
+                    marker = this.scene.add.graphics();
+                    marker.setDepth(35);
+                    building.container.add(marker);
+                    this.bufferMarkers.set(building, marker);
+                }
 
-            const pulse = Math.sin(this.scene.time.now / 170) * 0.25 + 0.65;
-            marker.clear();
-            marker.lineStyle(2, 0xfde047, pulse);
-            marker.strokeCircle(0, 0, CONFIG.GRID_SIZE * 0.58);
-            marker.fillStyle(0xfde047, pulse * 0.25);
-            marker.fillTriangle(-5, -CONFIG.GRID_SIZE / 2 - 10, 5, -CONFIG.GRID_SIZE / 2 - 10, 0, -CONFIG.GRID_SIZE / 2 - 1);
+                const pulse = Math.sin(this.scene.time.now / 210) * 0.2 + 0.7;
+                const color = outputFull ? 0xfb923c : 0x38bdf8;
+                marker.clear();
+                marker.lineStyle(2, color, pulse);
+                marker.strokeCircle(0, 0, CONFIG.GRID_SIZE * 0.43);
+                marker.fillStyle(color, pulse * 0.22);
+                marker.fillRect(CONFIG.GRID_SIZE / 2 - 8, -CONFIG.GRID_SIZE / 2 - 8, 10, 10);
+            }
         });
 
         this.outageMarkers.forEach((marker, building) => {
-            if (!active.has(building)) {
+            if (!activeOutages.has(building)) {
                 marker.destroy();
                 this.outageMarkers.delete(building);
+            }
+        });
+        this.bufferMarkers.forEach((marker, building) => {
+            if (!activeBuffers.has(building)) {
+                marker.destroy();
+                this.bufferMarkers.delete(building);
             }
         });
     }

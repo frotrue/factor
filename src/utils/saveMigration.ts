@@ -1,4 +1,5 @@
 import { CONFIG } from '../config';
+import { DEFAULT_LANGUAGE, isLanguage } from '../i18n';
 import { SaveData } from '../types';
 
 export const CURRENT_SAVE_VERSION = '1.1.0';
@@ -40,6 +41,7 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         showPowerGrid: data.settings?.showPowerGrid ?? false,
         showDefenseRange: data.settings?.showDefenseRange ?? false,
         difficulty: data.settings?.difficulty ?? fallbackDifficulty,
+        language: isLanguage(data.settings?.language) ? data.settings.language : DEFAULT_LANGUAGE,
         masterVolume: data.settings?.masterVolume ?? 0.6,
         muted: data.settings?.muted ?? false,
         tutorialCompleted: data.settings?.tutorialCompleted ?? false,

@@ -3,6 +3,7 @@ import EventBus from './EventBus';
 import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
 import Core from '../buildings/Core';
+import { t } from '../i18n';
 
 export default class ResearchUI {
     private activeTab: 'RESEARCH' | 'DEFENSE' = 'RESEARCH';
@@ -38,6 +39,7 @@ export default class ResearchUI {
                 event.preventDefault();
                 event.stopPropagation();
                 modalResearch.style.display = 'none';
+                this.uiManager.restoreCanvasFocus();
             };
         }
 
@@ -70,8 +72,8 @@ export default class ResearchUI {
         tabs.style.marginBottom = '12px';
 
         [
-            { id: 'RESEARCH' as const, label: 'Research' },
-            { id: 'DEFENSE' as const, label: 'Defense Upgrades' }
+            { id: 'RESEARCH' as const, label: t('research.tab.research') },
+            { id: 'DEFENSE' as const, label: t('research.tab.defense') }
         ].forEach(tab => {
             const tabBtn = document.createElement('button');
             tabBtn.className = 'tab-btn';
@@ -131,7 +133,7 @@ export default class ResearchUI {
             title.style.fontSize = '18px';
 
             const cost = document.createElement('span');
-            cost.innerText = `Cost: ${node.COST} CS`;
+            cost.innerText = t('research.cost', { cost: node.COST });
             cost.style.color = '#fde047';
             cost.style.fontSize = '14px';
 
@@ -152,12 +154,12 @@ export default class ResearchUI {
             actionBtn.style.flexDirection = 'row';
 
             if (isUnlocked) {
-                actionBtn.innerText = 'Unlocked';
+                actionBtn.innerText = t('research.action.unlocked');
                 actionBtn.style.background = 'rgba(99, 102, 241, 0.3)';
                 actionBtn.style.borderColor = '#6366f1';
                 actionBtn.disabled = true;
             } else if (canUnlock) {
-                actionBtn.innerText = 'Research';
+                actionBtn.innerText = t('research.action.research');
                 actionBtn.style.borderColor = '#fde047';
                 this.uiManager.guardDomPointer(actionBtn);
                 actionBtn.onclick = event => {
@@ -166,7 +168,7 @@ export default class ResearchUI {
                     rm.unlock(node.ID);
                 };
             } else {
-                actionBtn.innerText = 'Locked';
+                actionBtn.innerText = t('research.action.locked');
                 actionBtn.style.opacity = '0.5';
                 actionBtn.disabled = true;
             }
@@ -180,11 +182,11 @@ export default class ResearchUI {
 
     getEffectSummary(researchId: string): string {
         const summaries: Record<string, string> = {
-            TECH_PRECISION_INFERENCE: 'Effect: Tower Damage +30%',
-            TECH_DEFENSE_RANGE: 'Effect: Tower Range +1 tile',
-            TECH_RAPID_RESPONSE: 'Effect: Fire Rate 20% faster',
-            TECH_FIREWALL_HARDENING: 'Effect: Firewall HP +50%',
-            TECH_AUTOMATED_DEFENSE: 'Effect: Unlocks Inference Unit production'
+            TECH_PRECISION_INFERENCE: t('research.effect.precision'),
+            TECH_DEFENSE_RANGE: t('research.effect.range'),
+            TECH_RAPID_RESPONSE: t('research.effect.rapid'),
+            TECH_FIREWALL_HARDENING: t('research.effect.firewall'),
+            TECH_AUTOMATED_DEFENSE: t('research.effect.automated')
         };
         return summaries[researchId] || '';
     }

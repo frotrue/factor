@@ -1,6 +1,7 @@
 import { CONFIG } from '../config';
 import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
+import { getBuildingName, getCableName, getItemName, t } from '../i18n';
 
 export default class MobileUIManager {
     constructor(
@@ -27,12 +28,12 @@ export default class MobileUIManager {
         this.uiManager.guardDomPointer(this.uiManager.mobileCableMenu);
 
         const actions = [
-            { id: 'rotate', label: 'Rotate', handler: () => this.scene.rotateCursor() },
-            { id: 'remove', label: 'Remove', handler: () => this.uiManager.selectBuilding('REMOVE') },
-            { id: 'cable', label: 'Cable', handler: () => this.openCableMenu() },
-            { id: 'cancel', label: 'Cancel', handler: () => this.scene.cancelCurrentAction() },
-            { id: 'defense', label: 'Defense', handler: () => this.scene.toggleDefenseRange() },
-            { id: 'power', label: 'Power', handler: () => this.scene.togglePowerGrid() }
+            { id: 'rotate', label: t('action.rotate'), handler: () => this.scene.rotateCursor() },
+            { id: 'remove', label: t('action.remove'), handler: () => this.uiManager.selectBuilding('REMOVE') },
+            { id: 'cable', label: t('action.cable'), handler: () => this.openCableMenu() },
+            { id: 'cancel', label: t('action.cancel'), handler: () => this.scene.cancelCurrentAction() },
+            { id: 'defense', label: t('action.defense'), handler: () => this.scene.toggleDefenseRange() },
+            { id: 'power', label: t('action.power'), handler: () => this.scene.togglePowerGrid() }
         ];
 
         this.uiManager.mobileActionBar.innerHTML = '';
@@ -88,8 +89,8 @@ export default class MobileUIManager {
             const btn = document.createElement('button');
             btn.className = 'mobile-cable-option';
             btn.type = 'button';
-            btn.textContent = cConfig.NAME.split('(')[0].trim() || type;
-            btn.setAttribute('aria-label', cConfig.NAME);
+            btn.textContent = getCableName(type);
+            btn.setAttribute('aria-label', getCableName(type));
             btn.addEventListener('pointerdown', event => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -152,18 +153,18 @@ export default class MobileUIManager {
         const type = this.uiManager.selectedBuildingType;
         const data = CONFIG.BUILDINGS[type] || CONFIG.CABLES[type];
         if (!data) {
-            summary.textContent = type === 'REMOVE' ? 'Remove mode' : '';
+            summary.textContent = type === 'REMOVE' ? t('action.removeMode') : '';
             return;
         }
 
         const cost = 'COST' in data && data.COST
-            ? data.COST.map(c => `${c.amount} ${CONFIG.ITEMS[c.resource]?.NAME || c.resource}`).join(', ')
+            ? data.COST.map(c => `${c.amount} ${getItemName(c.resource)}`).join(', ')
             : 'COST_PER_TILE' in data && data.COST_PER_TILE
-                ? `${data.COST_PER_TILE} Silicon / tile`
+                ? t('action.costPerTile', { amount: data.COST_PER_TILE })
                 : '';
         summary.innerHTML = `
-            <strong>${data.NAME.split('(')[0].trim()}</strong>
-            <span>${this.uiManager.mobileActionStatus || cost || 'No build cost'}</span>
+            <strong>${CONFIG.BUILDINGS[type] ? getBuildingName(type) : getCableName(type)}</strong>
+            <span>${this.uiManager.mobileActionStatus || cost || t('action.noCost')}</span>
         `;
     }
 }
