@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from './config';
 
 describe('CONFIG integrity', () => {
+    const texturedBuildingIds = [
+        'CORE',
+        'MINER',
+        'CONVEYOR',
+        'FAST_LINK',
+        'STORAGE',
+        'PROCESSOR',
+        'POWER_NODE',
+        'POWER_PLANT',
+        'CLASSIFIER',
+        'FILTER',
+        'FIREWALL'
+    ];
+
     it('references existing research nodes from unlock requirements', () => {
         const researchIds = new Set(Object.keys(CONFIG.RESEARCH));
         const missing: string[] = [];
@@ -69,5 +83,19 @@ describe('CONFIG integrity', () => {
         expect(CONFIG.CABLES.FIBER.UNLOCK_REQUIRED).toBe('TECH_FIBER_OPTIC');
         expect(CONFIG.RESOURCE_PATCHES.ENERGY).toBeDefined();
         expect(CONFIG.RECIPES.INFERENCE_UNIT_PRODUCTION.OUTPUT).toBe('INFERENCE_UNIT');
+    });
+
+    it('assigns neon building textures to the core visual upgrade set', () => {
+        const missing = texturedBuildingIds.filter(id => !CONFIG.BUILDINGS[id]?.TEXTURE);
+
+        expect(missing).toEqual([]);
+        texturedBuildingIds.forEach(id => {
+            expect(CONFIG.BUILDINGS[id].TEXTURE).toBe(`building-${id.toLowerCase().replaceAll('_', '-')}`);
+        });
+    });
+
+    it('uses a 4x4 footprint for the neural core', () => {
+        expect(CONFIG.BUILDINGS.CORE.WIDTH).toBe(4);
+        expect(CONFIG.BUILDINGS.CORE.HEIGHT).toBe(4);
     });
 });

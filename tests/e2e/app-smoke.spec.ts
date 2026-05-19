@@ -15,6 +15,12 @@ async function startGame(page: Page): Promise<void> {
     const viewport = page.viewportSize()!;
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
+    await page.waitForFunction(() => {
+        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainMenuScene') as any;
+        return scene?.children?.list?.some((child: any) =>
+            child.text === '> 시스템 초기화 <' || child.text === '> Initialize System <'
+        );
+    });
 
     const isCompact = viewport.width < 600 || viewport.height < 520;
     await page.mouse.click(viewport.width / 2, viewport.height / 2 + (isCompact ? 112 : 120));
@@ -85,15 +91,31 @@ async function expectBuildingCount(page: Page, type: string, count: number): Pro
     }).toBe(count);
 }
 
-function getMobileBuildPoints(page: Page): { sourcePoint: { x: number; y: number }; targetPoint: { x: number; y: number } } {
+async function getScreenPointForTile(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
+    return page.evaluate(({ x, y }) => {
+        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const camera = scene.cameras.main;
+        const canvas = document.querySelector('canvas')!;
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: rect.left + (x + 16 - camera.worldView.x) * camera.zoom,
+            y: rect.top + (y + 16 - camera.worldView.y) * camera.zoom
+        };
+    }, { x, y });
+}
+
+async function getMobileBuildPoints(page: Page): Promise<{ sourcePoint: { x: number; y: number }; targetPoint: { x: number; y: number } }> {
     const viewport = page.viewportSize()!;
-    const y = viewport.height < 500
-        ? Math.max(132, viewport.height / 2 - 36)
-        : Math.max(180, viewport.height / 2 - 160);
-    const sourceX = Math.max(72, viewport.width / 2 - 96);
+    if (viewport.height >= 500) {
+        return {
+            sourcePoint: await getScreenPointForTile(page, -96, -96),
+            targetPoint: await getScreenPointForTile(page, -32, -96)
+        };
+    }
+
     return {
-        sourcePoint: { x: sourceX, y },
-        targetPoint: { x: sourceX + 96, y }
+        sourcePoint: await getScreenPointForTile(page, -160, -96),
+        targetPoint: await getScreenPointForTile(page, -96, -96)
     };
 }
 
@@ -227,7 +249,7 @@ test('mobile taps place buildings and connect a cable', async ({ page }, testInf
     await startGame(page);
     await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
 
-    const { sourcePoint, targetPoint } = getMobileBuildPoints(page);
+    const { sourcePoint, targetPoint } = await getMobileBuildPoints(page);
 
     await page.touchscreen.tap(sourcePoint.x, sourcePoint.y);
     await expectBuildingCount(page, 'DATA_DOWNLOADER', 1);
@@ -260,8 +282,8 @@ test('desktop places buildings, connects cable, and removes cable', async ({ pag
 
     await startGame(page);
 
-    const sourcePoint = { x: 384, y: 256 };
-    const targetPoint = { x: 480, y: 256 };
+    const sourcePoint = await getScreenPointForTile(page, -160, -96);
+    const targetPoint = await getScreenPointForTile(page, -96, -96);
 
     await page.mouse.click(sourcePoint.x, sourcePoint.y);
     await expectBuildingCount(page, 'DATA_DOWNLOADER', 1);
@@ -302,24 +324,28 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
 
     await page.getByRole('button', { name: '물류' }).click();
     await page.locator('#btn-conveyor').click();
-    await page.mouse.click(352, 320);
+    const conveyorPoint = await getScreenPointForTile(page, -224, -32);
+    await page.mouse.click(conveyorPoint.x, conveyorPoint.y);
     await expectBuildingCount(page, 'CONVEYOR', 1);
 
     await page.locator('#btn-storage').click();
-    await page.mouse.click(448, 320);
+    const storagePoint = await getScreenPointForTile(page, -160, -32);
+    await page.mouse.click(storagePoint.x, storagePoint.y);
     await expectBuildingCount(page, 'STORAGE', 2);
 
     await page.getByRole('button', { name: '생산' }).click();
     await page.locator('#btn-weight_trainer').click();
-    await page.mouse.click(544, 320);
+    const trainerPoint = await getScreenPointForTile(page, -96, -32);
+    await page.mouse.click(trainerPoint.x, trainerPoint.y);
     await expectBuildingCount(page, 'WEIGHT_TRAINER', 1);
 
     await page.getByRole('button', { name: '방어' }).click();
     await page.locator('#btn-classifier').click();
-    await page.mouse.click(640, 320);
+    const classifierPoint = await getScreenPointForTile(page, -32, -32);
+    await page.mouse.click(classifierPoint.x, classifierPoint.y);
     await expectBuildingCount(page, 'CLASSIFIER', 1);
 
-    await page.mouse.click(640, 320, { button: 'right' });
+    await page.mouse.click(classifierPoint.x, classifierPoint.y, { button: 'right' });
     await expectBuildingCount(page, 'CLASSIFIER', 0);
 
     await page.locator('#btn-settings').click();

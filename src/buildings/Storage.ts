@@ -6,8 +6,8 @@ import { BuildingOptions } from '../types';
 export default class Storage extends BaseBuilding {
     amountText: Phaser.GameObjects.Text;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
-        super(scene, x, y, 'STORAGE', { ...config, color: CONFIG.BUILDINGS.STORAGE.COLOR });
+    constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}, type: string = 'STORAGE') {
+        super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
 
         this.amountText = scene.add.text(0, 0, '0', {
             fontSize: '14px',

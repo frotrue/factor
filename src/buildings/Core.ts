@@ -35,7 +35,7 @@ export default class Core extends BaseBuilding {
 
     drawHpBar(): void {
         this.hpBar.clear();
-        const width = CONFIG.GRID_SIZE;
+        const width = CONFIG.GRID_SIZE * (CONFIG.BUILDINGS.CORE.WIDTH || 1);
         const height = 4;
         const percent = Math.max(0, this.hp / this.maxHp);
         

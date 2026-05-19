@@ -7,8 +7,7 @@ const DATA_ITEM_TYPES = ['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_M
 
 export default class DataCache extends Storage {
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
-        super(scene, x, y, { ...config, color: CONFIG.BUILDINGS.DATA_CACHE.COLOR });
-        this.type = 'DATA_CACHE';
+        super(scene, x, y, { ...config, color: CONFIG.BUILDINGS.DATA_CACHE.COLOR }, 'DATA_CACHE');
         this.maxBufferSize = CONFIG.BUILDINGS.DATA_CACHE.MAX_BUFFER || 20;
         this.drawBody(CONFIG.BUILDINGS.DATA_CACHE.COLOR, 1, 1);
     }

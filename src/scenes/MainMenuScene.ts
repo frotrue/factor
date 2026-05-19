@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CONFIG } from '../config';
 import { getDifficultyName, t } from '../i18n';
 
 export default class MainMenuScene extends Phaser.Scene {
@@ -7,6 +8,14 @@ export default class MainMenuScene extends Phaser.Scene {
     constructor() {
         super('MainMenuScene');
         this.selectedDifficulty = 'NORMAL';
+    }
+
+    preload(): void {
+        Object.values(CONFIG.BUILDINGS).forEach(building => {
+            if (building.TEXTURE && !this.textures.exists(building.TEXTURE)) {
+                this.load.image(building.TEXTURE, `/assets/buildings/${building.TEXTURE}.png`);
+            }
+        });
     }
 
     create(): void {
