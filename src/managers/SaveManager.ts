@@ -50,6 +50,7 @@ export default class SaveManager {
                 rotation: b.rotation,
                 inputBuffer: [...b.inputBuffer],
                 outputBuffer: [...b.outputBuffer],
+                hp: b.hp,
                 customState
             });
         });
@@ -84,6 +85,10 @@ export default class SaveManager {
         const resourceMapArray: { key: string; type: string }[] = [];
         this.scene.mapManager.getResourceMap().forEach((type, key) => {
             resourceMapArray.push({ key, type });
+        });
+        const terrainMapArray: { key: string; type: string }[] = [];
+        this.scene.mapManager.getTerrainMap().forEach((type, key) => {
+            terrainMapArray.push({ key, type });
         });
 
         const coreBuilding = this.scene.buildingManager.get(`0,0`) as Core | null;
@@ -122,6 +127,7 @@ export default class SaveManager {
                 tutorialStep: this.scene.tutorialManager?.getSavedStep?.() ?? 0
             },
             resourceMap: resourceMapArray,
+            terrainMap: terrainMapArray,
             research: this.scene.researchManager.getUnlockedResearch()
         };
 
@@ -160,8 +166,16 @@ export default class SaveManager {
                 data.resourceMap.forEach(r => {
                     this.scene.mapManager.resourceMap.set(r.key, r.type);
                 });
-                this.scene.gridRenderer.draw(true);
             }
+            this.scene.mapManager.terrainMap.clear();
+            if (data.terrainMap && data.terrainMap.length > 0) {
+                data.terrainMap.forEach(r => {
+                    this.scene.mapManager.terrainMap.set(r.key, r.type);
+                });
+            } else {
+                this.scene.mapManager.addEarlyLaneBlockers();
+            }
+            this.scene.gridRenderer.draw(true);
 
             // Load Core
             const core = this.scene.buildingManager.place(0, 0, 'CORE', 0, { skipCost: true }) as Core;
@@ -213,6 +227,11 @@ export default class SaveManager {
                 if (placed) {
                     placed.inputBuffer = b.inputBuffer || [];
                     placed.outputBuffer = b.outputBuffer || [];
+                    if (typeof b.hp === 'number') {
+                        placed.hp = Math.max(0, Math.min(placed.maxHp, b.hp));
+                        placed.ensureHpBar();
+                        placed.drawHpBar();
+                    }
                     if (placed.type === 'NEURAL_TRAINER' && b.customState && b.customState.recipe) {
                         const recipeKey = Object.keys(CONFIG.RECIPES).find(k => CONFIG.RECIPES[k].OUTPUT === b.customState.recipe);
                         if (recipeKey) {

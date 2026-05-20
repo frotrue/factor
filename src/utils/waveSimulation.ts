@@ -7,6 +7,18 @@ export interface IntrusionRoute {
     label: string;
 }
 
+export type ThreatLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export interface WaveBriefing {
+    wave: number;
+    difficultyId: string;
+    routes: IntrusionRoute[];
+    routeNames: string[];
+    threat: ThreatLevel;
+    special: string | null;
+    recommendedDefense: string;
+}
+
 export interface SpawnPoint {
     x: number;
     y: number;
@@ -58,11 +70,52 @@ export function getIntrusionRoutesForDifficulty(difficultyId = 'NORMAL'): Intrus
 
 export function selectActiveIntrusionRoutes(wave: number, difficultyId = 'NORMAL'): IntrusionRoute[] {
     const routes = getIntrusionRoutesForDifficulty(difficultyId);
+    const difficulty = getDifficultyConfig(difficultyId);
     const currentWave = Math.max(1, Math.floor(wave));
     if (routes.length <= 1) return routes;
+    if (difficulty.ID === 'NORMAL' && currentWave <= 10) return routes.slice(0, 1);
+    if (difficulty.ID === 'NORMAL') return routes.slice(0, 2);
+    if (difficulty.ID === 'HARD' && currentWave <= 3) return routes.slice(0, 1);
+    if (difficulty.ID === 'HARD' && currentWave <= 10) return routes.slice(0, 2);
 
-    const rotation = currentWave % routes.length;
-    return routes.map((_, index) => routes[(index + rotation) % routes.length]);
+    return routes;
+}
+
+export function createWaveBriefing(wave: number, difficultyId = 'NORMAL'): WaveBriefing {
+    const currentWave = Math.max(1, Math.floor(wave));
+    const difficulty = getDifficultyConfig(difficultyId);
+    const routes = selectActiveIntrusionRoutes(currentWave, difficulty.ID);
+
+    return {
+        wave: currentWave,
+        difficultyId: difficulty.ID,
+        routes,
+        routeNames: routes.map(route => route.label),
+        threat: getThreatLevel(currentWave),
+        special: getSpecialThreat(currentWave),
+        recommendedDefense: getRecommendedDefense(currentWave, routes)
+    };
+}
+
+function getThreatLevel(wave: number): ThreatLevel {
+    if (wave >= 16) return 'Critical';
+    if (wave >= 10) return 'High';
+    if (wave >= 6) return 'Medium';
+    return 'Low';
+}
+
+function getSpecialThreat(wave: number): string | null {
+    if (wave % 10 === 0) return 'Boss signal';
+    if (wave >= 8) return 'DDoS risk';
+    return null;
+}
+
+function getRecommendedDefense(wave: number, routes: IntrusionRoute[]): string {
+    const primaryRoute = routes[0]?.label ?? 'North Port';
+    if (wave <= 3) return `1 Classifier near ${primaryRoute}`;
+    if (wave < 8) return `2 defenses covering ${primaryRoute}`;
+    if (wave < 11) return `Add a Filter near ${primaryRoute}`;
+    return `Split defenses across ${routes.map(route => route.label).join(' and ')}`;
 }
 
 export function getSpawnPointForRoute(routeId: IntrusionRouteId, progress: number): SpawnPoint {

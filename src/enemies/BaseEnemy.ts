@@ -4,6 +4,7 @@ import EventBus from '../managers/EventBus';
 import BaseBuilding from '../buildings/BaseBuilding';
 import BuildingManager from '../managers/BuildingManager';
 import { IMainScene } from '../types';
+import { selectEnemyBuildingTarget } from '../utils/enemyBuildingInteraction';
 
 interface GridPoint {
     x: number;
@@ -29,6 +30,7 @@ export default class BaseEnemy {
     path: GridPoint[];
     pathTimer: number;
     specialTimer: number;
+    attackTimer: number;
     auraSpeedMultiplier: number;
 
     constructor(scene: Phaser.Scene, type: string, x: number, y: number, hpMultiplier: number = 1, id: string, buildingManager: BuildingManager) {
@@ -48,6 +50,7 @@ export default class BaseEnemy {
         this.path = [];
         this.pathTimer = 0;
         this.specialTimer = 0;
+        this.attackTimer = 0;
         this.auraSpeedMultiplier = 1;
 
         this.sprite = scene.add.circle(x, y, config.RADIUS, config.COLOR);
@@ -109,6 +112,7 @@ export default class BaseEnemy {
         const delta = deltaMs / 1000;
         this.pathTimer -= deltaMs;
         this.specialTimer -= deltaMs;
+        this.attackTimer -= deltaMs;
 
         const snappedX = Math.floor(this.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         const snappedY = Math.floor(this.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
@@ -119,6 +123,11 @@ export default class BaseEnemy {
         }
 
         let currentSpeed = this.speed * this.auraSpeedMultiplier;
+        const attackTarget = this.getAttackTarget(snappedX, snappedY);
+        if (attackTarget) {
+            currentSpeed = 0;
+            this.attackBuilding(attackTarget);
+        }
         if (building && building.type === 'FIREWALL') {
             currentSpeed = 0;
         }
@@ -144,6 +153,30 @@ export default class BaseEnemy {
             EventBus.emit('CORE_DAMAGED', { amount: this.damage });
             this.die();
         }
+    }
+
+    getAttackTarget(snappedX: number, snappedY: number): BaseBuilding | null {
+        const gridSize = CONFIG.GRID_SIZE;
+        const candidates = [
+            `${snappedX},${snappedY}`,
+            `${snappedX + gridSize},${snappedY}`,
+            `${snappedX - gridSize},${snappedY}`,
+            `${snappedX},${snappedY + gridSize}`,
+            `${snappedX},${snappedY - gridSize}`
+        ]
+            .map(key => {
+                const building = this.buildingManager.get(key) as BaseBuilding | null;
+                return building ? { key, type: building.type, building } : null;
+            })
+            .filter((candidate): candidate is { key: string; type: string; building: BaseBuilding } => Boolean(candidate));
+
+        return selectEnemyBuildingTarget(candidates)?.building ?? null;
+    }
+
+    attackBuilding(building: BaseBuilding): void {
+        if (this.attackTimer > 0) return;
+        this.attackTimer = 900;
+        building.takeDamage(Math.max(1, this.damage));
     }
 
     createStatusVisuals(): void {
@@ -247,7 +280,9 @@ export default class BaseEnemy {
 
                 const worldKey = `${next.x * gridSize},${next.y * gridSize}`;
                 const blockingBuilding = this.buildingManager.get(worldKey) as BaseBuilding | null;
+                const blocksEnemy = (this.scene as IMainScene).mapManager?.blocksEnemyAt(next.x * gridSize, next.y * gridSize);
                 const isTarget = key === targetKey;
+                if (blocksEnemy && !isTarget) continue;
                 if (blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget) continue;
 
                 visited.add(key);

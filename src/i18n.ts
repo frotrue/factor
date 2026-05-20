@@ -271,7 +271,7 @@ export const TRANSLATIONS = {
         'tutorial.POWER.title': 'Keep the grid powered',
         'tutorial.POWER.detail': 'The core powers nearby machines. Add power buildings when the network starts to run short.',
         'tutorial.DEFENSE.title': 'Prepare defense',
-        'tutorial.DEFENSE.detail': 'Place a Classifier, Filter, or Firewall before incoming traffic reaches the core.',
+        'tutorial.DEFENSE.detail': 'Defend the marked intrusion port first. A Classifier near the highlighted route is enough for the opening waves.',
         'tutorial.RESEARCH.title': 'Open research',
         'tutorial.RESEARCH.detail': 'Use confidence score to unlock better logistics, production, and defense upgrades.',
         'tutorial.WAVE.title': 'Survive a wave',

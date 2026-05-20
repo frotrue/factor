@@ -47,8 +47,32 @@ export default class GridRenderer {
         this.graphics.clear();
 
         const padding = this.gridSize;
+        this.drawTerrain(startX - padding, startY - padding, width + padding * 2, height + padding * 2);
         this.drawResourcePatches(startX - padding, startY - padding, width + padding * 2, height + padding * 2);
         this.drawGridLines(startX - padding, startY - padding, width + padding * 2, height + padding * 2);
+    }
+
+    drawTerrain(startX: number, startY: number, width: number, height: number): void {
+        const gridStartX = Math.floor(startX / this.gridSize);
+        const gridStartY = Math.floor(startY / this.gridSize);
+        const gridWidth = Math.ceil(width / this.gridSize) + 1;
+        const gridHeight = Math.ceil(height / this.gridSize) + 1;
+        const terrainMap = this.mapManager.getTerrainMap();
+
+        for (let i = gridStartX; i < gridStartX + gridWidth; i++) {
+            for (let j = gridStartY; j < gridStartY + gridHeight; j++) {
+                const x = i * this.gridSize;
+                const y = j * this.gridSize;
+                const type = terrainMap.get(`${x},${y}`);
+                if (!type) continue;
+
+                const color = CONFIG.TERRAIN[type]?.COLOR ?? 0x475569;
+                this.graphics.fillStyle(color, 0.7);
+                this.graphics.fillRect(x + 3, y + 3, this.gridSize - 6, this.gridSize - 6);
+                this.graphics.lineStyle(1, 0xcbd5e1, 0.22);
+                this.graphics.strokeRect(x + 5, y + 5, this.gridSize - 10, this.gridSize - 10);
+            }
+        }
     }
 
     drawResourcePatches(startX: number, startY: number, width: number, height: number): void {

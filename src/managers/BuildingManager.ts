@@ -64,6 +64,8 @@ export default class BuildingManager {
             const bConfig = CONFIG.BUILDINGS[building.type];
             const w = bConfig?.WIDTH || 1;
             const h = bConfig?.HEIGHT || 1;
+            const baseKey = `${building.x},${building.y}`;
+            this.scene.cableManager?.handleBuildingRemoved(baseKey);
 
             for (let dx = 0; dx < w; dx++) {
                 for (let dy = 0; dy < h; dy++) {
@@ -72,7 +74,8 @@ export default class BuildingManager {
                 }
             }
             building.destroy();
-            EventBus.emit('BUILDING_REMOVED', { key });
+            EventBus.emit('BUILDING_REMOVED', { key: baseKey });
+            EventBus.emit('BUILDING_DESTROYED', { key: baseKey, building, type: building.type });
         }
     }
 

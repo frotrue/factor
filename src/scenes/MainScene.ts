@@ -62,7 +62,6 @@ export default class MainScene extends Phaser.Scene {
     defenseRangeGraphics!: Phaser.GameObjects.Graphics;
     cursorContainer!: Phaser.GameObjects.Container;
     ghostGraphics!: Phaser.GameObjects.Graphics;
-    cursorArrow!: Phaser.GameObjects.Triangle;
     mobileMediaQuery: MediaQueryList | null = null;
     mobileTouchStart: { x: number; y: number; time: number } | null = null;
     mobileMultiTouchActive: boolean = false;
@@ -143,6 +142,10 @@ export default class MainScene extends Phaser.Scene {
             this.effectsManager.playBuildingRemoved(x, y);
             this.uiManager.logMessage(`System: Unit disconnected at [${x}, ${y}].`, true);
             this.defenseRangeDirty = true;
+        }, 'MainScene');
+
+        EventBus.on('BUILDING_DAMAGED', ({ building }: { key: string; building: any; amount: number; hp: number; maxHp: number }) => {
+            this.effectsManager.playBuildingDamaged(building);
         }, 'MainScene');
 
         EventBus.on('WAVE_STARTED', ({ routes }) => {
@@ -262,12 +265,10 @@ export default class MainScene extends Phaser.Scene {
             this.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.ghostGraphics.lineBetween(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.ghostGraphics.lineBetween(CONFIG.GRID_SIZE, 0, 0, CONFIG.GRID_SIZE);
-            this.cursorArrow.setVisible(false);
             this.cursorContainer.setAlpha(1);
         } else if (mode === 'BASIC' || mode === 'FIBER') {
             this.ghostGraphics.lineStyle(2, CONFIG.CABLES[mode].COLOR);
             this.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
-            this.cursorArrow.setVisible(false);
             this.cursorContainer.setAlpha(1);
         } else {
             const bConfig = CONFIG.BUILDINGS[mode];
@@ -277,35 +278,6 @@ export default class MainScene extends Phaser.Scene {
 
             this.ghostGraphics.fillStyle(bConfig.COLOR || 0xaaaaaa, 0.5);
             this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
-
-            const cx = (CONFIG.GRID_SIZE * w) / 2;
-            const cy = (CONFIG.GRID_SIZE * h) / 2;
-            this.ghostGraphics.lineStyle(2, 0xffffff);
-
-            switch (this.currentRotation) {
-                case 0:
-                    this.ghostGraphics.lineBetween(cx - 5, cy, cx + 10, cy);
-                    this.ghostGraphics.lineBetween(cx + 10, cy, cx + 5, cy - 5);
-                    this.ghostGraphics.lineBetween(cx + 10, cy, cx + 5, cy + 5);
-                    break;
-                case 1:
-                    this.ghostGraphics.lineBetween(cx, cy - 5, cx, cy + 10);
-                    this.ghostGraphics.lineBetween(cx, cy + 10, cx - 5, cy + 5);
-                    this.ghostGraphics.lineBetween(cx, cy + 10, cx + 5, cy + 5);
-                    break;
-                case 2:
-                    this.ghostGraphics.lineBetween(cx + 5, cy, cx - 10, cy);
-                    this.ghostGraphics.lineBetween(cx - 10, cy, cx - 5, cy - 5);
-                    this.ghostGraphics.lineBetween(cx - 10, cy, cx - 5, cy + 5);
-                    break;
-                case 3:
-                    this.ghostGraphics.lineBetween(cx, cy + 5, cx, cy - 10);
-                    this.ghostGraphics.lineBetween(cx, cy - 10, cx - 5, cy - 5);
-                    this.ghostGraphics.lineBetween(cx, cy - 10, cx + 5, cy - 5);
-                    break;
-            }
-
-            this.cursorArrow.setVisible(true);
             this.cursorContainer.setAlpha(0.7);
         }
     }
@@ -382,7 +354,9 @@ export default class MainScene extends Phaser.Scene {
     isBlocked(x: number, y: number, w: number, h: number): boolean {
         for (let dx = 0; dx < w; dx++) {
             for (let dy = 0; dy < h; dy++) {
-                if (this.buildingManager.has(`${x + dx * CONFIG.GRID_SIZE},${y + dy * CONFIG.GRID_SIZE}`)) {
+                const tileX = x + dx * CONFIG.GRID_SIZE;
+                const tileY = y + dy * CONFIG.GRID_SIZE;
+                if (this.buildingManager.has(`${tileX},${tileY}`) || this.mapManager.isTerrainBlocked(tileX, tileY)) {
                     return true;
                 }
             }

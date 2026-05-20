@@ -75,6 +75,14 @@ export interface ItemConfig {
     RADIUS: number;
 }
 
+export interface TerrainConfig {
+    ID: string;
+    NAME: string;
+    COLOR: number;
+    BLOCKS_BUILDING: boolean;
+    BLOCKS_ENEMY: boolean;
+}
+
 // ── 전역 설정용 추가 인터페이스 ──
 export interface CableConfig {
     ID: string;
@@ -125,6 +133,7 @@ export interface GameConfig {
     RECIPES: Record<string, Recipe>;
     ITEMS: Record<string, ItemConfig>;
     RESOURCE_PATCHES: Record<string, number>;
+    TERRAIN: Record<string, TerrainConfig>;
     ENEMIES: Record<string, EnemyConfig>;
     RESEARCH: Record<string, ResearchNode>;
     DIFFICULTY: Record<string, DifficultyConfig>;
@@ -311,6 +320,7 @@ export interface SavedBuilding {
     rotation: number;
     inputBuffer: string[];
     outputBuffer: string[];
+    hp?: number;
     customState?: any;
 }
 
@@ -368,5 +378,6 @@ export interface SaveData {
         tutorialStep?: number;
     };
     resourceMap: { key: string; type: string }[];
+    terrainMap: { key: string; type: string }[];
     research: string[];
 }

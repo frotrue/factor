@@ -31,7 +31,8 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         ...building,
         rotation: building.rotation ?? 0,
         inputBuffer: building.inputBuffer || [],
-        outputBuffer: building.outputBuffer || []
+        outputBuffer: building.outputBuffer || [],
+        hp: typeof building.hp === 'number' ? building.hp : undefined
     }));
     data.defenseModelStates = data.defenseModelStates || {};
     data.items = data.items || [];
@@ -48,6 +49,7 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         tutorialStep: data.settings?.tutorialStep ?? 0
     };
     data.resourceMap = data.resourceMap || [];
+    data.terrainMap = data.terrainMap || [];
     data.research = data.research || [];
 
     return data as SaveData;

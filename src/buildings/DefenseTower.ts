@@ -6,9 +6,6 @@ import BaseEnemy from '../enemies/BaseEnemy';
 
 export default class DefenseTower extends BaseBuilding {
     fireTimer: number;
-    hp: number;
-    maxHp: number;
-    hpBar?: Phaser.GameObjects.Graphics;
     modelConfidence: number;
     modelVersion: number;
     inferenceCharge: number;
@@ -31,39 +28,6 @@ export default class DefenseTower extends BaseBuilding {
                 : 1;
             this.maxHp = Math.round(bConfig.HP * hpMultiplier);
             this.hp = this.maxHp;
-            this.hpBar = scene.add.graphics();
-            this.container.add(this.hpBar);
-            this.drawHpBar();
-        } else {
-            this.maxHp = 0;
-            this.hp = 0;
-        }
-    }
-
-    drawHpBar(): void {
-        if (!this.hpBar) return;
-        this.hpBar.clear();
-        const width = CONFIG.GRID_SIZE;
-        const height = 4;
-        const percent = Math.max(0, this.hp / this.maxHp);
-        
-        this.hpBar.fillStyle(0xff0000, 1);
-        this.hpBar.fillRect(-width/2, -CONFIG.GRID_SIZE/2 - 6, width, height);
-        
-        this.hpBar.fillStyle(0x00ff00, 1);
-        this.hpBar.fillRect(-width/2, -CONFIG.GRID_SIZE/2 - 6, width * percent, height);
-    }
-
-    takeDamage(amount: number): void {
-        if (this.maxHp <= 0) return;
-        this.hp -= amount;
-        if (this.hp <= 0) {
-            const buildingManager = (this.scene as IMainScene).buildingManager;
-            if (buildingManager) {
-                buildingManager.remove(`${this.x},${this.y}`);
-            }
-        } else {
-            this.drawHpBar();
         }
     }
 

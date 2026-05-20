@@ -5,6 +5,7 @@ import EventBus from './EventBus';
 import BuildingManager from './BuildingManager';
 import { IMainScene } from '../types';
 import {
+    createWaveBriefing,
     createWavePlan,
     getSpawnPointForRoute,
     selectActiveIntrusionRoutes
@@ -74,6 +75,7 @@ export default class WaveManager {
     setDifficulty(difficultyId: string): void {
         this.difficultyId = CONFIG.DIFFICULTY[difficultyId] ? difficultyId : 'NORMAL';
         this.activeRoutes = selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
+        this.emitNextWaveBriefing();
     }
 
     getDifficulty() {
@@ -105,16 +107,20 @@ export default class WaveManager {
         this.waveActive = false;
         this.waveTimer = this.getDifficulty().WAVE_COOLDOWN_MS;
         EventBus.emit('WAVE_ENDED', { wave: this.currentWave });
+        this.emitNextWaveBriefing();
+    }
+
+    private emitNextWaveBriefing(): void {
+        EventBus.emit('WAVE_BRIEFING_UPDATED', createWaveBriefing(this.currentWave + 1, this.difficultyId));
     }
 
     spawnEnemy(typeOverride?: string): void {
         this.enemiesSpawned++;
         const id = `enemy_${this.enemyIdCounter++}`;
         
-        const routes = selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
-        this.activeRoutes = routes;
-        const route = routes[Math.floor(Math.random() * routes.length)];
-        const { x, y } = getSpawnPointForRoute(route.id, Math.random());
+        const routes = this.activeRoutes.length > 0 ? this.activeRoutes : selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
+        const route = routes[(this.enemiesSpawned - 1) % routes.length];
+        const { x, y } = getSpawnPointForRoute(route.id, 0.5 + Phaser.Math.FloatBetween(-0.08, 0.08));
 
         let type = typeOverride || 'NOISE';
         const isBossWave = this.currentWave % 10 === 0;
@@ -146,6 +152,7 @@ export default class WaveManager {
     update(delta: number): void {
         if (!this.waveActive) {
             this.waveTimer -= delta;
+            this.emitNextWaveBriefing();
             EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
             if (this.waveTimer <= 0) {
                 this.startWave();

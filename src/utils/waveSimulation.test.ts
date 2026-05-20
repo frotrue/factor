@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    createWaveBriefing,
     createWavePlan,
     estimateWaveHitPoints,
     getBaseWaveStats,
@@ -58,6 +59,28 @@ describe('intrusion route planning', () => {
         expect(firstPlan).toEqual(secondPlan);
         expect(firstPlan.length).toBeGreaterThanOrEqual(1);
         expect(firstPlan.length).toBeLessThanOrEqual(3);
+    });
+
+    it('keeps the first three normal waves focused on the North Port', () => {
+        expect(selectActiveIntrusionRoutes(1, 'NORMAL').map(route => route.id)).toEqual(['NORTH']);
+        expect(selectActiveIntrusionRoutes(2, 'NORMAL').map(route => route.id)).toEqual(['NORTH']);
+        expect(selectActiveIntrusionRoutes(3, 'NORMAL').map(route => route.id)).toEqual(['NORTH']);
+    });
+
+    it('introduces a second normal port after the guided opening', () => {
+        expect(selectActiveIntrusionRoutes(11, 'NORMAL').map(route => route.id)).toEqual(['NORTH', 'EAST']);
+    });
+
+    it('creates readable next-wave briefings for the HUD', () => {
+        expect(createWaveBriefing(1, 'NORMAL')).toMatchObject({
+            wave: 1,
+            threat: 'Low',
+            recommendedDefense: '1 Classifier near North Port'
+        });
+        expect(createWaveBriefing(8, 'NORMAL')).toMatchObject({
+            wave: 8,
+            special: 'DDoS risk'
+        });
     });
 
     it('keeps generated spawn points on the selected route edge', () => {

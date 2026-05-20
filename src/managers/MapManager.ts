@@ -2,15 +2,18 @@ import { CONFIG } from '../config';
 
 export default class MapManager {
     resourceMap: Map<string, string>;
+    terrainMap: Map<string, string>;
     gridSize: number;
 
     constructor() {
         this.resourceMap = new Map();
+        this.terrainMap = new Map();
         this.gridSize = CONFIG.GRID_SIZE;
     }
 
     generateResourcePatches(): void {
         this.resourceMap.clear();
+        this.terrainMap.clear();
         const types = ['SILICON', 'ENERGY'];
         const numPatches = Math.floor(Math.random() * 8) + 8;
 
@@ -28,6 +31,7 @@ export default class MapManager {
         }
 
         this.addGuaranteedSpawnPatches();
+        this.addEarlyLaneBlockers();
     }
 
     addGuaranteedSpawnPatches(): void {
@@ -46,6 +50,28 @@ export default class MapManager {
         }
     }
 
+    addTerrainBlocker(tileX: number, tileY: number): void {
+        const x = tileX * this.gridSize;
+        const y = tileY * this.gridSize;
+        const key = `${x},${y}`;
+        if (this.resourceMap.has(key)) return;
+        if (Math.abs(tileX) < 4 && Math.abs(tileY) < 4) return;
+        this.terrainMap.set(key, 'BLOCKER');
+    }
+
+    addEarlyLaneBlockers(): void {
+        for (let y = -22; y <= -8; y++) {
+            if (y >= -16 && y <= -12) continue;
+            this.addTerrainBlocker(-4, y);
+            this.addTerrainBlocker(4, y);
+        }
+
+        for (let x = -8; x <= 8; x++) {
+            if (Math.abs(x) <= 2) continue;
+            this.addTerrainBlocker(x, -18);
+        }
+    }
+
     getResourceAt(x: number, y: number): string | null {
         return this.resourceMap.get(`${x},${y}`) || null;
     }
@@ -56,5 +82,23 @@ export default class MapManager {
 
     getResourceMap(): Map<string, string> {
         return this.resourceMap;
+    }
+
+    getTerrainAt(x: number, y: number): string | null {
+        return this.terrainMap.get(`${x},${y}`) || null;
+    }
+
+    isTerrainBlocked(x: number, y: number): boolean {
+        const terrainType = this.getTerrainAt(x, y);
+        return Boolean(terrainType && CONFIG.TERRAIN[terrainType]?.BLOCKS_BUILDING);
+    }
+
+    blocksEnemyAt(x: number, y: number): boolean {
+        const terrainType = this.getTerrainAt(x, y);
+        return Boolean(terrainType && CONFIG.TERRAIN[terrainType]?.BLOCKS_ENEMY);
+    }
+
+    getTerrainMap(): Map<string, string> {
+        return this.terrainMap;
     }
 }

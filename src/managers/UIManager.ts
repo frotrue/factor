@@ -16,6 +16,7 @@ import {
     translateStaticDom,
     type TranslationKey
 } from '../i18n';
+import type { WaveBriefing } from '../utils/waveSimulation';
 
 export default class UIManager {
     scene: MainScene;
@@ -40,6 +41,7 @@ export default class UIManager {
     mobileCableMenu: HTMLElement | null;
     mobileActionStatus: string | null;
     activeTrainingLab: ModelTrainingLab | null;
+    currentWaveBriefing: WaveBriefing | null;
     trainingLabUI: TrainingLabUI;
     researchUI: ResearchUI;
     settingsUI: SettingsUI;
@@ -70,6 +72,7 @@ export default class UIManager {
         this.mobileCableMenu = null;
         this.mobileActionStatus = null;
         this.activeTrainingLab = null;
+        this.currentWaveBriefing = null;
         this.trainingLabUI = new TrainingLabUI(scene, this);
         this.researchUI = new ResearchUI(scene, this);
         this.settingsUI = new SettingsUI(scene, this);
@@ -102,9 +105,14 @@ export default class UIManager {
             if (this.waveTimerEl) this.waveTimerEl.innerText = t('hud.waveActive');
             this.logMessage(t('log.waveIncoming', { wave }), true);
         }, 'UIManager');
+
+        EventBus.on('WAVE_BRIEFING_UPDATED', (briefing: WaveBriefing) => {
+            this.currentWaveBriefing = briefing;
+            this.renderWaveBriefing();
+        }, 'UIManager');
         
         EventBus.on('WAVE_UPDATE', ({ timer }: { timer: number }) => {
-            if (this.waveTimerEl) this.waveTimerEl.innerText = `${Math.ceil(timer/1000)}s`;
+            this.renderWaveBriefing(timer);
         }, 'UIManager');
 
         EventBus.on('GAME_OVER', () => {
@@ -156,7 +164,22 @@ export default class UIManager {
             this.setupMobileUI();
             this.updateMobileBuildSummary();
             this.updateMobileControls();
+            this.renderWaveBriefing();
         });
+    }
+
+    private renderWaveBriefing(timer?: number): void {
+        if (!this.waveTimerEl) return;
+        if (!this.currentWaveBriefing) {
+            if (typeof timer === 'number') this.waveTimerEl.innerText = `${Math.ceil(timer / 1000)}s`;
+            return;
+        }
+
+        const countdown = typeof timer === 'number' ? `${Math.max(0, Math.ceil(timer / 1000))}s` : null;
+        const routeText = this.currentWaveBriefing.routeNames.join(' + ');
+        const specialText = this.currentWaveBriefing.special ? ` | ${this.currentWaveBriefing.special}` : '';
+        const prefix = countdown ? `${countdown} | ` : '';
+        this.waveTimerEl.innerText = `${prefix}${routeText} | ${this.currentWaveBriefing.threat}${specialText}`;
     }
 
     guardDomPointer(element: HTMLElement | null): void {

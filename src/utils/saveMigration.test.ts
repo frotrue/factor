@@ -14,6 +14,7 @@ describe('migrateSaveData', () => {
         expect(migrated.items).toEqual([]);
         expect(migrated.cables).toEqual([]);
         expect(migrated.resourceMap).toEqual([]);
+        expect(migrated.terrainMap).toEqual([]);
         expect(migrated.research).toEqual([]);
         expect(migrated.settings.difficulty).toBe('HARD');
         expect(migrated.settings.language).toBe('ko');
@@ -23,7 +24,7 @@ describe('migrateSaveData', () => {
         const migrated = migrateSaveData({
             buildings: [
                 { x: 32, y: 64, type: 'PROCESSOR' },
-                { x: 96, y: 64, type: 'STORAGE', rotation: 2, inputBuffer: ['SILICON'] }
+                { x: 96, y: 64, type: 'STORAGE', rotation: 2, inputBuffer: ['SILICON'], hp: 123 }
             ]
         });
 
@@ -38,7 +39,8 @@ describe('migrateSaveData', () => {
         expect(migrated.buildings[1]).toMatchObject({
             rotation: 2,
             inputBuffer: ['SILICON'],
-            outputBuffer: []
+            outputBuffer: [],
+            hp: 123
         });
     });
 

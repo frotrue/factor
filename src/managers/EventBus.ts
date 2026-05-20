@@ -1,9 +1,12 @@
 import { PowerUpdateData, CoreDataEvent } from '../types';
+import type { WaveBriefing } from '../utils/waveSimulation';
 
 export interface EventMap {
     'BUILDING_SELECTED': { type: string };
     'BUILDING_PLACED': { key: string; building: any; type: string };
     'BUILDING_REMOVED': { key: string };
+    'BUILDING_DAMAGED': { key: string; building: any; amount: number; hp: number; maxHp: number };
+    'BUILDING_DESTROYED': { key: string; building: any; type: string };
     'CABLE_CONNECTED': { fromKey: string; toKey: string; cableType: string };
     'POWER_UPDATED': PowerUpdateData;
     'CORE_DAMAGED': { amount: number };
@@ -11,6 +14,7 @@ export interface EventMap {
     'ENEMY_KILLED': { id: string; type: string; x: number; y: number; rewardSilicon: number };
     'GAME_OVER': void;
     'WAVE_STARTED': { wave: number; routes?: string[] };
+    'WAVE_BRIEFING_UPDATED': WaveBriefing;
     'WAVE_UPDATE': { timer: number };
     'WAVE_ENDED': { wave: number };
     'GAME_SPEED_CHANGED': { speed: number };

@@ -8,6 +8,22 @@
 
 ## 진행 로그
 
+### 2026-05-20
+
+- Implemented terrain and building-attack foundations: every building now has durability, enemies can damage non-core buildings they encounter, and destroyed buildings disconnect their cables.
+- Added simple BLOCKER terrain with generated early North Port lane shaping, placement blocking, enemy path blocking, grid rendering, and save/load persistence.
+- Added damage feedback through HP bars and building hit flashes, while preserving the existing Core damage/game-over path.
+- Added Vitest coverage for building durability config, terrain generation/querying, enemy target priority, save migration HP/terrain fields, and kept Playwright smoke green.
+- Verification: `npm test`, `npm run test:e2e`, and `npm run build` passed.
+
+- Implemented first-10-minute onboarding route clarity: Normal waves 1-10 now focus on North Port, and Normal wave 11 introduces East Port as the second defended route.
+- Added wave briefing metadata for HUD guidance: route names, threat level, special threat hints, and recommended defense copy.
+- Updated enemy spawning to use stable active route anchors with only a narrow spread, so ports feel defendable instead of random.
+- Added wave-start route guidance overlays: active port labels and a highlighted route corridor toward the core.
+- Updated the English defense tutorial detail to direct new players toward the marked intrusion port.
+- Added/updated Vitest coverage for guided route policy and wave briefing behavior.
+- Verification: `npm test`, `npm run test:e2e`, and `npm run build` passed.
+
 ### 2026-05-19
 
 - Implemented P0/P1 UX hardening: modal close canvas focus restore, safer `EventBus.off(event)`, Solar Panel wording, localized tooltip/training lab strings, tooltip viewport clamping, and blackout/buffer visual warnings.

@@ -107,12 +107,7 @@ export default class InputController {
 
         scene.cursorContainer = scene.add.container(0, 0);
         scene.ghostGraphics = scene.add.graphics();
-        scene.cursorArrow = scene.add.triangle(
-            CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE / 2,
-            12, 0, 0, 12, 0, -12, 0xffffff, 1
-        );
-        scene.cursorArrow.setAngle(CONFIG.DIRECTIONS[scene.currentRotation].angle);
-        scene.cursorContainer.add([scene.ghostGraphics, scene.cursorArrow]);
+        scene.cursorContainer.add(scene.ghostGraphics);
         scene.cursorContainer.setDepth(100);
         scene.cursorContainer.setAlpha(0.6);
         scene.updateCursorGraphics();
@@ -121,7 +116,7 @@ export default class InputController {
     rotateCursor(): void {
         const { scene } = this;
         scene.currentRotation = (scene.currentRotation + 1) % 4;
-        scene.cursorArrow.setAngle(CONFIG.DIRECTIONS[scene.currentRotation].angle);
+        scene.updateCursorGraphics();
     }
 
     cancelCurrentAction(): void {

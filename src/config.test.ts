@@ -98,4 +98,20 @@ describe('CONFIG integrity', () => {
         expect(CONFIG.BUILDINGS.CORE.WIDTH).toBe(4);
         expect(CONFIG.BUILDINGS.CORE.HEIGHT).toBe(4);
     });
+
+    it('assigns positive durability to every building', () => {
+        const missingDurability = Object.values(CONFIG.BUILDINGS)
+            .filter(building => !building.HP || building.HP <= 0)
+            .map(building => building.ID);
+
+        expect(missingDurability).toEqual([]);
+    });
+
+    it('defines blocker terrain for lane shaping', () => {
+        expect(CONFIG.TERRAIN.BLOCKER).toMatchObject({
+            ID: 'BLOCKER',
+            BLOCKS_BUILDING: true,
+            BLOCKS_ENEMY: true
+        });
+    });
 });

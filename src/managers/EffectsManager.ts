@@ -3,6 +3,7 @@ import { CONFIG } from '../config';
 import type MainScene from '../scenes/MainScene';
 import BaseBuilding from '../buildings/BaseBuilding';
 import BaseEnemy from '../enemies/BaseEnemy';
+import { getSpawnPointForRoute, type IntrusionRouteId } from '../utils/waveSimulation';
 
 interface InferenceLockMarker {
     target: BaseEnemy;
@@ -17,6 +18,7 @@ export default class EffectsManager {
     private outageMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
     private bufferMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
     private inferenceLocks = new Map<string, InferenceLockMarker>();
+    private routeHintObjects: Phaser.GameObjects.GameObject[] = [];
 
     constructor(scene: MainScene) {
         this.scene = scene;
@@ -62,6 +64,17 @@ export default class EffectsManager {
         });
     }
 
+    playBuildingDamaged(building: BaseBuilding): void {
+        if (!building.container?.active) return;
+        this.scene.tweens.add({
+            targets: building.container,
+            alpha: 0.45,
+            yoyo: true,
+            duration: 80,
+            ease: 'Sine.easeInOut'
+        });
+    }
+
     playWaveStart(routes: string[] = []): void {
         this.scene.cameras.main.shake(160, 0.004);
         const flash = this.scene.add.rectangle(
@@ -84,6 +97,7 @@ export default class EffectsManager {
 
     private playRouteWarnings(routes: string[]): void {
         if (routes.length === 0) return;
+        this.clearRouteHints();
 
         const positions: Record<string, { x: number; y: number }> = {
             NORTH: { x: this.scene.scale.width / 2, y: 72 },
@@ -113,7 +127,45 @@ export default class EffectsManager {
                 duration: 420,
                 onComplete: () => label.destroy()
             });
+            this.drawRouteGuidance(route);
         });
+    }
+
+    private clearRouteHints(): void {
+        this.routeHintObjects.forEach(object => object.destroy());
+        this.routeHintObjects = [];
+    }
+
+    private drawRouteGuidance(route: string): void {
+        if (!this.isRouteId(route)) return;
+
+        const spawn = getSpawnPointForRoute(route, 0.5);
+        const core = {
+            x: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE * 2,
+            y: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE * 2
+        };
+        const graphics = this.scene.add.graphics();
+        graphics.setDepth(18);
+        graphics.lineStyle(3, 0xff4444, 0.45);
+        graphics.lineBetween(spawn.x, spawn.y, core.x, core.y);
+        graphics.lineStyle(18, 0xff4444, 0.08);
+        graphics.lineBetween(spawn.x, spawn.y, core.x, core.y);
+
+        const portLabel = this.scene.add.text(spawn.x, spawn.y, `${route} PORT`, {
+            fontSize: '14px',
+            color: '#ffdddd',
+            fontFamily: 'Share Tech Mono',
+            backgroundColor: 'rgba(127, 29, 29, 0.78)',
+            padding: { x: 8, y: 4 }
+        });
+        portLabel.setOrigin(0.5);
+        portLabel.setDepth(45);
+
+        this.routeHintObjects.push(graphics, portLabel);
+    }
+
+    private isRouteId(route: string): route is IntrusionRouteId {
+        return route === 'NORTH' || route === 'EAST' || route === 'SOUTH' || route === 'WEST';
     }
 
     playEnemyKilled(x: number, y: number): void {

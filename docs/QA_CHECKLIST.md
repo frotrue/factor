@@ -2,6 +2,29 @@
 
 ## Automated Smoke
 
+### 2026-05-20 terrain and building attack automated check
+
+- [x] Vitest: every building has positive durability.
+- [x] Vitest: blocker terrain config exists and blocks building/enemy movement.
+- [x] Vitest: MapManager terrain blockers are queryable and generated outside core/resource safe tiles.
+- [x] Vitest: enemy building targeting prioritizes Firewall, then defense, then utility buildings while ignoring Core.
+- [x] Vitest: save migration preserves terrain and damaged building HP fields.
+- [x] Playwright: existing desktop/mobile startup, placement, cable, overlay, save, and modal smoke tests passed.
+- [x] `npm test` passed.
+- [x] `npm run test:e2e` passed.
+- [x] `npm run build` passed.
+
+### 2026-05-20 onboarding intrusion ports automated check
+
+- [x] Vitest: Normal waves 1-3 stay focused on North Port.
+- [x] Vitest: Normal wave 11 introduces North + East ports.
+- [x] Vitest: wave briefing metadata exposes route names, threat level, special threat, and recommended defense.
+- [x] Vitest: tutorial flow remains compatible after defense guidance copy update.
+- [x] Playwright: existing desktop/mobile startup and interaction smoke tests passed.
+- [x] `npm test` passed.
+- [x] `npm run test:e2e` passed.
+- [x] `npm run build` passed.
+
 ### 2026-05-19 P0/P1/P2 UX hardening automated check
 
 - [x] Vitest: EventBus owner/callback removal and no-arg `off(event)` guard

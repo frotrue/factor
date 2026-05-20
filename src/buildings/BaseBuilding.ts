@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
 import { BuildingOptions, GameItem, IMainScene, MoveTarget } from '../types';
+import EventBus from '../managers/EventBus';
 
 /**
  * 모든 건물의 기반 클래스
@@ -18,6 +19,10 @@ export default class BaseBuilding {
     outputBuffer: string[];
     maxBufferSize: number;
     hasPower: boolean;
+    hp: number;
+    maxHp: number;
+    hpBar?: Phaser.GameObjects.Graphics;
+    destroyed: boolean;
     infectedUntilTick: number;
     infectionMarker: Phaser.GameObjects.Graphics;
 
@@ -58,6 +63,9 @@ export default class BaseBuilding {
         this.outputBuffer = [];
         this.maxBufferSize = bConfig.MAX_BUFFER || config.maxBufferSize || 5;
         this.hasPower = true;
+        this.maxHp = bConfig.HP || 100;
+        this.hp = this.maxHp;
+        this.destroyed = false;
         this.infectedUntilTick = 0;
         this.infectionMarker = scene.add.graphics();
         this.infectionMarker.setDepth(35);
@@ -192,6 +200,46 @@ export default class BaseBuilding {
                 this.graphics.fillStyle(0xffffff, 0.2);
                 this.graphics.fillCircle(cx, cy, 4);
                 break;
+        }
+    }
+
+    ensureHpBar(): void {
+        if (this.hpBar) return;
+        this.hpBar = this.scene.add.graphics();
+        this.container.add(this.hpBar);
+    }
+
+    drawHpBar(): void {
+        if (!this.hpBar) return;
+        this.hpBar.clear();
+        if (this.hp >= this.maxHp) return;
+
+        const bConfig = CONFIG.BUILDINGS[this.type];
+        const width = CONFIG.GRID_SIZE * (bConfig.WIDTH || 1);
+        const height = 4;
+        const percent = Math.max(0, this.hp / this.maxHp);
+        this.hpBar.fillStyle(0x7f1d1d, 1);
+        this.hpBar.fillRect(-width / 2, -CONFIG.GRID_SIZE / 2 - 8, width, height);
+        this.hpBar.fillStyle(0x22c55e, 1);
+        this.hpBar.fillRect(-width / 2, -CONFIG.GRID_SIZE / 2 - 8, width * percent, height);
+    }
+
+    takeDamage(amount: number): void {
+        if (this.destroyed || amount <= 0) return;
+        this.hp = Math.max(0, this.hp - amount);
+        this.ensureHpBar();
+        this.drawHpBar();
+        EventBus.emit('BUILDING_DAMAGED', {
+            key: `${this.x},${this.y}`,
+            building: this,
+            amount,
+            hp: this.hp,
+            maxHp: this.maxHp
+        });
+
+        if (this.hp <= 0) {
+            this.destroyed = true;
+            (this.scene as IMainScene).buildingManager?.remove(`${this.x},${this.y}`);
         }
     }
 
