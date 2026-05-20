@@ -266,9 +266,14 @@ export default class InputController {
             scene.uiManager.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
         } else {
             const resourceType = scene.mapManager.getResourceAt(snappedX, snappedY);
+            const terrainType = scene.mapManager.getTerrainAt(snappedX, snappedY);
             if (resourceType) {
                 const resourceName = getItemName(resourceType);
                 scene.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `${textForKey('tooltip.type')}: ${resourceType}`);
+            } else if (terrainType === 'BLOCKER') {
+                const title = textForKey('terrain.BLOCKER.name');
+                const content = `${textForKey('tooltip.type')}: ${textForKey('tooltip.terrain')}\n${textForKey('tooltip.blockerDescription')}`;
+                scene.uiManager.showTooltip(pointer.x, pointer.y, title, content);
             } else {
                 scene.uiManager.hideTooltip();
             }

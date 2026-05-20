@@ -177,7 +177,10 @@ export const TRANSLATIONS = {
         'trainingLab.autoOff': '자동 훈련: 꺼짐',
         'trainingLab.noInput': '훈련: 먼저 대상과 훈련 입력을 준비하세요.',
         'trainingLab.targetSet': '훈련: 모든 {name} 모델을 대상으로 설정했습니다.',
-        'building.SOLAR_PANEL.description': '주변 1x1 범위(본인을 중심으로 8칸) 내의 건물에 전력을 공급하는 독립형 태양광 패널입니다.'
+        'building.SOLAR_PANEL.description': '주변 1x1 범위(본인을 중심으로 8칸) 내의 건물에 전력을 공급하는 독립형 태양광 패널입니다.',
+        'terrain.BLOCKER.name': '데이터 잔해',
+        'tooltip.terrain': '지형',
+        'tooltip.blockerDescription': '건설 불가 | 적 이동 차단\n협곡 지형을 활용해 좁은 입구를 설계하세요.'
     },
     en: {
         'app.title': 'NEURAL FACTORY',
@@ -350,7 +353,10 @@ export const TRANSLATIONS = {
         'trainingLab.autoOff': 'Auto Train: OFF',
         'trainingLab.noInput': 'Training: select a target and provide training input first.',
         'trainingLab.targetSet': 'Training: target set to all {name} models.',
-        'building.SOLAR_PANEL.description': 'A standalone panel that supplies power to buildings within a 1x1 range (8 tiles around itself).'
+        'building.SOLAR_PANEL.description': 'A standalone panel that supplies power to buildings within a 1x1 range (8 tiles around itself).',
+        'terrain.BLOCKER.name': 'Data Debris',
+        'tooltip.terrain': 'Terrain',
+        'tooltip.blockerDescription': 'Blocks placement | Blocks enemy pathing\nUse terrain bottlenecks to design choke points.'
     }
 } as const;
 
