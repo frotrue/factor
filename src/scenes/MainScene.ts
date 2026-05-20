@@ -278,6 +278,33 @@ export default class MainScene extends Phaser.Scene {
 
             this.ghostGraphics.fillStyle(bConfig.COLOR || 0xaaaaaa, 0.5);
             this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
+
+            const cx = (CONFIG.GRID_SIZE * w) / 2;
+            const cy = (CONFIG.GRID_SIZE * h) / 2;
+            this.ghostGraphics.lineStyle(2, 0xffffff);
+
+            switch (this.currentRotation) {
+                case 0:
+                    this.ghostGraphics.lineBetween(cx - 5, cy, cx + 10, cy);
+                    this.ghostGraphics.lineBetween(cx + 10, cy, cx + 5, cy - 5);
+                    this.ghostGraphics.lineBetween(cx + 10, cy, cx + 5, cy + 5);
+                    break;
+                case 1:
+                    this.ghostGraphics.lineBetween(cx, cy - 5, cx, cy + 10);
+                    this.ghostGraphics.lineBetween(cx, cy + 10, cx - 5, cy + 5);
+                    this.ghostGraphics.lineBetween(cx, cy + 10, cx + 5, cy + 5);
+                    break;
+                case 2:
+                    this.ghostGraphics.lineBetween(cx + 5, cy, cx - 10, cy);
+                    this.ghostGraphics.lineBetween(cx - 10, cy, cx - 5, cy - 5);
+                    this.ghostGraphics.lineBetween(cx - 10, cy, cx - 5, cy + 5);
+                    break;
+                case 3:
+                    this.ghostGraphics.lineBetween(cx, cy + 5, cx, cy - 10);
+                    this.ghostGraphics.lineBetween(cx, cy - 10, cx - 5, cy - 5);
+                    this.ghostGraphics.lineBetween(cx, cy - 10, cx + 5, cy - 5);
+                    break;
+            }
             this.cursorContainer.setAlpha(0.7);
         }
     }

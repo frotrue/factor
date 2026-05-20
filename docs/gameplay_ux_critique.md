@@ -1,83 +1,81 @@
-# 🧠 Neural Factory 플레이 경험 및 UI/UX 비판적 분석 보고서
+# Gameplay UX Critique
 
-본 보고서는 **Neural Factory**의 현재 알파 빌드를 직접 플레이하고, 코드 및 리소스를 다각도로 분석하여 **게임 플레이 경험(UX), UI 콘셉트 및 비주얼 디자인, 핵심 메커니즘**의 완성도를 평가하고, 완성도 높은 상용 게임 수준으로 도약하기 위한 **비판적인 개선 방향**을 제시합니다.
+Updated: 2026-05-21
 
----
+## Summary
 
-## 📊 요약 평가 (Executive Summary)
+The project has moved from a broad prototype into a playable factory-defense loop. The strongest recent UX improvements are fixed onboarding ports, wave briefing data, terrain lane shaping, and building damage feedback. The biggest remaining UX risk is not missing functionality; it is whether new combat pressure is readable and fair.
 
-* **종합 평점:** `7.8 / 10`
-* **한 줄 요약:** 
-  > *"머신러닝 파이프라인이라는 참신하고 지적인 테마를 글래스모피즘(Glassmorphism)과 네온 사이버 해커 톤으로 시각화하여 프리미엄한 첫인상을 주지만, 세부적인 입력 포커스 처리, 다국어 텍스트 일관성, 그리고 디펜스 정보의 시각적 피드백에서 다듬어지지 않은 마찰점(Friction Points)이 존재함."*
+## Strengths
 
----
+### Clearer First Objective
 
-## 🎨 1. UI 콘셉트 & 비주얼 디자인 비판
+Normal Wave 1~10 focuses on North Port, giving players a specific place to defend before multi-port pressure begins.
 
-### 👍 우수한 점 (Strengths)
-1. **일관성 있고 매력적인 테마 (Cyberpunk Retro Console):**
-   * 어두운 격자 그리드 위에 얹어진 네온 핑크, 테알(Teal), 골드 색상의 대비가 훌륭하며, HUD와 모달 윈도우에 적용된 반투명 배경(backdrop filter blur)과 부드러운 외곽선 글로우(glow)가 **굉장히 고급스럽고 프리미엄한 느낌**을 줍니다.
-2. **논리적인 레이아웃 범주화:**
-   * 하단 빌드바를 **"추출", "물류", "생산", "전력", "방어"** 등 기능 단위의 탭으로 직관적으로 분류하여 화면을 넓게 쓰면서도 건물을 빠르게 탐색할 수 있습니다.
-   * 좌상단의 단축키(Key Guide) 정보와 우상단의 메뉴/설정 배치 등 정렬 배치가 깔끔합니다.
+### Better Tactical Readability
 
-### ⚠️ 한계점 및 비판 (Critique & Flaws)
-1. **다국어(영한) 혼재로 인한 일관성 훼손:**
-   * **현상:** 메인 빌드 바 탭("추출", "방어" 등)과 튜토리얼 패널("Prepare defense"), 연구 목록("Recycling Loop" vs "효율적 채굴") 및 상단 HUD("POWER OUTPUT", "CONFIDENCE SCORE") 등에서 한국어와 영어 텍스트가 무분별하게 혼재되어 있습니다.
-   * **비판:** UI의 텍스트 일관성은 플레이어에게 정돈된 인상을 주는 핵심 요소입니다. 영어로 하이테크 느낌을 살릴 것이라면 전체 영문화(혹은 한글 자막 병기)를 하거나, 명확한 한글화를 하거나 둘 중 하나의 방향성을 정립해야 합니다.
-2. **게임 월드 오브젝트(Phaser)와 UI(DOM)의 비주얼 격차:**
-   * **현상:** 웹 기술로 구현된 DOM 기반 HUD는 매우 유려하고 미려한 반면, 실제 게임 격자판과 건물 스프라이트(실리콘 패치, 라우터, 타워 등)의 비주얼은 단순한 원색 사각형 및 기본 텍스처로 처리되어 상대적으로 평평하고 투박하게 느껴집니다.
-   * **비판:** DOM UI와 게임 내 그래픽 간의 '품질 불일치'는 플레이어가 가상 세계에 몰입하는 것을 방해합니다. 건물 배치 시 미세한 섀도우(Shadow) 효과나 네온 케이블이 밝게 발광하는 쉐이더 연출이 필요합니다.
+Wave briefing data communicates:
 
----
+- next wave number
+- active route names
+- threat level
+- special threat
+- recommended defense
 
-## 🕹️ 2. 플레이 경험 & 조작성 (UX & Controls) 비판
+Wave start effects label active ports and draw a corridor toward the Core.
 
-### 👍 우수한 점 (Strengths)
-1. **드래그 스트레스가 없는 케이블 배치 방식:**
-   * 마우스를 길게 드래그하는 방식 대신, 출발지 건물과 목적지 건물을 각각 클릭하면 자동으로 가이드선과 함께 케이블이 부드럽게 이어지는 방식은 조작 피로도를 극적으로 낮추는 매우 우수한 UX 디자인입니다.
-2. **시스템 로그 및 튜토리얼 가이드:**
-   * 좌하단의 텍스트 터미널 형태 로그는 게임 상태(웨이브 시작, 자원 획득 등)를 해킹 로그처럼 보여주며, 우측 튜토리얼 체크리스트는 이 복잡한 자동화 디펜스의 초기 진입 장벽을 영리하게 극복해 줍니다.
+### More Meaningful Defense Lines
 
-### ⚠️ 한계점 및 비판 (Critique & Flaws)
-1. **키보드 카메라 조작(WASD)의 포커스 상실 (Focus Issue):**
-   * **현상:** 연구(Research) 모달을 닫거나, 설정 창을 클릭한 뒤, 혹은 UI 바를 선택하고 나면 브라우저의 포커스가 Phaser Canvas 영역을 벗어납니다. 이 상태에서 `W A S D`를 누르면 카메라가 전혀 움직이지 않고 마우스로 게임 화면 한가운데를 강제로 다시 클릭해야 작동합니다.
-   * **비판:** 실시간 적 침공과 공장 운영을 동시에 멀티태스킹해야 하는 상황에서 포커스 유실은 심각한 조작적 불쾌감을 야기합니다. UI 클릭 시에도 포커스를 자동으로 Canvas로 돌려주거나 전역 키 이벤트를 처리하는 바인딩 개선이 필요합니다.
-2. **중앙 화면을 지나치게 침범하는 대형 툴팁 (Screen Space Overlap):**
-   * **현상:** 건물을 선택하거나 hover했을 때 노출되는 정보 시트(Info sheet/Tooltip)가 빌드바 바로 위에 너무 크게 고정되어 생성됩니다.
-   * **비판:** 배치하려는 타겟 타일이 화면 하단에 가깝다면, 툴팁이 설치 대상 타일을 완전히 가려 조작이 불가능한 사각지대가 발생합니다. 툴팁은 마우스 포인터 근처에 플로팅 툴팁으로 나오거나, 좌측 조작 가이드 패널 공간 등을 재활용하여 고정 영역에 띄우는 것이 공간 효율상 현명합니다.
-3. **전력망(Power Grid) 범위 예측의 불투명성:**
-   * **현상:** F2 오버레이를 통해 설치된 전선망의 연결선은 훌륭히 시각화되지만, 새로운 전력 노드(Power Node)를 배치하려 할 때, 이 노드가 커버할 수 있는 유효 반경(Range)이 미리 점선이나 오라(Ora) 형태로 보이지 않습니다.
-   * **비판:** 플레이어는 일단 지어보고 나서야 전력이 닿는지 확인해야 하므로 '실행 및 오류(Trial and Error)'를 강요당해 자원 소모의 낭비를 초래합니다.
+BLOCKER terrain creates a defendable lane. Enemies can attack buildings, so Firewall and forward defense placement matter more than before.
 
----
+### Stronger System Feedback
 
-## ⚙️ 3. 핵심 게임 메커니즘 비판
+Tooltips and status markers communicate power, buffers, AP relay state, model confidence, and damage. Building HP bars appear when damaged.
 
-### 👍 우수한 점 (Strengths)
-1. **머신러닝 이론과의 창의적 결합:**
-   * 단순히 '금'이나 '광석'을 캐서 타워를 업그레이드하는 식상함을 넘어, **데이터를 다운로드하고, 라벨링하고, 가중치를 학습(Weight Trainer)하여 모델 신뢰도(Confidence)를 높여야만 타워의 성능이 올라가는 메커니즘**은 게임의 내러티브와 시스템이 유기적으로 맞물린 놀라운 완성도를 보여줍니다.
-2. **전력 블랙아웃 시스템:**
-   * 그리드가 겹치는 발전소들이 자동으로 하나의 거대한 전력망으로 병합되고, 전력이 부족하면 전역이 암전되며 멈추는 리얼리티는 단순 방치를 막고 긴장감을 유지시켜 줍니다.
+### Mobile Baseline Exists
 
-### ⚠️ 한계점 및 비판 (Critique & Flaws)
-1. **악성 데이터(적)의 스폰 위치/벡터 정보 결여:**
-   * **현상:** 적 웨이브가 활성화될 때 맵 전체의 외곽 경계선 어디선가 갑작스럽게 적들이 스폰되어 코어를 향해 진격합니다.
-   * **비판:** 공장 건설 및 기지 레이아웃을 최적화하려면 적이 어느 라인(입구)으로 오는지 사전에 예측할 수 있어야 합니다. 경고 표시나 스폰 지점에 붉은색 데이터 흐름(Vector) 화살표 등을 띄워주지 않으면 디펜스 게임 특유의 '전략적 기지 설계' 재미가 반감됩니다.
-2. **초반 플레이 흐름의 인위적인 병목 (Time Gating):**
-   * **현상:** 게임 초반부에 실리콘을 캐고 수송 벨트를 설치하기 위해 플레이어가 직접 조작하기보다는, 실리콘이 느리게 차는 것을 하염없이 바라보는 시간(약 1~2분)이 존재합니다.
-   * **비판:** 팩토리오 장르의 생명은 끊임없는 건설과 확장인데, 자원 수급 속도의 밸런스 설정에 의해 초반에 멍하니 기다리는 시간이 발생하여 몰입도가 초기 단계에서 꺾일 수 있습니다. 초기 자원 보유량을 소폭 증가시키거나 초반 광산의 기본 속도를 빠르게 조정할 필요가 있습니다.
+Mobile portrait/landscape controls are covered by Playwright smoke tests and support placement, cable mode, rotate, remove, defense, and power toggles.
 
----
+## Main Friction Points
 
-## 🛠️ 4. 종합 제안 및 개선 방향 (Actionable Recommendations)
+### Wave Briefing Is Too Compressed
 
-| 분류 | 제안 사항 (Actionable Item) | 기대 효과 | 우선순위 |
-| :--- | :--- | :--- | :--- |
-| **UI/UX** | **포커스 자동 복구 코드 적용:** UI 버튼 클릭 후 Canvas에 `focus()`를 주는 핸들러를 추가하거나 Phaser 키 캡처 방식을 전역으로 이관. | WASD 조작 시 키가 먹통이 되는 조작 불쾌감의 완벽한 해소. | **최우선 (P0)** |
-| **비주얼** | **다국어(텍스트) 언어 톤 통합:** 연구 트리와 HUD 명칭을 완전히 다국어화(예: `POWER OUTPUT` → `전력 출력`, `Recycling Loop` → `리사이클 루프`). | UI 디자인의 완성도 및 언어적 통일감 제공. | **우선 (P1)** |
-| **UX** | **건물 정보 툴팁 배치 및 앵커 변경:** 마우스 포인터 근처 또는 고정 사이드바로 정보 가이드 위치 변경. | 건설 대상 영역이 대형 정보 툴팁에 가려지는 사각지대 문제 해결. | **우선 (P1)** |
-| **기획** | **적 스폰 방향 벡터 표시기 추가:** 웨이브 타이머가 만료될 때, 화면 테두리에 적이 진입하는 지점을 보여주는 붉은색 네트워크 침투 신호(네온 경보) 렌더링. | 플레이어가 적의 진입로에 집중해 방화벽과 분류 모델을 설치할 수 있는 전술적 재미 증대. | **보통 (P2)** |
-| **기획** | **초반 자원(Silicon) 밸런싱 수정:** 게임 시작 시 기본 제공하는 Silicon 자원량을 소폭 늘려 초반 파이프라인 구축을 막힘없이 시작하도록 유도. | 지루한 대기 시간을 없애고 즉각적으로 자동화의 쾌감에 몰입하도록 지원. | **보통 (P2)** |
+The wave timer currently carries too much information. A dedicated compact panel would reduce scanning friction.
 
-본 보고서에서 제시한 조작감 피드백과 직관적이고 완성도 높은 오버레이 및 시각 피드백들을 적용한다면, **Neural Factory**는 그 독창적인 테마와 함께 유저들에게 강한 중독성과 시각적 카타르시스를 전달하는 명작으로 안착할 수 있을 것입니다.
+### Building Damage Needs Better Triage
+
+HP bars and flashes exist, but a player may still miss which building is under attack during a busy wave.
+
+Recommended:
+
+- `UNDER ATTACK` chip
+- critical building alert
+- clearer destroyed-building log
+
+### Terrain Needs Explanation
+
+BLOCKER terrain is functional but may be visually ambiguous. It needs hover/tooltip text or a distinct style pass.
+
+### Installed Versus Ghost Direction
+
+Current intended behavior:
+
+- placement ghost shows direction
+- installed buildings do not show extra arrows
+
+This keeps planning clarity without adding visual noise after placement.
+
+## Recommended UX Next Steps
+
+1. Add dedicated next-wave briefing panel.
+2. Add building under-attack chips.
+3. Add BLOCKER terrain tooltip.
+4. Playtest Wave 1~15 and tune enemy building damage.
+5. Add a game-over stats screen that explains what failed.
+
+## Watch List
+
+- If building destruction feels random, reduce regular enemy building damage.
+- If Firewall feels mandatory too early, increase Wave 1~3 leniency.
+- If BLOCKER terrain hides resource planning, reduce blocker density near Core.
+- If mobile UI feels crowded, collapse wave briefing into a small icon + drawer.

@@ -7,16 +7,11 @@ const PHYSICAL_ITEMS = new Set(['SILICON']);
 
 export default class Conveyor extends BaseBuilding {
     transferRate: number;
-    arrow: Phaser.GameObjects.Triangle;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}, type: string = 'CONVEYOR') {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
         this.transferRate = type === 'FAST_LINK' ? 1 : 2;
         this.maxBufferSize = 1;
-
-        this.arrow = scene.add.triangle(0, 0, 10, 0, -8, -7, -8, 7, 0xffffff, 0.85);
-        this.arrow.setAngle(CONFIG.DIRECTIONS[this.rotation].angle);
-        this.container.add(this.arrow);
     }
 
     canAcceptItem(type: string): boolean {

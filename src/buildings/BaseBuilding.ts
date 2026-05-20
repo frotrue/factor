@@ -146,8 +146,6 @@ export default class BaseBuilding {
             case 'FAST_LINK':
                 this.graphics.lineStyle(2, 0xffffff, 0.55);
                 this.graphics.lineBetween(left + 7, cy, left + width - 7, cy);
-                this.graphics.fillStyle(0xffffff, 0.55);
-                this.graphics.fillTriangle(left + width - 10, cy, left + width - 17, cy - 5, left + width - 17, cy + 5);
                 break;
             case 'PROCESSOR':
             case 'WEIGHT_TRAINER':

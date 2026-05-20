@@ -1,80 +1,82 @@
 # Playability Hardening Plan
 
-> 최종 갱신: 2026-05-15
-> 상태: **코드 구현 완료 — 수동 QA 대기 중**
+Updated: 2026-05-21
 
----
+## Goal
 
-## 1. 범위
+Make the current build understandable and stable for a new player in the first 10 minutes, while preserving enough tactical pressure for midgame play.
 
-이번 작업은 신규 콘텐츠 추가가 아니라 플레이 가능성 안정화를 목표로 한다.
+## Completed Hardening
 
-**포함:**
-- 모바일 터치 입력 충돌 방지
-- 모바일 레이아웃 겹침 조정
-- 터치 드래그 vs 짧은 탭 판정 안정화
-- 케이블 연결 중 상태 표시
-- 선택 건물/타일 정보 표시
-- 데스크톱 입력 회귀 확인
+- Mobile layout and action bar
+- Desktop and mobile smoke tests
+- Camera starts centered on Core
+- Modal focus restoration
+- Tooltip viewport clamping
+- Power and defense range overlays
+- Building placement range preview
+- Cable connection state feedback
+- Tutorial flow for core factory loop
+- Fixed onboarding intrusion ports
+- Wave briefing data and route overlays
+- BLOCKER terrain lane shaping
+- Building HP and destruction
+- Enemy building attacks
+- Save/load for terrain and damaged building HP
+- Installed-building arrows removed; placement ghost arrows kept
 
-**제외:**
-- EMP Tower, Honeypot 등 신규 콘텐츠
-- 웨이브 밸런스 수치 조정
-- 저장 데이터 마이그레이션
-- 대규모 MainScene 리팩터링
+## Current Hardening Targets
 
----
+### 1. Early Combat Fairness
 
-## 2. 구현 완료 내역
+Risk: Enemies can now destroy buildings, which may feel harsh if damage pacing is too high.
 
-### 모바일 레이아웃
+Manual checks:
 
-- `src/styles/main.css`: 모바일 HUD, 하단 빌드바, 액션바, 정보 시트, 모달 반응형 스타일
-- 모바일 가로 화면에서 HUD와 하단 UI 높이 축소, 활동 로그/튜토리얼 패널 숨김
-- 모달은 모바일에서 화면 안에 들어오고 내부 스크롤 가능
+- [ ] Wave 1 does not destroy critical buildings before the player understands the threat.
+- [ ] Firewall absorbs pressure better than utility buildings.
+- [ ] Damage indicators are visible enough.
+- [ ] Destroyed building/cable consequences are understandable.
 
-### 터치 입력 안정화
+### 2. Threat Readability
 
-- 이동 거리 8px 이하 + 시간 250ms 이하일 때만 배치 탭으로 처리
-- 이동 거리 10px 이하 + 시간 500ms 이상 + 빈 공간이면 현재 액션 취소
-- 멀티터치 중에는 탭 배치 비활성화
-- `CameraController`: 한 손가락 팬 + 두 손가락 핀치 줌
+Risk: Route, terrain, damage, and wave information may compete for attention.
 
-### 모바일 조작 UI
+Planned improvements:
 
-- 모바일 액션바: `Rotate`, `Remove`, `Cable`, `Cancel`, `Defense`, `Power`
-- 모바일 정보 시트: `POWER OK`, `NO POWER`, `INPUT FULL`, `OUTPUT FULL`, `NO AMMO`, `PROCESSING`
-- DOM 버튼에 `preventDefault` + `stopPropagation` 적용
-- 최소 터치 타깃 56px 보장
+- [ ] Dedicated next-wave briefing panel
+- [ ] `UNDER ATTACK` status chip
+- [ ] Better destroyed-building message
+- [ ] Terrain tooltip for BLOCKER
 
-### 케이블 UX
+### 3. Mobile Usability
 
-- 케이블 시작 시 `Cable: select endpoint` 상태 표시
-- 성공/중복/자원부족/취소 상태를 로그로 표시
-- Cancel 버튼으로 케이블 대기 상태 및 삭제 모드 해제
+Risk: Combat lane, terrain, and tooltips may crowd small screens.
 
----
+Manual checks:
 
-## 3. 남은 항목 (수동 QA 필요)
+- [ ] 390x844 portrait
+- [ ] 844x390 landscape
+- [ ] 768x1024 tablet portrait
+- [ ] Pinch/drag does not accidentally place buildings
+- [ ] Action bar states remain clear during cable/defense/power modes
 
-코드로 처리할 수 있는 1차 구현은 완료됐다. 남은 것은 실제 기기/브라우저에서의 수동 QA다.
+### 4. Save Robustness
 
-체크리스트: `docs/QA_CHECKLIST.md`
+Risk: New terrain and building HP fields must not break older saves.
 
-### 필수 확인 뷰포트
+Planned tests:
 
-| 뷰포트 | 설명 |
-|--------|------|
-| `390×844` | 모바일 세로 (iPhone 12/13/14 기준) |
-| `844×390` | 모바일 가로 |
-| `768×1024` | 태블릿 세로 |
+- [ ] Old save without `terrainMap`
+- [ ] Old save without building `hp`
+- [ ] Damaged building round-trip
+- [ ] Terrain blocker round-trip
 
----
+## Completion Criteria For Current Hardening Pass
 
-## 4. 완료 기준
-
-- `npm run build` 성공
-- 데스크톱: WASD/휠줌/우클릭삭제/R회전/F1·F2 오버레이 정상
-- 모바일: 키보드/마우스 없이 건설·회전·삭제·케이블·오버레이 가능
-- 작은 화면에서 HUD·빌드바·액션바·모달이 치명적으로 겹치지 않음
-- 케이블 연결 상태와 실패 이유를 UI에서 확인 가능
+- `npm test` passes.
+- `npm run test:e2e` passes.
+- `npm run build` passes.
+- Normal Wave 1~10 can be completed by a new player following tutorial hints.
+- Wave 11 second-port introduction is understandable.
+- Building damage increases tension without causing confusing sudden failure.
