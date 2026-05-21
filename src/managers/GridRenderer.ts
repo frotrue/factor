@@ -71,6 +71,26 @@ export default class GridRenderer {
                 this.graphics.fillRect(x + 3, y + 3, this.gridSize - 6, this.gridSize - 6);
                 this.graphics.lineStyle(1, 0xcbd5e1, 0.22);
                 this.graphics.strokeRect(x + 5, y + 5, this.gridSize - 10, this.gridSize - 10);
+
+                if (type === 'BLOCKER') {
+                    const inner = this.gridSize - 12;
+                    this.graphics.lineStyle(1, 0x22d3ee, 0.38);
+                    this.graphics.beginPath();
+                    this.graphics.moveTo(x + 7, y + this.gridSize - 9);
+                    this.graphics.lineTo(x + 15, y + 15);
+                    this.graphics.lineTo(x + 23, y + this.gridSize - 12);
+                    this.graphics.lineTo(x + inner, y + 10);
+                    this.graphics.strokePath();
+
+                    this.graphics.lineStyle(1, 0xf472b6, 0.34);
+                    this.graphics.strokeRect(x + 9, y + 9, this.gridSize - 18, this.gridSize - 18);
+
+                    this.graphics.fillStyle(0x22d3ee, 0.72);
+                    this.graphics.fillCircle(x + 11, y + this.gridSize - 11, 2);
+                    this.graphics.fillCircle(x + 23, y + 11, 2);
+                    this.graphics.fillStyle(0xf472b6, 0.7);
+                    this.graphics.fillCircle(x + this.gridSize - 11, y + 19, 2);
+                }
             }
         }
     }

@@ -6,8 +6,8 @@ Updated: 2026-05-21
 
 ```powershell
 npm test
-npm run test:e2e
 npm run build
+npm run test:e2e -- --workers=1
 ```
 
 If Playwright browsers are missing:
@@ -79,6 +79,8 @@ Covered flows:
 - hotkeys and overlays
 - save smoke
 - mobile action bar and touch placement
+- tactical objective and wave panel startup smoke
+- research/advanced-logistics early-game gating smoke
 
 ## E2E Notes
 
@@ -86,6 +88,8 @@ Covered flows:
 - DOM UI readiness should be checked before clicking DOM buttons.
 - The game exposes `window.__NEURAL_FACTORY_GAME__` for smoke assertions.
 - Keep Playwright tests under `tests/e2e/**`; Vitest should only collect `src/**/*.test.ts`.
+- Use `--workers=1` for the reliable local baseline. Full parallel e2e may be
+  sensitive to browser startup timing and audio unlock behavior.
 
 ## When Adding Tests
 
@@ -110,5 +114,5 @@ Use Playwright when the behavior depends on canvas + DOM interaction:
 As of 2026-05-21, the expected clean result is:
 
 - `npm test`: all Vitest tests pass
-- `npm run test:e2e`: desktop/mobile smoke tests pass, with expected project-specific skips
 - `npm run build`: Vite production build succeeds
+- `npm run test:e2e -- --workers=1`: desktop/mobile smoke tests pass, with expected project-specific skips

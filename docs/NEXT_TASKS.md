@@ -4,15 +4,19 @@ Updated: 2026-05-21
 
 ## Immediate Priority
 
-### 1. Playtest Building Damage Balance
+### 1. Playtest First 15 Waves
 
-Goal: confirm that enemy building attacks add tension without making the early game frustrating.
+Goal: confirm that the realigned onboarding, tactical panels, research timing,
+and enemy building attacks create tension without making the early game
+frustrating.
 
 Checklist:
 
 - [ ] Normal Wave 1~5: one North Port defense line is enough for a new player.
 - [ ] Normal Wave 6~10: damaged buildings are noticeable but recoverable.
 - [ ] Normal Wave 11: East Port introduction is understandable.
+- [ ] Research reveal after first defense feels like a reward.
+- [ ] AP/Fiber/Fast Link being delayed makes the early build choices clearer.
 - [ ] Firewall feels useful as a front-line blocker.
 - [ ] Conveyor/Power Node destruction does not feel random or unfair.
 
@@ -39,16 +43,16 @@ Suggested files:
 - `src/managers/UIManager.ts`
 - `src/i18n.ts`
 
-### 3. Wave Briefing Panel
+### 3. Tune Tactical Panels
 
-Goal: move route/threat/recommendation text out of the cramped wave timer.
+Goal: make the new objective, wave, defense, and power panels useful during real play without becoming noisy.
 
 Tasks:
 
-- [ ] Add a compact "Next Wave" panel.
-- [ ] Show port, threat level, special threat, recommended defense.
-- [ ] Keep current timer display short.
-- [ ] Add Playwright smoke coverage for the panel.
+- [ ] Confirm panel placement does not hide critical tiles on desktop.
+- [ ] Confirm mobile HUD remains readable with the systems panel hidden.
+- [ ] Add stronger alert state when an active wave threatens buildings.
+- [ ] Consider extracting panel rendering from `UIManager` if it grows further.
 
 Suggested files:
 
@@ -56,14 +60,14 @@ Suggested files:
 - `src/styles/main.css`
 - `tests/e2e/app-smoke.spec.ts`
 
-### 4. Terrain UX
+### 4. Terrain UX Follow-Up
 
 Goal: make BLOCKER terrain understandable.
 
 Tasks:
 
-- [ ] Add tooltip or hover text for BLOCKER terrain.
-- [ ] Make BLOCKER visual distinct from resource patches and grid.
+- [x] Add tooltip or hover text for BLOCKER terrain.
+- [x] Make BLOCKER visual distinct from resource patches and grid.
 - [ ] Confirm generated blockers do not hide important early placement tiles.
 - [ ] Consider a future research unlock for debris removal.
 
@@ -114,3 +118,7 @@ Current enemies already have distinct stats and some special behavior. Next pass
 - [x] Added enemy building attack priority.
 - [x] Saved/loaded terrain and damaged building HP.
 - [x] Removed arrows from installed buildings while keeping placement ghost arrows.
+- [x] Added tactical objective, wave, defense, and power panels.
+- [x] Delayed research and advanced logistics until after first defense success.
+- [x] Updated high-impact building names toward cyber/data terminology.
+- [x] Added BLOCKER data-debris visual treatment.

@@ -40,14 +40,14 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         detail: t('tutorial.CONNECTION.detail')
     },
     {
-        id: 'POWER',
-        title: t('tutorial.POWER.title'),
-        detail: t('tutorial.POWER.detail')
-    },
-    {
         id: 'DEFENSE',
         title: t('tutorial.DEFENSE.title'),
         detail: t('tutorial.DEFENSE.detail')
+    },
+    {
+        id: 'WAVE',
+        title: t('tutorial.WAVE.title'),
+        detail: t('tutorial.WAVE.detail')
     },
     {
         id: 'RESEARCH',
@@ -55,9 +55,9 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         detail: t('tutorial.RESEARCH.detail')
     },
     {
-        id: 'WAVE',
-        title: t('tutorial.WAVE.title'),
-        detail: t('tutorial.WAVE.detail')
+        id: 'POWER',
+        title: t('tutorial.POWER.title'),
+        detail: t('tutorial.POWER.detail')
     }
 ];
 

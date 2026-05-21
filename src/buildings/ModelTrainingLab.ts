@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
 import { BuildingOptions, IMainScene } from '../types';
+import { getBuildingName } from '../i18n';
 
 const TRAINING_ITEMS = new Set(['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
 const TRAINING_INTERVAL_BUILDING_TICKS = 4;
@@ -73,7 +74,7 @@ export default class ModelTrainingLab extends BaseBuilding {
         if (!trained) return false;
 
         const state = scene.getDefenseModelState(this.targetType);
-        const displayName = CONFIG.BUILDINGS[this.targetType]?.NAME.split('(')[0].trim() || this.targetType;
+        const displayName = getBuildingName(this.targetType);
         scene.uiManager?.logMessage(
             `Training: ${displayName} model consumed ${item}. Shared confidence ${Math.round(state.modelConfidence)}%.`
         );
@@ -93,7 +94,7 @@ export default class ModelTrainingLab extends BaseBuilding {
             return;
         }
 
-        const displayName = CONFIG.BUILDINGS[this.targetType]?.NAME.split('(')[0].trim() || this.targetType;
+        const displayName = getBuildingName(this.targetType);
         this.statusText.setText(`${displayName}\n${Math.round(state.modelConfidence)}% v${state.modelVersion}`);
         this.statusText.setColor('#99f6e4');
     }

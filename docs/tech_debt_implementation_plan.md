@@ -10,16 +10,17 @@ The project is stable enough for feature iteration, but a few files still carry 
 
 ### 1. UIManager Split
 
-Current issue: `UIManager` coordinates HUD, build bar, research, settings, mobile controls, wave text, and tooltips.
+Current issue: `UIManager` coordinates HUD, tactical panels, build bar, research,
+settings, mobile controls, wave text, and tooltips.
 
 Suggested split:
 
-- `WaveBriefingUI`
+- `TacticalPanelsUI`
 - `BuildBarUI`
 - `TooltipUI`
 - keep `UIManager` as facade
 
-Priority: Medium. Do this when touching wave briefing panel or tooltip work.
+Priority: Medium. Do this when adding more tactical panel states or tooltip work.
 
 ### 2. EffectsManager Split
 
@@ -82,11 +83,13 @@ Priority: Low to Medium.
 - Enemy building target priority tests
 - Playwright smoke tests across desktop/mobile
 - `IMainScene` interface used by many building/manager boundaries
+- Tactical panel smoke coverage for objective/wave UI
+- Early-game research and advanced-logistics gate coverage
 
 ## Recommended Order
 
 1. Add save compatibility round-trip tests.
-2. Build a dedicated wave briefing panel.
-3. Extract `WaveBriefingUI` if the panel increases `UIManager` size.
-4. Improve damage/terrain visual feedback.
+2. Playtest and tune early damage pacing.
+3. Extract `TacticalPanelsUI` if panel alert states increase `UIManager` size.
+4. Improve building damage feedback.
 5. Extract effects helpers if `EffectsManager` grows again.

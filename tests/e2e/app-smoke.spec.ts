@@ -27,6 +27,8 @@ async function startGame(page: Page): Promise<void> {
 
     await expect(page.locator('#top-hud')).toBeVisible();
     await expect(page.locator('#bottom-ui-container')).toBeVisible();
+    await expect(page.locator('#mission-panel')).toBeVisible();
+    await expect(page.locator('#threat-panel')).toBeVisible();
     await expect(page.locator('#info-layer')).toBeAttached();
     await expect(page.locator('#ui-overlay .build-btn').first()).toBeVisible();
     await page.waitForFunction(() => document.getElementById('btn-settings')?.dataset.pointerGuarded === 'true');
@@ -81,6 +83,16 @@ async function getCameraCoreOffset(page: Page): Promise<{ dx: number; dy: number
             dx: cameraCenter.x - core.container.x,
             dy: cameraCenter.y - core.container.y
         };
+    });
+}
+
+async function unlockFirstDefenseProgress(page: Page): Promise<void> {
+    await page.evaluate(() => {
+        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        scene.waveManager.currentWave = 1;
+        scene.waveManager.waveActive = false;
+        scene.uiManager.renderTacticalPanels();
+        scene.uiManager.createBuildingButtons();
     });
 }
 
@@ -139,9 +151,17 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await startGame(page);
     await expect(page.locator('#ui-overlay')).toBeVisible();
     await expect(page.locator('#btn-settings')).toBeVisible();
+    await expect(page.locator('#btn-research')).toBeHidden();
+    await expect(page.locator('#mission-panel')).toContainText('데이터 수집 시작');
+    await expect(page.locator('#threat-panel')).toContainText('Wave 1');
+    await expect(page.locator('#systems-panel')).toContainText('방어 준비 전');
     await expect(page.locator('#tutorial-panel')).toBeVisible();
     await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', 'DATA_SOURCE');
     await expect(page.locator('#tutorial-panel')).toContainText('데이터 수집 시작');
+
+    await page.getByRole('button', { name: '물류' }).click();
+    await expect(page.locator('#btn-access_point')).toHaveCount(0);
+    await expect(page.locator('#btn-fast_link')).toHaveCount(0);
 
     await page.locator('#btn-settings').click();
     await expect(page.locator('#settings-modal')).toBeVisible();
@@ -357,6 +377,8 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     await page.locator('#btn-close-settings').click();
     await expect(page.locator('#settings-modal')).toBeHidden();
 
+    await unlockFirstDefenseProgress(page);
+    await expect(page.locator('#btn-research')).toBeVisible();
     await page.locator('#btn-research').click();
     await expect(page.locator('#research-modal')).toBeVisible();
     await expect(page.locator('#research-tree-container')).toContainText('연구');

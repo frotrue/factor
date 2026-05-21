@@ -15,10 +15,10 @@ describe('tutorial flow', () => {
             'DATA_SOURCE',
             'PROCESSING',
             'CONNECTION',
-            'POWER',
             'DEFENSE',
+            'WAVE',
             'RESEARCH',
-            'WAVE'
+            'POWER'
         ]);
     });
 

@@ -8,8 +8,8 @@ Run from repository root:
 
 ```powershell
 npm test
-npm run test:e2e
 npm run build
+npm run test:e2e -- --workers=1
 ```
 
 ## Current Automated Coverage
@@ -46,6 +46,9 @@ npm run build
 - [x] Mobile building placement and cable connection
 - [x] Desktop placement, cable connection, and cable removal
 - [x] Desktop build categories, hotkeys, overlays, save, research modal
+- [x] Tactical objective and wave panels appear after game start
+- [x] Research starts hidden before first defense success
+- [x] AP/Fiber/Fast Link are hidden from early logistics choices
 
 ## Manual QA: First 10 Minutes
 
@@ -54,7 +57,8 @@ npm run build
 - [ ] Placement ghost shows direction arrow before placement.
 - [ ] Installed buildings do not show extra direction arrows.
 - [ ] Player can build a basic data pipeline before Wave 1.
-- [ ] Wave briefing clearly communicates North Port and low threat.
+- [ ] Tactical panels clearly communicate objective, North Port, low threat, defense status, and power status.
+- [ ] Research is not shown until after first successful defense.
 - [ ] Route guidance appears when the wave starts.
 - [ ] A Classifier/Firewall near North Port can handle early waves.
 - [ ] Building damage feedback is noticeable.
@@ -108,8 +112,12 @@ npm run build
 
 ### 2026-05-21
 
-- Updated docs for current project state.
-- Verified before docs update request:
+- Direction realignment implementation and docs cleanup.
+- Verified:
+  - `npm test`: 13 files / 47 tests passed
+  - `npm run build`: passed, 61 modules transformed
+  - `npm run test:e2e -- --workers=1`: 14 passed / 13 skipped
+- Earlier docs update baseline:
   - `npm test`: 13 files / 47 tests passed
   - `npm run build`: passed
 

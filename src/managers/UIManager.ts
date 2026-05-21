@@ -17,6 +17,7 @@ import {
     type TranslationKey
 } from '../i18n';
 import type { WaveBriefing } from '../utils/waveSimulation';
+import { createWaveBriefing } from '../utils/waveSimulation';
 
 export default class UIManager {
     scene: MainScene;
@@ -30,6 +31,14 @@ export default class UIManager {
     waveEl: HTMLElement | null;
     waveTimerEl: HTMLElement | null;
     siliconEl: HTMLElement | null;
+    objectiveTitleEl: HTMLElement | null;
+    objectiveDetailEl: HTMLElement | null;
+    waveTitleEl: HTMLElement | null;
+    waveDetailEl: HTMLElement | null;
+    waveRecommendationEl: HTMLElement | null;
+    defenseTitleEl: HTMLElement | null;
+    defenseDetailEl: HTMLElement | null;
+    powerStatusChipEl: HTMLElement | null;
     hotkeys: string[];
     lastItemCount: number;
     lastScore: number;
@@ -42,6 +51,7 @@ export default class UIManager {
     mobileActionStatus: string | null;
     activeTrainingLab: ModelTrainingLab | null;
     currentWaveBriefing: WaveBriefing | null;
+    lastPowerData: PowerUpdateData | null;
     trainingLabUI: TrainingLabUI;
     researchUI: ResearchUI;
     settingsUI: SettingsUI;
@@ -60,6 +70,14 @@ export default class UIManager {
         this.waveEl = document.getElementById('hud-wave');
         this.waveTimerEl = document.getElementById('hud-wave-timer');
         this.siliconEl = document.getElementById('hud-silicon');
+        this.objectiveTitleEl = document.getElementById('current-objective-title');
+        this.objectiveDetailEl = document.getElementById('current-objective-detail');
+        this.waveTitleEl = document.getElementById('next-wave-title');
+        this.waveDetailEl = document.getElementById('next-wave-detail');
+        this.waveRecommendationEl = document.getElementById('next-wave-recommendation');
+        this.defenseTitleEl = document.getElementById('defense-status-title');
+        this.defenseDetailEl = document.getElementById('defense-status-detail');
+        this.powerStatusChipEl = document.getElementById('power-status-chip');
 
         this.hotkeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
         this.lastItemCount = -1;
@@ -72,7 +90,8 @@ export default class UIManager {
         this.mobileCableMenu = null;
         this.mobileActionStatus = null;
         this.activeTrainingLab = null;
-        this.currentWaveBriefing = null;
+        this.currentWaveBriefing = createWaveBriefing(scene.waveManager.currentWave + 1, scene.difficultyId);
+        this.lastPowerData = null;
         this.trainingLabUI = new TrainingLabUI(scene, this);
         this.researchUI = new ResearchUI(scene, this);
         this.settingsUI = new SettingsUI(scene, this);
@@ -80,6 +99,7 @@ export default class UIManager {
 
         // Note: createBuildingButtons is now called by MainScene after ResearchManager is initialized
         this.setupEvents();
+        this.showTacticalPanels();
     }
 
     setupEvents(): void {
@@ -91,6 +111,7 @@ export default class UIManager {
         }, 'UIManager');
 
         EventBus.on('POWER_UPDATED', (data: PowerUpdateData) => {
+            this.lastPowerData = data;
             if (this.powerEl) {
                 const isDeficit = data.isBlackout || data.net < 0;
                 const networkText = data.networks ? ` | ${data.networks.length} grids` : '';
@@ -98,6 +119,7 @@ export default class UIManager {
                 this.powerEl.style.color = isDeficit ? '#ef4444' : '#fde047';
                 this.powerEl.style.textShadow = isDeficit ? '0 0 10px #ef4444' : '0 0 10px #fde047';
             }
+            this.renderPowerStatus();
         }, 'UIManager');
 
         EventBus.on('WAVE_STARTED', ({ wave }: { wave: number }) => {
@@ -113,6 +135,12 @@ export default class UIManager {
         
         EventBus.on('WAVE_UPDATE', ({ timer }: { timer: number }) => {
             this.renderWaveBriefing(timer);
+        }, 'UIManager');
+
+        EventBus.on('WAVE_ENDED', () => {
+            this.createBuildingButtons();
+            this.renderTacticalPanels();
+            this.logMessage(textForKey('log.researchAvailable'));
         }, 'UIManager');
 
         EventBus.on('GAME_OVER', () => {
@@ -164,7 +192,7 @@ export default class UIManager {
             this.setupMobileUI();
             this.updateMobileBuildSummary();
             this.updateMobileControls();
-            this.renderWaveBriefing();
+            this.renderTacticalPanels();
         });
     }
 
@@ -178,8 +206,122 @@ export default class UIManager {
         const countdown = typeof timer === 'number' ? `${Math.max(0, Math.ceil(timer / 1000))}s` : null;
         const routeText = this.currentWaveBriefing.routeNames.join(' + ');
         const specialText = this.currentWaveBriefing.special ? ` | ${this.currentWaveBriefing.special}` : '';
-        const prefix = countdown ? `${countdown} | ` : '';
-        this.waveTimerEl.innerText = `${prefix}${routeText} | ${this.currentWaveBriefing.threat}${specialText}`;
+        this.waveTimerEl.innerText = countdown || t('hud.waveActive');
+
+        if (this.waveTitleEl) {
+            this.waveTitleEl.innerText = `Wave ${this.currentWaveBriefing.wave}`;
+        }
+        if (this.waveDetailEl) {
+            this.waveDetailEl.innerText = `${routeText} | ${this.currentWaveBriefing.threat}${specialText}`;
+        }
+        if (this.waveRecommendationEl) {
+            this.waveRecommendationEl.innerText = this.currentWaveBriefing.recommendedDefense;
+        }
+    }
+
+    showTacticalPanels(): void {
+        ['mission-panel', 'threat-panel', 'systems-panel'].forEach(id => {
+            const panel = document.getElementById(id);
+            if (panel) panel.style.display = 'block';
+        });
+        this.renderTacticalPanels();
+    }
+
+    renderTacticalPanels(): void {
+        this.renderCurrentObjective();
+        this.renderWaveBriefing();
+        this.renderDefenseStatus();
+        this.renderPowerStatus();
+        this.researchUI.updateResearchButtonVisibility();
+    }
+
+    hasFirstDefenseSuccess(): boolean {
+        const waveManager = this.scene.waveManager;
+        if (!waveManager) return false;
+        return waveManager.currentWave > 1 || (waveManager.currentWave >= 1 && !waveManager.waveActive);
+    }
+
+    private countBuildings(types: string[]): number {
+        let count = 0;
+        this.scene.buildingManager?.forEach(building => {
+            if (types.includes(building.type)) count++;
+        });
+        return count;
+    }
+
+    private renderCurrentObjective(): void {
+        if (!this.objectiveTitleEl || !this.objectiveDetailEl) return;
+
+        const hasDownloader = this.countBuildings(['DATA_DOWNLOADER']) > 0;
+        const hasProcessor = this.countBuildings(['PROCESSOR', 'WEIGHT_TRAINER']) > 0;
+        const hasDefense = this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']) > 0;
+        const firstDefenseDone = this.hasFirstDefenseSuccess();
+
+        let title = textForKey('objective.data.title');
+        let detail = textForKey('objective.data.detail');
+        if (!hasDownloader) {
+            title = textForKey('objective.data.title');
+            detail = textForKey('objective.data.detail');
+        } else if (!hasProcessor) {
+            title = textForKey('objective.processing.title');
+            detail = textForKey('objective.processing.detail');
+        } else if (!hasDefense) {
+            title = textForKey('objective.defense.title');
+            detail = textForKey('objective.defense.detail');
+        } else if (!firstDefenseDone) {
+            title = textForKey('objective.wave.title');
+            detail = textForKey('objective.wave.detail');
+        } else {
+            title = textForKey('objective.research.title');
+            detail = textForKey('objective.research.detail');
+        }
+
+        this.objectiveTitleEl.innerText = title;
+        this.objectiveDetailEl.innerText = detail;
+    }
+
+    private renderDefenseStatus(): void {
+        if (!this.defenseTitleEl || !this.defenseDetailEl) return;
+
+        const defenseTypes = ['CLASSIFIER', 'FILTER', 'FIREWALL'];
+        const counts = defenseTypes.map(type => ({
+            type,
+            name: getBuildingName(type),
+            count: this.countBuildings([type]),
+            state: this.scene.getDefenseModelState(type)
+        }));
+        const total = counts.reduce((sum, entry) => sum + entry.count, 0);
+
+        if (total === 0) {
+            this.defenseTitleEl.innerText = textForKey('defenseStatus.empty.title');
+            this.defenseDetailEl.innerText = textForKey('defenseStatus.empty.detail');
+            return;
+        }
+
+        this.defenseTitleEl.innerText = textForKey('defenseStatus.ready.title', { count: total });
+        this.defenseDetailEl.innerText = counts
+            .filter(entry => entry.count > 0)
+            .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelConfidence)}%`)
+            .join('\n');
+    }
+
+    private renderPowerStatus(): void {
+        if (!this.powerStatusChipEl) return;
+        const data = this.lastPowerData;
+        this.powerStatusChipEl.classList.remove('panel-chip-danger', 'panel-chip-warning');
+
+        if (!data) {
+            this.powerStatusChipEl.innerText = textForKey('powerStatus.core');
+            this.powerStatusChipEl.classList.add('panel-chip-warning');
+            return;
+        }
+
+        if (data.isBlackout || data.net < 0) {
+            this.powerStatusChipEl.innerText = textForKey('powerStatus.blackout', { net: data.net });
+            this.powerStatusChipEl.classList.add('panel-chip-danger');
+        } else {
+            this.powerStatusChipEl.innerText = textForKey('powerStatus.stable', { net: data.net });
+        }
     }
 
     guardDomPointer(element: HTMLElement | null): void {
@@ -354,6 +496,11 @@ export default class UIManager {
         }
 
         Object.entries(buildables).forEach(([key, data]) => {
+            const advancedEarlySystems = new Set(['ACCESS_POINT', 'FAST_LINK', 'FIBER']);
+            if (!this.hasFirstDefenseSuccess() && advancedEarlySystems.has(key)) {
+                return;
+            }
+
             // Check Category
             if (data.CATEGORY !== this.activeCategory && data.CATEGORY !== 'ALL') {
                 return;
@@ -487,6 +634,9 @@ export default class UIManager {
                 this.siliconEl.innerText = String(siliconCount);
             }
         }
+
+        this.renderCurrentObjective();
+        this.renderDefenseStatus();
     }
 
     showTooltip(x: number, y: number, title: string, content: string): void {

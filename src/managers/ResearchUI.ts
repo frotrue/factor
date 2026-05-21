@@ -24,10 +24,14 @@ export default class ResearchUI {
         this.uiManager.guardDomPointer(container);
 
         if (btnResearch && modalResearch) {
-            btnResearch.style.display = 'flex';
+            this.updateResearchButtonVisibility();
             btnResearch.onclick = event => {
                 event.preventDefault();
                 event.stopPropagation();
+                if (!this.uiManager.hasFirstDefenseSuccess()) {
+                    this.uiManager.logMessage(t('research.lockedUntilDefense'), true);
+                    return;
+                }
                 modalResearch.style.display = 'flex';
                 EventBus.emit('RESEARCH_OPENED');
                 this.render();
@@ -50,6 +54,14 @@ export default class ResearchUI {
                 this.render();
             }
         }, 'UIManager');
+
+        EventBus.on('WAVE_ENDED', () => this.updateResearchButtonVisibility(), 'UIManager');
+    }
+
+    updateResearchButtonVisibility(): void {
+        const btnResearch = document.getElementById('btn-research');
+        if (!btnResearch) return;
+        btnResearch.style.display = this.uiManager.hasFirstDefenseSuccess() ? 'flex' : 'none';
     }
 
     render(): void {

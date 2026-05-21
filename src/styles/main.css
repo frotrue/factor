@@ -83,6 +83,77 @@ body {
     letter-spacing: 1px;
 }
 
+.tactical-panel {
+    position: absolute;
+    z-index: 900;
+    width: 280px;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+#mission-panel {
+    top: 105px;
+    left: 20px;
+}
+
+#threat-panel {
+    top: 105px;
+    right: 20px;
+}
+
+#systems-panel {
+    top: 235px;
+    right: 20px;
+}
+
+.panel-kicker {
+    color: var(--neon-cyan);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.panel-title {
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1.25;
+    margin-bottom: 6px;
+}
+
+.panel-detail {
+    color: #cbd5e1;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.panel-chip {
+    display: inline-flex;
+    max-width: 100%;
+    margin-top: 9px;
+    padding: 4px 7px;
+    border: 1px solid rgba(0, 243, 255, 0.28);
+    border-radius: 4px;
+    background: rgba(0, 243, 255, 0.08);
+    color: #dbeafe;
+    font-size: 10px;
+    line-height: 1.25;
+    box-sizing: border-box;
+}
+
+.panel-chip-warning {
+    border-color: rgba(250, 204, 21, 0.36);
+    background: rgba(250, 204, 21, 0.1);
+    color: #fef3c7;
+}
+
+.panel-chip-danger {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fecaca;
+}
+
 .control-hint {
     margin: 5px 0;
     font-size: 12px;
@@ -531,6 +602,35 @@ body {
 
     body.mobile-layout #info-layer {
         display: none !important;
+    }
+
+    body.mobile-layout .tactical-panel {
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        padding: 9px 10px;
+    }
+
+    body.mobile-layout #mission-panel {
+        top: calc(132px + env(safe-area-inset-top, 0px)) !important;
+    }
+
+    body.mobile-layout #threat-panel {
+        top: calc(212px + env(safe-area-inset-top, 0px)) !important;
+    }
+
+    body.mobile-layout #systems-panel {
+        display: none !important;
+    }
+
+    body.mobile-layout .panel-title {
+        font-size: 13px;
+        margin-bottom: 3px;
+    }
+
+    body.mobile-layout .panel-detail {
+        font-size: 10px;
+        line-height: 1.25;
     }
 
     body.mobile-layout #bottom-ui-container {

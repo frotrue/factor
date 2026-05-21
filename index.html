@@ -101,6 +101,26 @@
         </div>
     </div>
 
+    <div id="mission-panel" class="glass-panel tactical-panel" style="display: none;">
+        <div class="panel-kicker" data-i18n="panel.objective">현재 목표</div>
+        <div id="current-objective-title" class="panel-title">데이터 수집 시작</div>
+        <div id="current-objective-detail" class="panel-detail">패킷 수집기를 배치해 첫 데이터 흐름을 만드세요.</div>
+    </div>
+
+    <div id="threat-panel" class="glass-panel tactical-panel" style="display: none;">
+        <div class="panel-kicker" data-i18n="panel.nextWave">다음 침입</div>
+        <div id="next-wave-title" class="panel-title">Wave 1</div>
+        <div id="next-wave-detail" class="panel-detail">North Port | 초기 위협</div>
+        <div id="next-wave-recommendation" class="panel-chip">방어선을 준비하세요</div>
+    </div>
+
+    <div id="systems-panel" class="glass-panel tactical-panel" style="display: none;">
+        <div class="panel-kicker" data-i18n="panel.systems">방어 시스템</div>
+        <div id="defense-status-title" class="panel-title">방어 준비 전</div>
+        <div id="defense-status-detail" class="panel-detail">Classifier 또는 Firewall을 침입 경로 근처에 배치하세요.</div>
+        <div id="power-status-chip" class="panel-chip panel-chip-warning">전력: Core 주변 기본 공급</div>
+    </div>
+
     <div id="game-over-screen" class="glass-panel" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); flex-direction: column; align-items: center; z-index: 1000; padding: 40px; pointer-events: all;">
         <h1 style="color: #ff4444; font-family: 'Share Tech Mono'; font-size: 48px; margin: 0 0 20px 0; text-shadow: 0 0 20px #ff4444;" data-i18n="gameOver.title">시스템 실패</h1>
         <p style="color: #ffffff; font-size: 18px; margin-bottom: 30px;" data-i18n="gameOver.message">Neural Core가 침투당했습니다.</p>

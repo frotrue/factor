@@ -4,7 +4,7 @@ Updated: 2026-05-21
 
 ## Current Status
 
-Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype with automated regression coverage. The core loop, early onboarding, fixed intrusion ports, terrain blockers, destructible buildings, AP relay logistics, power networks, research, save/load, and mobile controls are implemented.
+Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype with automated regression coverage. The core loop, early onboarding, fixed intrusion ports, terrain blockers, destructible buildings, AP relay logistics, power networks, research, save/load, mobile controls, and first-pass tactical HUD realignment are implemented.
 
 ## Implemented Systems
 
@@ -53,10 +53,14 @@ Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype
 ### UI/UX
 
 - Korean-first UI with English language toggle
-- Tutorial checklist for the first factory loop
+- Tutorial checklist for the first factory-defense loop
+- Tactical panels for current objective, next wave, defense status, and power state
+- Research is hidden until the first successful defense
+- AP, Fiber, and Fast Link are hidden from early build choices until first defense success
 - Compact mobile controls
 - Tooltip/status information for power, buffers, AP relay, model training, defense stats
 - Placement ghost displays direction; installed buildings do not show extra direction arrows
+- Visible building labels have been moved toward data/network/security terminology
 
 ### Persistence
 
@@ -81,7 +85,7 @@ Building HP and enemy building attacks are implemented, but the exact damage pac
 
 ### Visual Clarity Risk
 
-BLOCKER terrain and route corridors are functional, but their visual language is still simple. They may need stronger art direction once building art is finalized.
+BLOCKER terrain now has a small data-debris visual treatment, but the broader building/enemy art direction is still simple. It may need a stronger pass once the interaction model is stable.
 
 ### Documentation Encoding History
 
@@ -110,8 +114,8 @@ Some archived documents contain old mojibake text. Active documents have been re
 
 - Add clearer "under attack" status chips for buildings.
 - Add stronger destroyed-building feedback.
-- Add a small wave briefing panel instead of packing all briefing text into the wave timer.
-- Add tooltip text explaining BLOCKER terrain.
+- Add localized log copy for damaged and destroyed buildings.
+- Review whether the tactical panels need additional alert states during active waves.
 
 ### P1: Save Compatibility Hardening
 
@@ -149,3 +153,8 @@ Some archived documents contain old mojibake text. Active documents have been re
 - Enemy building attacks
 - Save/load for terrain and damaged HP
 - Removal of installed-building direction arrows while preserving ghost direction arrows
+- Direction realignment report and implementation plan
+- Tactical objective/wave/defense/power panels
+- Research and advanced logistics gating after first defense success
+- Cyber/data terminology pass for high-impact building names
+- BLOCKER data-debris visual treatment
