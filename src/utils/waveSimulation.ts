@@ -168,7 +168,7 @@ export function createWavePlan(options: WavePlanOptions): WavePlan {
     const difficulty = getDifficultyConfig(difficultyId);
     const { baseEnemyCount, hpMultiplier } = getBaseWaveStats(wave);
     const bossCount = wave % 10 === 0 ? 1 : 0;
-    const ddosBots = wave >= 8 ? Math.max(0, Math.floor(options.ddosBots ?? 10)) : 0;
+    const ddosBots = wave >= 8 ? Math.max(0, Math.floor(options.ddosBots ?? 6)) : 0;
     const scaledEnemyCount = Math.max(
         1,
         Math.round((baseEnemyCount + bossCount) * difficulty.ENEMY_SPAWN_MULTIPLIER)

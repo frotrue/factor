@@ -1,0 +1,57 @@
+# 파일 역할 맵
+
+프로젝트 이해와 구현에 중요한 파일만 압축 정리했습니다. 전체 구조는 [PROJECT_MAP.md](./PROJECT_MAP.md), 런타임 흐름은 [ARCHITECTURE.md](./ARCHITECTURE.md)를 참고하세요.
+
+| 파일 | 역할 | 관련 흐름 | 수정 시 주의점 | 관련 테스트 |
+|---|---|---|---|---|
+| `src/main.ts` | Phaser 게임 생성, `window.__NEURAL_FACTORY_GAME__` 노출 | 앱 시작, Playwright 상태 조회 | Scene 배열 순서가 메뉴->게임 흐름을 결정 | `tests/e2e/app-smoke.spec.ts` |
+| `src/scenes/MainMenuScene.ts` | 난이도 선택 메뉴, 건물 텍스처 preload | 메뉴 UI, 난이도 전달 | 시작 버튼 좌표/텍스트는 E2E가 기다림 | `tests/e2e/app-smoke.spec.ts` |
+| `src/scenes/MainScene.ts` | 게임 런타임 조립, 매니저 초기화, 프레임 update, 이벤트 연결 | 거의 모든 게임 흐름의 중심 | 매니저 초기화 순서, EventBus owner cleanup, 모바일 layout 상태 주의 | E2E 전반 |
+| `src/config.ts` | 건물/아이템/레시피/적/연구/난이도/타이밍 설정 | 밸런스, UI, 팩토리, 테스트의 단일 원천 | 새 ID 추가 시 `types.ts`, `BuildingFactory`, i18n, 테스트 동시 갱신 | `src/config.test.ts`, 다수 utils 테스트 |
+| `src/types.ts` | 핵심 타입, 저장 포맷, Scene 인터페이스 | 타입 계약, SaveData, manager 접근 | SaveData 변경 시 `SaveManager`와 migration 필수 | `src/utils/saveMigration.test.ts` |
+| `src/i18n.ts` | 한국어/영어 번역과 언어 저장 | 메뉴, HUD, 툴팁, 테스트 텍스트 | 새 UI 키 추가 시 ko/en 모두 추가 | `src/i18n.test.ts`, E2E language smoke |
+| `src/styles/main.css` | DOM UI와 모바일 레이아웃 | PC HUD shell, 우측 정보 레일, 하단 빌드 콘솔, 모달, 모바일 액션바 | DOM id/class와 Playwright 셀렉터 영향. 모바일에서는 HUD가 터치 배치를 가로막지 않게 pointer-events 주의 | `tests/e2e/app-smoke.spec.ts` |
+| `src/managers/BuildingManager.ts` | 건물 배치/철거/조회, 비용 차감, 멀티타일 등록 | 입력 배치, 저장 복원, 적 공격, 인벤토리 | 멀티타일 건물은 모든 타일 key에 같은 객체 등록 | E2E placement, `BaseBuilding.test.ts` 보조 |
+| `src/buildings/BuildingFactory.ts` | 건물 ID -> 클래스 매핑 | 모든 건물 생성 | 새 건물 추가 시 registry 누락 위험 | `src/config.test.ts` 간접 |
+| `src/buildings/BaseBuilding.ts` | 모든 건물 공통 상태, 버퍼, HP, 감염, 렌더 기본 | 생산, 전투, 저장, UI tooltip | `takeDamage()`가 `BuildingManager.remove()`까지 호출 | `src/buildings/BaseBuilding.test.ts` |
+| `src/buildings/AbstractProcessor.ts` | 레시피 기반 입력 소비/가공/출력 공통 로직 | Processor, WeightTrainer, NeuralTrainer, Recycler | 연구 속도 배율과 진행바 계산 영향 | `src/utils/productionSimulation.test.ts` 간접 |
+| `src/buildings/Miner.ts` | 자원 타일에서 Silicon/Energy 생산 | 자원 추출, 컨베이어 물류 | 자원 타일 위에 있어야 실제 생산 | 추정: `productionSimulation`은 Downloader 중심 |
+| `src/buildings/DataDownloader.ts` | 전력 기반 RAW_DATA 생산 | 초반 데이터 라인 시작 | `MINING_RATE_MULTIPLIER` 효과를 함께 받음 | `src/utils/productionSimulation.test.ts` |
+| `src/buildings/Processor.ts` | RAW_DATA -> LABELED_DATA | 핵심 데이터 라인 | `CONFIG.RECIPES.LABELLING` 의존 | `src/utils/productionSimulation.test.ts` |
+| `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | Confidence 성장 재료 | Core 점수와 모델 훈련 둘 다에 연결 | `src/utils/productionSimulation.test.ts` |
+| `src/buildings/NeuralTrainer.ts` | MODEL_TRAINING / INFERENCE_UNIT_PRODUCTION 레시피 전환 | 후반 생산, 고급 연구 | 클릭 시 레시피 전환하며 버퍼 초기화 | E2E는 간접 |
+| `src/buildings/ModelTrainingLab.ts` | 방어 모델 공유 상태 훈련 | 방어 모델 신뢰도/버전 성장 | `targetType`, `autoTrain`은 저장 customState 대상 | `src/utils/modelTrainingSummary.test.ts` 보조 |
+| `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 상태 적용 | 방어 전투, 적 제거 | 피해는 `CONFIG` + 연구 + 모델 신뢰도 조합 | E2E 방어 배치 smoke |
+| `src/buildings/Core.ts` | Core HP와 Confidence Score 수신 | 연구 비용, 게임오버, 점수 | WEIGHT_UPDATE는 +10, LABELED_DATA는 +2, 기타 +0.1 | E2E, save smoke |
+| `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push | 자원 라인 | 현재 물리 아이템은 `SILICON`만 허용 | E2E placement smoke |
+| `src/buildings/Storage.ts` | 단일 타입 저장, inputBuffer를 출력으로도 사용 | 인벤토리, 케이블/컨베이어 버퍼 | 한 Storage는 첫 아이템 타입만 계속 받음 | E2E storage placement |
+| `src/buildings/DataCache.ts` | 데이터 아이템 전용 Storage | 케이블/AP 데이터 버퍼 | RAW/Labeled/Weight/Trained/Inference만 허용 | AP relay 테스트 간접 |
+| `src/buildings/Unloader.ts` | Storage 뒤쪽에서 아이템 추출 | 저장고 -> 라인 연결 | 회전 방향의 back tile 기준 | E2E early gating |
+| `src/buildings/PowerPlant.ts` | Energy 자원 위 발전소 활성 여부 | 전력 생산 | Energy 타일이 아니면 생산 0 | PowerManager 간접 |
+| `src/buildings/PowerNode.ts`, `SolarPanel.ts` | 전력 범위 노드 | 전력망 확장 | 실질 계산은 `PowerManager` | `src/utils/powerPreview.test.ts` |
+| `src/buildings/AccessPoint.ts` | AP 시각/기본 범위/대역폭 상태 | 무선 데이터 릴레이 | 전송 정책은 `CableManager`와 `utils/apRelay.ts` | `src/utils/apRelay.test.ts` |
+| `src/managers/TickSystem.ts` | 고정 틱 실행, 전력/케이블/건물 onTick 순서 | 생산, 전력, AP, 케이블 | `gameSpeed`가 tick interval을 나눔 | 생산/파워 관련 테스트 간접 |
+| `src/managers/CableManager.ts` | 케이블 연결, 큐, 데이터 이동, AP 자동 릴레이 | 데이터 물류, 저장 복원 | 큐 방향, bandwidth, AP 제외 정책 변경 시 테스트 필요 | `src/utils/apRelay.test.ts`, E2E cable |
+| `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 소비자 할당, blackout 적용 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서가 전체 런타임에 영향 | `src/utils/powerPreview.test.ts` 보조 |
+| `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 보상, boss aura | 방어 압박, 연구 개방 신호 | 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음 | `src/utils/waveSimulation.test.ts`, E2E threat panel |
+| `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의 | `src/utils/enemyBuildingInteraction.test.ts` |
+| `src/managers/MapManager.ts` | 자원 패치와 BLOCKER 지형 생성 | 초기 맵, 저장 복원, 적 경로 차단 | spawn safe zone과 early lane blockers 보존 | `src/managers/MapManager.test.ts` |
+| `src/managers/SaveManager.ts` | localStorage 저장/로드, 런타임 재구성 | 자동 저장, 설정, 연구, 케이블/적/건물 복원 | 포맷 변경 시 migration과 SaveData 갱신 | `src/utils/saveMigration.test.ts`, E2E save |
+| `src/utils/saveMigration.ts` | 구버전 저장 데이터 기본값 보정 | 로드 안정성 | 새 필드는 기본값과 버전 처리 필요 | `src/utils/saveMigration.test.ts` |
+| `src/managers/ResearchManager.ts` | 연구 해금 조건/비용/효과 누적 | 연구 UI, 건물 해금, 밸런스 보정 | multiplier 효과는 곱하고 bonus는 더함 | config/research 간접 |
+| `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔/선택 도구 요약, 툴팁, 모달 위임 | 모든 DOM UI | DOM id/text는 E2E와 연결. 빌드 버튼 id는 유지해야 hotkey/E2E 회귀가 적음 | E2E 전반 |
+| `src/managers/SettingsUI.ts` | 설정 모달, 저장/로드/언어/속도 버튼 | 설정 UI | 닫기 후 canvas focus 복원 기대 | E2E focus/language/save |
+| `src/managers/ResearchUI.ts` | 연구 모달 렌더링/해금 버튼 | 연구 진행 | 첫 방어 전 연구 버튼 gating과 연결 | E2E research smoke |
+| `src/managers/TrainingLabUI.ts` | 모델 훈련 연구소 DOM UI | 방어 모델 타겟 선택/훈련 | `ModelTrainingLab` 상태와 동기화 | E2E 간접 |
+| `src/managers/MobileUIManager.ts` | 모바일 액션바/케이블 메뉴/빌드 요약 | 모바일 조작 | touch gesture와 DOM guard 영향 | E2E mobile |
+| `src/controllers/InputController.ts` | 캔버스 입력, 배치/케이블/철거/툴팁/모바일 탭 | 실 조작의 중심 | DOM UI guard 셀렉터, 좌표 snap, unlock 체크 주의 | E2E interaction |
+| `src/controllers/OverlayController.ts` | 방어 범위/전력망 오버레이 그리기 | F1/F2, 모바일 토글 | 연구 보너스 반영 | E2E overlay |
+| `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |
+| `src/utils/waveSimulation.ts` | 웨이브 수량/HP/경로/브리핑 순수 계산 | WaveManager, UI threat panel, tests | 난이도/경로 정책의 기준 파일 | `src/utils/waveSimulation.test.ts` |
+| `src/utils/progressionGates.ts` | 초반 목표와 고급 시스템 숨김 정책 | UI 빌드바/목표 패널 | 초반 AP/Fast/Fiber/Unloader 노출 정책 | `src/utils/progressionGates.test.ts` |
+| `src/utils/productionSimulation.ts` | 생산 라인 장기 시뮬레이션 | 밸런스 검증용 순수 모델 | 실제 CableManager와 완전 동일하지 않을 수 있음 | `src/utils/productionSimulation.test.ts` |
+| `src/utils/apRelay.ts` | AP 소스/타겟 선택 정책 | CableManager 무선 릴레이 | Storage/DataCache를 자동 source에서 제외 | `src/utils/apRelay.test.ts` |
+| `src/utils/enemyBuildingInteraction.ts` | 적의 건물 공격 우선순위 | BaseEnemy 공격 타겟 | Core/Firewall/일반 건물 우선순위 확인 | `src/utils/enemyBuildingInteraction.test.ts` |
+| `src/utils/tutorialFlow.ts` | 튜토리얼 단계 정의/진행 | TutorialManager, UI copy | i18n 키와 단계 순서 연결 | `src/utils/tutorialFlow.test.ts` |
+| `tests/e2e/app-smoke.spec.ts` | 실제 브라우저 smoke, 배치/케이블/모바일/저장/언어 | 회귀 최종 방어선 | Phaser canvas 좌표 테스트라 viewport 변경 영향 큼 | Playwright |
+| `index.html` | Phaser mount와 `#game-hud-shell` DOM UI 컨테이너 | UIManager가 id 기반으로 제어 | 기존 HUD/패널/빌드 id 변경은 E2E와 manager 코드 영향 | E2E 전반 |

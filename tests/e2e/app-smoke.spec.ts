@@ -149,9 +149,14 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     const runtimeErrors = collectRuntimeErrors(page);
 
     await startGame(page);
+    await expect(page.locator('#hud-top-bar')).toBeVisible();
+    await expect(page.locator('#hud-right-rail')).toBeVisible();
+    await expect(page.locator('#build-console')).toBeVisible();
+    await expect(page.locator('#selected-tool-panel')).toBeVisible();
     await expect(page.locator('#ui-overlay')).toBeVisible();
     await expect(page.locator('#btn-settings')).toBeVisible();
     await expect(page.locator('#btn-research')).toBeHidden();
+    await expect(page.locator('#selected-tool-name')).toContainText('패킷 수집기');
     await expect(page.locator('#mission-panel')).toContainText('데이터 수집 시작');
     await expect(page.locator('#threat-panel')).toContainText('Wave 1');
     await expect(page.locator('#systems-panel')).toContainText('방어 준비 전');
@@ -162,11 +167,40 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await page.getByRole('button', { name: '물류' }).click();
     await expect(page.locator('#btn-access_point')).toHaveCount(0);
     await expect(page.locator('#btn-fast_link')).toHaveCount(0);
+    await page.getByRole('button', { name: '추출' }).click();
+    await expect(page.locator('#btn-unloader')).toHaveCount(0);
 
     await page.locator('#btn-settings').click();
     await expect(page.locator('#settings-modal')).toBeVisible();
     await page.locator('#btn-close-settings').click();
     await expect(page.locator('#settings-modal')).toBeHidden();
+
+    expect(runtimeErrors).toEqual([]);
+});
+
+test('desktop can show wave result summary', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only wave summary smoke');
+    const runtimeErrors = collectRuntimeErrors(page);
+
+    await startGame(page);
+    await page.evaluate(() => {
+        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        scene.uiManager.showWaveResultSummary({
+            wave: 1,
+            outcome: 'survived',
+            enemiesDestroyed: 5,
+            coreDamage: 0,
+            coreHpPercent: 100,
+            confidenceGained: 12,
+            buildingsDamaged: 0,
+            buildingsDestroyed: 0,
+            lines: []
+        });
+    });
+
+    await expect(page.locator('.wave-result-card')).toBeVisible();
+    await expect(page.locator('.wave-result-card')).toContainText('웨이브 결과');
+    await expect(page.locator('.wave-result-card')).toContainText('공장 성장');
 
     expect(runtimeErrors).toEqual([]);
 });

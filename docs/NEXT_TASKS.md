@@ -1,6 +1,6 @@
 # Next Tasks
 
-Updated: 2026-05-21
+Updated: 2026-05-23
 
 ## Immediate Priority
 
@@ -16,7 +16,10 @@ Checklist:
 - [ ] Normal Wave 6~10: damaged buildings are noticeable but recoverable.
 - [ ] Normal Wave 11: East Port introduction is understandable.
 - [ ] Research reveal after first defense feels like a reward.
-- [ ] AP/Fiber/Fast Link being delayed makes the early build choices clearer.
+- [ ] AP/Fiber/Fast Link/Unloader being delayed makes the early build choices clearer.
+- [ ] Wave result summaries make factory growth feel connected to defense outcomes.
+- [ ] Post-first-defense objectives make the expand-vs-defend tradeoff clear.
+- [ ] Model Training Lab copy makes permanent model growth understandable.
 - [ ] Firewall feels useful as a front-line blocker.
 - [ ] Conveyor/Power Node destruction does not feel random or unfair.
 
@@ -104,7 +107,6 @@ Current enemies already have distinct stats and some special behavior. Next pass
 
 ## Lower Priority
 
-- [ ] Game-over stats screen
 - [ ] Save reset UI
 - [ ] Itch.io/PWA packaging review
 - [ ] Real device mobile QA
@@ -122,3 +124,8 @@ Current enemies already have distinct stats and some special behavior. Next pass
 - [x] Delayed research and advanced logistics until after first defense success.
 - [x] Updated high-impact building names toward cyber/data terminology.
 - [x] Added BLOCKER data-debris visual treatment.
+- [x] Added wave result summary with factory-growth feedback.
+- [x] Added expand-vs-defend objective states after first defense.
+- [x] Improved Model Training Lab permanent-growth copy.
+- [x] Added game-over run stats.
+- [x] Reduced early DDoS pressure and added building category accents.

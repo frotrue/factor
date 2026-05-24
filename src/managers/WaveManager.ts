@@ -88,7 +88,7 @@ export default class WaveManager {
         this.enemiesSpawned = 0;
         this.spawnTimer = 0;
         this.ddosSwarmSpawned = false;
-        this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(8, 12) : 0;
+        this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(6, 8) : 0;
         this.ddosRewardGranted = false;
         this.activeRoutes = selectActiveIntrusionRoutes(this.currentWave, this.difficultyId);
         

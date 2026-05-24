@@ -91,6 +91,11 @@ export default class TutorialManager {
             panel = document.createElement('div');
             panel.id = 'tutorial-panel';
             panel.className = 'glass-panel';
+        }
+        const rail = document.getElementById('hud-right-rail');
+        if (rail && panel.parentElement !== rail) {
+            rail.appendChild(panel);
+        } else if (!panel.parentElement) {
             document.body.appendChild(panel);
         }
         return panel;

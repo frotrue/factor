@@ -1,6 +1,6 @@
 # QA Checklist
 
-Updated: 2026-05-21
+Updated: 2026-05-23
 
 ## Standard Automated Checks
 
@@ -25,6 +25,10 @@ npm run test:e2e -- --workers=1
 - [x] AP relay source exclusion and receiver priority
 - [x] Tutorial flow order and saved progress
 - [x] Wave formulas, difficulty scaling, DDoS, boss pressure
+- [x] Wave result summary helper
+- [x] Expand-vs-defend progression gates
+- [x] Model training summary helper
+- [x] Game-over run result helper
 - [x] Onboarding intrusion route policy
 - [x] Wave briefing metadata
 - [x] Enemy building target priority
@@ -49,6 +53,8 @@ npm run test:e2e -- --workers=1
 - [x] Tactical objective and wave panels appear after game start
 - [x] Research starts hidden before first defense success
 - [x] AP/Fiber/Fast Link are hidden from early logistics choices
+- [x] Unloader is hidden from early extraction choices
+- [x] Wave result summary can render on desktop
 
 ## Manual QA: First 10 Minutes
 
@@ -59,6 +65,10 @@ npm run test:e2e -- --workers=1
 - [ ] Player can build a basic data pipeline before Wave 1.
 - [ ] Tactical panels clearly communicate objective, North Port, low threat, defense status, and power status.
 - [ ] Research is not shown until after first successful defense.
+- [ ] Wave result summary appears after each completed wave and does not block controls.
+- [ ] Wave result summary includes enemy removals, Confidence gained, Core integrity, and building damage/loss.
+- [ ] After first defense, objective text asks the player to choose between factory expansion and defense investment.
+- [ ] Model Training Lab target rows explain permanent model growth.
 - [ ] Route guidance appears when the wave starts.
 - [ ] A Classifier/Firewall near North Port can handle early waves.
 - [ ] Building damage feedback is noticeable.
@@ -78,6 +88,7 @@ npm run test:e2e -- --workers=1
 - [ ] Remove mode works with `0`, `Delete`, and `Backspace`.
 - [ ] Tooltip content stays inside viewport.
 - [ ] Research and settings modals fit on screen.
+- [ ] Game-over stats screen shows reached wave, Core integrity, Confidence, research, and strongest model.
 
 ## Manual QA: Mobile
 
@@ -109,6 +120,17 @@ npm run test:e2e -- --workers=1
 - [ ] Old saves without terrain still load and regenerate lane blockers.
 
 ## Recent Verification Log
+
+### 2026-05-23
+
+- Autopilot implementation pass for direction realignment.
+- Verified:
+  - `npm test`: 17 files / 57 tests passed
+  - `npm run build`: passed, 64 modules transformed
+  - `npm run test:e2e -- --workers=1`: 15 passed / 15 skipped
+    - Note: local npm emitted a warning about `--workers`, and Playwright ran
+      with its configured worker count, but the full desktop/mobile smoke suite
+      passed.
 
 ### 2026-05-21
 

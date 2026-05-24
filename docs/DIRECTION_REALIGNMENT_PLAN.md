@@ -1,9 +1,9 @@
 # Neural Factory Direction Realignment Plan
 
-Updated: 2026-05-21
+Updated: 2026-05-23
 
-Status: Active product direction. The first implementation pass is complete as
-of 2026-05-21.
+Status: Active product direction. The second implementation pass is complete as
+of 2026-05-23.
 
 ## Purpose
 
@@ -20,6 +20,9 @@ data-processing factory, places defensive infrastructure, and survives intrusion
 waves. Early play should reward good building placement and defensive line
 construction. Later play should make the data pipeline and model training feel
 like a second-stage defense growth engine.
+
+Current weighting: factory automation 60 / tower defense 40. The factory is the
+main long-term power source; waves are the pressure and validation layer.
 
 Short direction statement:
 
@@ -67,6 +70,8 @@ Recommended loop:
 5. Open research after the first defense success.
 6. Expand production, power, logistics, and defense in response to wave pressure.
 7. Unlock model training so processed data upgrades defensive models.
+8. Review wave results so the player sees factory growth, defense outcome, and
+   Core integrity together.
 
 Condensed loop:
 
@@ -216,6 +221,7 @@ understanding.
 - AP
 - Fiber
 - Fast Link
+- Unloader
 - Advanced model training
 - Complex research choices
 - Power-grid optimization
@@ -268,8 +274,19 @@ Completed first pass:
 7. Renamed high-impact generic visible labels toward data/network/security terms.
 8. Tuned visual language for BLOCKER terrain as data debris.
 
-Next pass should focus on manual playtest tuning, damage feedback, and clearer
-midgame model-training payoff.
+Second pass completed:
+
+1. Added wave result summaries after completed waves.
+2. Added post-first-defense objective states for expand-vs-defend choices.
+3. Improved Model Training Lab permanent-growth explanation.
+4. Added defense status training line for active model training.
+5. Delayed Unloader exposure until after first defense success.
+6. Added game-over run stats.
+7. Reduced Wave 8+ DDoS pressure to keep special pressure readable.
+8. Added small category accent marks to buildings.
+
+Next pass should focus on manual playtest tuning, stronger damaged/destroyed
+building feedback, and release-readiness polish.
 
 ## Immediate Next Decisions
 
@@ -284,10 +301,11 @@ Remaining product decisions:
 
 - Which exact visible names should ship for every building after another
   playtest pass.
-- How strongly model training should change tower behavior once it becomes the
-  midgame growth layer.
+- Whether the reduced DDoS pressure still creates enough midgame stress.
 - Whether damaged building triage should be solved with status chips, stronger
   effects, or both.
+- Whether game-over stats need deeper economy metrics beyond current live-state
+  values.
 
 ## Non-Goals
 

@@ -1,12 +1,15 @@
 # Neural Factory Concept
 
-Updated: 2026-05-21
+Updated: 2026-05-23
 
 ## One-Line Pitch
 
 Neural Factory is a compact cyber factory-defense game. The player builds a
 data-processing factory, places a readable defense line, survives intrusion
 waves, and later uses model training to make defensive systems stronger.
+Current direction weights this as factory automation 60 / tower defense 40:
+factory expansion is the main growth engine, and waves validate whether that
+growth was invested well enough into defense.
 
 ## Current Identity
 
@@ -37,6 +40,8 @@ In play, this means:
 5. Unlock research after the first successful defense.
 6. Expand power, logistics, production, and defense.
 7. Use processed data and model training to improve defensive capability.
+8. Read wave result summaries to understand how factory growth affected the
+   defense outcome.
 
 ## Early Game Direction
 
@@ -49,6 +54,8 @@ factory-defense loop:
 - North Port is the first clear intrusion route.
 - Research, advanced logistics, and model training appear after the player has
   survived an initial defense.
+- After the first defense, objectives should present the main tradeoff:
+  expand production for long-term growth or invest in immediate defense.
 
 Advanced systems should remain in the game, but they should not compete for the
 player's attention before the threat is understood.
@@ -64,6 +71,9 @@ player's attention before the threat is understood.
 - `ResearchManager`: unlocks and upgrade effects.
 - `TutorialManager`: first-loop checklist and saved progress.
 - `UIManager`: tactical panels, build bar, wave/status feedback, tooltips.
+- `waveResultSummary`, `progressionGates`, `modelTrainingSummary`, and
+  `runResultSummary`: focused helpers for feedback, objective gating, model
+  payoff copy, and game-over stats.
 
 ## Visual Direction
 

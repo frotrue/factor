@@ -15,13 +15,29 @@ describe('wave simulation planning', () => {
         expect(getBaseWaveStats(5)).toEqual({ baseEnemyCount: 9, hpMultiplier: 1 });
     });
 
-    it('adds boss and DDoS pressure on milestone waves', () => {
-        const wave10 = createWavePlan({ wave: 10, difficultyId: 'NORMAL', ddosBots: 10 });
+    it('adds boss and controlled DDoS pressure on milestone waves', () => {
+        const wave10 = createWavePlan({ wave: 10, difficultyId: 'NORMAL', ddosBots: 8 });
 
         expect(wave10.bossCount).toBe(1);
-        expect(wave10.ddosBots).toBe(10);
-        expect(wave10.enemiesToSpawn).toBe(34);
+        expect(wave10.ddosBots).toBe(8);
+        expect(wave10.enemiesToSpawn).toBe(32);
         expect(estimateWaveHitPoints(wave10)).toBeGreaterThan(2500);
+    });
+
+    it('keeps waves 4-7 focused on expand-vs-defend pressure before DDoS', () => {
+        const wave4 = createWavePlan({ wave: 4, difficultyId: 'NORMAL' });
+        const wave7 = createWavePlan({ wave: 7, difficultyId: 'NORMAL' });
+
+        expect(wave4.ddosBots).toBe(0);
+        expect(wave7.ddosBots).toBe(0);
+        expect(wave7.enemiesToSpawn).toBeGreaterThan(wave4.enemiesToSpawn);
+        expect(wave7.effectiveHpMultiplier).toBeGreaterThan(wave4.effectiveHpMultiplier);
+    });
+
+    it('uses a restrained default DDoS count when special pressure begins', () => {
+        const wave8 = createWavePlan({ wave: 8, difficultyId: 'NORMAL' });
+
+        expect(wave8.ddosBots).toBe(6);
     });
 
     it('applies difficulty modifiers without changing the base formula', () => {

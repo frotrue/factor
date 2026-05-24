@@ -128,7 +128,7 @@ export default class MainMenuScene extends Phaser.Scene {
             const topHud = document.getElementById('top-hud');
             const infoLayer = document.getElementById('info-layer');
             const bottomUiContainer = document.getElementById('bottom-ui-container');
-            if (topHud) topHud.style.display = 'flex';
+            if (topHud) topHud.style.display = 'grid';
             if (infoLayer) infoLayer.style.display = 'block';
             if (bottomUiContainer) bottomUiContainer.style.display = 'flex';
 

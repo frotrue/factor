@@ -1,10 +1,10 @@
 # Project Analysis And Roadmap
 
-Updated: 2026-05-21
+Updated: 2026-05-23
 
 ## Current Status
 
-Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype with automated regression coverage. The core loop, early onboarding, fixed intrusion ports, terrain blockers, destructible buildings, AP relay logistics, power networks, research, save/load, mobile controls, and first-pass tactical HUD realignment are implemented.
+Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype with automated regression coverage. The core loop, early onboarding, fixed intrusion ports, terrain blockers, destructible buildings, AP relay logistics, power networks, research, save/load, mobile controls, first-pass tactical HUD realignment, wave result summaries, clearer model-training payoff, and game-over run stats are implemented.
 
 ## Implemented Systems
 
@@ -38,6 +38,7 @@ Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype
   - Normal Wave 1~10: North Port
   - Normal Wave 11+: North + East
 - Wave briefing metadata: route names, threat level, special threat, recommended defense
+- Wave result summary after wave completion: enemies removed, factory Confidence gained, Core integrity, damaged/lost buildings
 - Wave-start route labels and corridor hints
 - Enemies attack non-core buildings when encountered or adjacent
 - Building target priority: Firewall, defense buildings, utility buildings
@@ -55,8 +56,11 @@ Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype
 - Korean-first UI with English language toggle
 - Tutorial checklist for the first factory-defense loop
 - Tactical panels for current objective, next wave, defense status, and power state
+- Post-first-defense objectives now emphasize the expand-production vs immediate-defense decision
+- Model Training Lab UI explains training input and permanent model growth
+- Game-over screen shows reached wave, Core integrity, Confidence, research count, and strongest model
 - Research is hidden until the first successful defense
-- AP, Fiber, and Fast Link are hidden from early build choices until first defense success
+- AP, Fiber, Fast Link, and Unloader are hidden from early build choices until first defense success
 - Compact mobile controls
 - Tooltip/status information for power, buffers, AP relay, model training, defense stats
 - Placement ghost displays direction; installed buildings do not show extra direction arrows
@@ -70,7 +74,7 @@ Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype
 
 ### Tests
 
-- Vitest unit/config/simulation tests
+- Vitest unit/config/simulation tests, including wave result, progression gate, model training summary, and run result helpers
 - Playwright desktop/mobile smoke tests
 - Current standard commands:
   - `npm test`
@@ -109,6 +113,7 @@ Some archived documents contain old mojibake text. Active documents have been re
   - enemy building attack interval/damage
   - BLOCKER layout
   - early rewards
+  - whether reduced DDoS pressure from Wave 8 still creates enough midgame stress
 
 ### P1: Damage And Threat UX
 
@@ -138,7 +143,6 @@ Some archived documents contain old mojibake text. Active documents have been re
 
 ### P3: Release Prep
 
-- Add game-over stats screen.
 - Add reset-save UI.
 - Refresh README screenshots or GIFs after visual art stabilizes.
 - Review mobile layout on physical devices.
@@ -158,3 +162,10 @@ Some archived documents contain old mojibake text. Active documents have been re
 - Research and advanced logistics gating after first defense success
 - Cyber/data terminology pass for high-impact building names
 - BLOCKER data-debris visual treatment
+- Wave result summary and factory-growth feedback
+- Expand-vs-defend objective states after first defense
+- Model Training Lab permanent-growth copy and defense status training line
+- Early Unloader gating alongside advanced logistics
+- Game-over run stats screen
+- Reduced default DDoS pressure for Wave 8+ from 10/8-12 to 6/6-8
+- Category accent marks on building visuals

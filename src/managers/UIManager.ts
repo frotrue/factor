@@ -18,6 +18,10 @@ import {
 } from '../i18n';
 import type { WaveBriefing } from '../utils/waveSimulation';
 import { createWaveBriefing } from '../utils/waveSimulation';
+import type { WaveResultSummary } from '../utils/waveResultSummary';
+import { getObjectiveState, shouldHideEarlyAdvancedSystem } from '../utils/progressionGates';
+import { createRunResultSummary } from '../utils/runResultSummary';
+import Core from '../buildings/Core';
 
 export default class UIManager {
     scene: MainScene;
@@ -44,6 +48,7 @@ export default class UIManager {
     lastScore: number;
     activeResearchTab: 'RESEARCH' | 'DEFENSE';
     previousBuildSelection: string;
+    buildableData: Record<string, any>;
     mobileActionBar: HTMLElement | null;
     mobileInfoSheet: HTMLElement | null;
     mobileBuildSummary: HTMLElement | null;
@@ -63,6 +68,7 @@ export default class UIManager {
         this.buttons = {};
         this.activeCategory = 'EXTRACTION';
         this.currentTabBuildings = [];
+        this.buildableData = {};
 
         this.scoreEl = document.getElementById('hud-score');
         this.packetsEl = document.getElementById('hud-packets');
@@ -146,6 +152,7 @@ export default class UIManager {
         EventBus.on('GAME_OVER', () => {
             const gameOverScreen = document.getElementById('game-over-screen');
             if (gameOverScreen) gameOverScreen.style.display = 'flex';
+            this.renderGameOverStats();
             
             const btnRestart = document.getElementById('btn-restart');
             if (btnRestart) {
@@ -190,6 +197,7 @@ export default class UIManager {
             this.createBuildingButtons();
             this.renderResearchTree();
             this.setupMobileUI();
+            this.updateSelectedToolPanel();
             this.updateMobileBuildSummary();
             this.updateMobileControls();
             this.renderTacticalPanels();
@@ -235,6 +243,69 @@ export default class UIManager {
         this.researchUI.updateResearchButtonVisibility();
     }
 
+    showWaveResultSummary(summary: WaveResultSummary): void {
+        const container = document.getElementById('notification-container');
+        if (!container) {
+            this.logMessage(t('waveSummary.log', {
+                wave: summary.wave,
+                confidence: summary.confidenceGained.toFixed(2),
+                integrity: summary.coreHpPercent
+            }));
+            return;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'wave-result-card glass-panel';
+        card.innerHTML = `
+            <div class="wave-result-kicker">${t('waveSummary.kicker')}</div>
+            <div class="wave-result-title">${t('waveSummary.title', { wave: summary.wave })}</div>
+            <div class="wave-result-grid">
+                <span>${t('waveSummary.destroyed', { count: summary.enemiesDestroyed })}</span>
+                <span>${t('waveSummary.confidence', { amount: summary.confidenceGained.toFixed(2) })}</span>
+                <span>${t('waveSummary.integrity', { percent: summary.coreHpPercent, damage: summary.coreDamage })}</span>
+                <span>${t('waveSummary.buildings', { destroyed: summary.buildingsDestroyed, damaged: summary.buildingsDamaged })}</span>
+            </div>
+        `;
+        container.appendChild(card);
+        this.logMessage(t('waveSummary.log', {
+            wave: summary.wave,
+            confidence: summary.confidenceGained.toFixed(2),
+            integrity: summary.coreHpPercent
+        }));
+
+        setTimeout(() => {
+            if (card.parentNode === container) container.removeChild(card);
+        }, 7000);
+    }
+
+    private renderGameOverStats(): void {
+        const statsEl = document.getElementById('game-over-stats');
+        if (!statsEl) return;
+        const core = this.scene.buildingManager.get('0,0');
+        const coreBuilding = core instanceof Core ? core : null;
+        const summary = createRunResultSummary({
+            wave: this.scene.waveManager.currentWave,
+            coreHp: coreBuilding?.hp ?? 0,
+            coreMaxHp: coreBuilding?.maxHp ?? 1,
+            totalConfidenceEarned: coreBuilding?.confidenceScore ?? 0,
+            unlockedResearchCount: this.scene.researchManager?.getUnlockedResearch().length ?? 0,
+            modelStates: this.scene.defenseModelStates,
+            getModelName: getBuildingName
+        });
+
+        statsEl.innerHTML = `
+            <div>${textForKey('gameOver.stat.wave', { wave: summary.wave })}</div>
+            <div>${textForKey('gameOver.stat.core', { percent: summary.coreHpPercent })}</div>
+            <div>${textForKey('gameOver.stat.confidence', { amount: summary.totalConfidenceEarned.toFixed(2) })}</div>
+            <div>${textForKey('gameOver.stat.research', { count: summary.unlockedResearchCount })}</div>
+            <div>${textForKey('gameOver.stat.model', {
+                name: summary.bestModelName,
+                confidence: summary.bestModelConfidence,
+                version: summary.bestModelVersion
+            })}</div>
+        `;
+    }
+
     hasFirstDefenseSuccess(): boolean {
         const waveManager = this.scene.waveManager;
         if (!waveManager) return false;
@@ -256,28 +327,23 @@ export default class UIManager {
         const hasProcessor = this.countBuildings(['PROCESSOR', 'WEIGHT_TRAINER']) > 0;
         const hasDefense = this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']) > 0;
         const firstDefenseDone = this.hasFirstDefenseSuccess();
+        const modelLabs: ModelTrainingLab[] = [];
+        this.scene.buildingManager?.forEach(building => {
+            if (building instanceof ModelTrainingLab) modelLabs.push(building);
+        });
+        const state = getObjectiveState({
+            hasDownloader,
+            hasProcessor,
+            hasDefense,
+            firstDefenseDone,
+            productionCount: this.countBuildings(['DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'NEURAL_TRAINER', 'MODEL_TRAINING_LAB']),
+            defenseCount: this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']),
+            hasModelTrainingLab: modelLabs.length > 0,
+            hasModelTrainingTarget: modelLabs.some(lab => Boolean(lab.targetType))
+        });
 
-        let title = textForKey('objective.data.title');
-        let detail = textForKey('objective.data.detail');
-        if (!hasDownloader) {
-            title = textForKey('objective.data.title');
-            detail = textForKey('objective.data.detail');
-        } else if (!hasProcessor) {
-            title = textForKey('objective.processing.title');
-            detail = textForKey('objective.processing.detail');
-        } else if (!hasDefense) {
-            title = textForKey('objective.defense.title');
-            detail = textForKey('objective.defense.detail');
-        } else if (!firstDefenseDone) {
-            title = textForKey('objective.wave.title');
-            detail = textForKey('objective.wave.detail');
-        } else {
-            title = textForKey('objective.research.title');
-            detail = textForKey('objective.research.detail');
-        }
-
-        this.objectiveTitleEl.innerText = title;
-        this.objectiveDetailEl.innerText = detail;
+        this.objectiveTitleEl.innerText = textForKey(state.titleKey);
+        this.objectiveDetailEl.innerText = textForKey(state.detailKey);
     }
 
     private renderDefenseStatus(): void {
@@ -299,10 +365,27 @@ export default class UIManager {
         }
 
         this.defenseTitleEl.innerText = textForKey('defenseStatus.ready.title', { count: total });
-        this.defenseDetailEl.innerText = counts
+        const lines = counts
             .filter(entry => entry.count > 0)
-            .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelConfidence)}%`)
-            .join('\n');
+            .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelConfidence)}%`);
+        const activeLab = this.findActiveModelTrainingLab();
+        if (activeLab?.targetType) {
+            const state = this.scene.getDefenseModelState(activeLab.targetType);
+            lines.push(textForKey('defenseStatus.training', {
+                name: getBuildingName(activeLab.targetType),
+                confidence: Math.round(state.modelConfidence),
+                version: state.modelVersion
+            }));
+        }
+        this.defenseDetailEl.innerText = lines.join('\n');
+    }
+
+    private findActiveModelTrainingLab(): ModelTrainingLab | null {
+        let activeLab: ModelTrainingLab | null = null;
+        this.scene.buildingManager?.forEach(building => {
+            if (!activeLab && building instanceof ModelTrainingLab) activeLab = building;
+        });
+        return activeLab;
     }
 
     private renderPowerStatus(): void {
@@ -479,6 +562,7 @@ export default class UIManager {
         overlay.innerHTML = '';
         this.buttons = {};
         this.currentTabBuildings = [];
+        this.buildableData = {};
 
         let index = 0;
         const mainScene = this.scene;
@@ -496,8 +580,8 @@ export default class UIManager {
         }
 
         Object.entries(buildables).forEach(([key, data]) => {
-            const advancedEarlySystems = new Set(['ACCESS_POINT', 'FAST_LINK', 'FIBER']);
-            if (!this.hasFirstDefenseSuccess() && advancedEarlySystems.has(key)) {
+            this.buildableData[key] = data;
+            if (shouldHideEarlyAdvancedSystem(key, this.hasFirstDefenseSuccess())) {
                 return;
             }
 
@@ -516,13 +600,12 @@ export default class UIManager {
             const btn = document.createElement('button');
             btn.id = `btn-${key.toLowerCase()}`;
             btn.className = 'build-btn';
+            btn.type = 'button';
             if (key === this.selectedBuildingType) btn.classList.add('active');
 
             const icon = document.createElement('div');
-            icon.className = 'icon';
+            icon.className = 'build-swatch icon';
             icon.style.background = `#${data.COLOR.toString(16).padStart(6, '0')}`;
-
-            const label = document.createTextNode(CONFIG.BUILDINGS[key] ? getBuildingName(key) : getCableName(key));
 
             if (index < this.hotkeys.length) {
                 const hotkeyLabel = document.createElement('div');
@@ -532,17 +615,21 @@ export default class UIManager {
             }
 
             btn.appendChild(icon);
+
+            const label = document.createElement('span');
+            label.className = 'build-label';
+            label.innerText = CONFIG.BUILDINGS[key] ? getBuildingName(key) : getCableName(key);
             btn.appendChild(label);
 
             // Show cost if defined
+            const costLabel = document.createElement('span');
+            costLabel.className = 'build-cost';
             if (data.COST && data.COST.length > 0) {
-                const costLabel = document.createElement('div');
-                costLabel.style.fontSize = '9px';
-                costLabel.style.color = '#94a3b8';
-                costLabel.style.marginTop = '2px';
                 costLabel.innerText = data.COST.map((c: any) => `${c.amount} ${getItemName(c.resource)}`).join(', ');
-                btn.appendChild(costLabel);
+            } else {
+                costLabel.innerText = textForKey('action.noCost');
             }
+            btn.appendChild(costLabel);
 
             this.guardDomPointer(btn);
             btn.onclick = event => {
@@ -559,11 +646,13 @@ export default class UIManager {
         const removeBtn = document.createElement('button');
         removeBtn.id = 'btn-remove';
         removeBtn.className = 'build-btn';
+        removeBtn.type = 'button';
         if (this.selectedBuildingType === 'REMOVE') removeBtn.classList.add('active');
         removeBtn.innerHTML = `
             <div class="hotkey-label">0</div>
-            <div class="icon" style="background:#444; border:1px solid #ff4444"></div>
-            철거
+            <div class="build-swatch icon" style="background:#2b3038; border:1px solid #ff6676"></div>
+            <span class="build-label">${textForKey('action.remove')}</span>
+            <span class="build-cost">${textForKey('action.removeMode')}</span>
         `;
         this.guardDomPointer(removeBtn);
         removeBtn.onclick = event => {
@@ -574,6 +663,7 @@ export default class UIManager {
         overlay.appendChild(removeBtn);
         this.buttons['REMOVE'] = removeBtn;
 
+        this.updateSelectedToolPanel();
         this.updateMobileBuildSummary();
         this.updateMobileControls();
     }
@@ -587,9 +677,48 @@ export default class UIManager {
             btn.classList.toggle('active', key === type);
         });
         this.mobileCableMenu?.classList.remove('open');
+        this.updateSelectedToolPanel();
         this.updateMobileBuildSummary();
         this.updateMobileControls();
         EventBus.emit('BUILDING_SELECTED', { type });
+    }
+
+    private getBuildableData(type: string): any {
+        if (type === 'REMOVE') return null;
+        return this.buildableData[type] || CONFIG.BUILDINGS[type] || CONFIG.CABLES[type];
+    }
+
+    private getSelectedToolName(): string {
+        if (this.selectedBuildingType === 'REMOVE') return textForKey('action.removeMode');
+        if (CONFIG.BUILDINGS[this.selectedBuildingType]) return getBuildingName(this.selectedBuildingType);
+        if (CONFIG.CABLES[this.selectedBuildingType]) return getCableName(this.selectedBuildingType);
+        return this.selectedBuildingType;
+    }
+
+    private getSelectedToolCost(): string {
+        if (this.selectedBuildingType === 'REMOVE') return textForKey('action.noCost');
+        const data = this.getBuildableData(this.selectedBuildingType);
+        if (!data) return '';
+        if (data.COST && data.COST.length > 0) {
+            return data.COST.map((c: any) => `${c.amount} ${getItemName(c.resource)}`).join(', ');
+        }
+        if (data.COST_PER_TILE) {
+            return textForKey('action.costPerTile', { amount: data.COST_PER_TILE });
+        }
+        return textForKey('action.noCost');
+    }
+
+    private updateSelectedToolPanel(): void {
+        const nameEl = document.getElementById('selected-tool-name');
+        const costEl = document.getElementById('selected-tool-cost');
+        const hintEl = document.getElementById('selected-tool-hint');
+        if (nameEl) nameEl.innerText = this.getSelectedToolName();
+        if (costEl) costEl.innerText = this.getSelectedToolCost();
+        if (hintEl) {
+            hintEl.innerText = this.selectedBuildingType === 'REMOVE'
+                ? textForKey('build.removeHint')
+                : textForKey('build.defaultHint');
+        }
     }
 
     cancelMobileAction(): void {

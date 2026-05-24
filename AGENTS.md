@@ -21,3 +21,14 @@ Get-Content src\config.ts -Encoding UTF8
 
 - In `cmd.exe`, run `chcp 65001` before printing Korean text.
 - If terminal output shows mojibake but the editor displays text correctly, treat it as a shell encoding issue before changing file contents.
+
+## Documentation Maintenance
+
+- When working on this project, keep the relevant `docs/` map documents up to date with the actual code changes.
+- For architecture, runtime flow, file responsibility, tests, or balance-affecting changes, update the matching document before finishing:
+  - `docs/PROJECT_MAP.md`
+  - `docs/FILE_ROLE_MAP.md`
+  - `docs/ARCHITECTURE.md`
+  - `docs/TEST_MAP.md`
+  - `docs/GAME_BALANCE_MAP.md`
+- Do not rewrite these documents wholesale unless the project structure changed broadly. Prefer small, accurate updates tied to the files or systems touched.

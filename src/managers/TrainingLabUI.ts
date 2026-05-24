@@ -65,7 +65,7 @@ export default class TrainingLabUI {
         const bufferText = ['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']
             .map(type => `${getItemName(type)}: ${counts[type] || 0}`)
             .join(' | ');
-        buffer.textContent = bufferText;
+        buffer.textContent = `${textForKey('trainingLab.inputStatus')}: ${bufferText}`;
 
         list.innerHTML = '';
         const targetTypes = ['CLASSIFIER', 'FILTER', 'FIREWALL'];
@@ -82,9 +82,8 @@ export default class TrainingLabUI {
             row.type = 'button';
             row.innerHTML = `
                 <span class="training-target-title">${displayName}</span>
-                <span>${textForKey('trainingLab.confidence')} ${Math.round(state.modelConfidence)}%</span>
-                <span>v${state.modelVersion}</span>
-                <span>${onlineCount} ${textForKey('trainingLab.online')}</span>
+                <span class="training-target-stat">${textForKey('trainingLab.confidence')} ${Math.round(state.modelConfidence)}% | v${state.modelVersion} | ${onlineCount} ${textForKey('trainingLab.online')}</span>
+                <span class="training-target-effect">${textForKey('trainingLab.permanentEffect')}</span>
             `;
             this.uiManager.guardDomPointer(row);
             row.onclick = event => {

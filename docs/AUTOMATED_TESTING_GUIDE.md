@@ -1,6 +1,6 @@
 # Automated Testing Guide
 
-Updated: 2026-05-21
+Updated: 2026-05-23
 
 ## Commands
 
@@ -56,6 +56,14 @@ Current tests:
   - tutorial order and progress
 - `src/utils/waveSimulation.test.ts`
   - wave counts, difficulty, DDoS/boss pressure, route policy, wave briefing
+- `src/utils/waveResultSummary.test.ts`
+  - wave-end summary math and readable lines
+- `src/utils/progressionGates.test.ts`
+  - first-loop objective order and early advanced-system gating
+- `src/utils/modelTrainingSummary.test.ts`
+  - permanent model-training input effects and target summary copy
+- `src/utils/runResultSummary.test.ts`
+  - game-over/run result summary math
 
 ### Playwright
 
@@ -81,6 +89,8 @@ Covered flows:
 - mobile action bar and touch placement
 - tactical objective and wave panel startup smoke
 - research/advanced-logistics early-game gating smoke
+- Unloader early-game gating smoke
+- wave result summary render smoke
 
 ## E2E Notes
 

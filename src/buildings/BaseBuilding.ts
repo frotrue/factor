@@ -58,6 +58,7 @@ export default class BaseBuilding {
         if (!this.buildingSprite) {
             this.drawBody(config.color || bConfig.COLOR || 0xaaaaaa, w, h);
         }
+        this.drawCategoryAccent(w, h);
 
         this.inputBuffer = [];
         this.outputBuffer = [];
@@ -201,6 +202,27 @@ export default class BaseBuilding {
         }
     }
 
+    drawCategoryAccent(w: number, h: number): void {
+        const bConfig = CONFIG.BUILDINGS[this.type];
+        const categoryColors: Record<string, number> = {
+            EXTRACTION: 0x67e8f9,
+            PRODUCTION: 0xc084fc,
+            LOGISTICS: 0x60a5fa,
+            POWER: 0xfde047,
+            DEFENSE: 0xfb7185
+        };
+        const color = categoryColors[bConfig.CATEGORY || ''];
+        if (!color) return;
+
+        const width = w * CONFIG.GRID_SIZE;
+        const height = h * CONFIG.GRID_SIZE;
+        const left = -width / 2;
+        const top = -height / 2;
+        this.graphics.lineStyle(3, color, 0.9);
+        this.graphics.lineBetween(left + 5, top + 5, left + Math.min(width * 0.45, 18), top + 5);
+        this.graphics.lineBetween(left + 5, top + 5, left + 5, top + Math.min(height * 0.45, 18));
+    }
+
     ensureHpBar(): void {
         if (this.hpBar) return;
         this.hpBar = this.scene.add.graphics();
@@ -237,6 +259,10 @@ export default class BaseBuilding {
 
         if (this.hp <= 0) {
             this.destroyed = true;
+            EventBus.emit('BUILDING_DESTROYED', {
+                key: `${this.x},${this.y}`,
+                building: this
+            });
             (this.scene as IMainScene).buildingManager?.remove(`${this.x},${this.y}`);
         }
     }

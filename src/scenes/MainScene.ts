@@ -21,8 +21,10 @@ import TutorialManager from '../managers/TutorialManager';
 import EventBus from '../managers/EventBus';
 import { DefenseModelState } from '../types';
 import DefenseTower from '../buildings/DefenseTower';
+import Core from '../buildings/Core';
 import OverlayController from '../controllers/OverlayController';
 import InputController from '../controllers/InputController';
+import { createWaveResultSummary } from '../utils/waveResultSummary';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -67,6 +69,14 @@ export default class MainScene extends Phaser.Scene {
     mobileMultiTouchActive: boolean = false;
     mobileLayoutHandler: (() => void) | null = null;
     mobilePointerStartedOverUI: boolean = false;
+    currentWaveStats: {
+        wave: number;
+        enemiesDestroyed: number;
+        coreHpBefore: number;
+        confidenceBefore: number;
+        buildingsDamaged: Set<string>;
+        buildingsDestroyed: Set<string>;
+    } | null = null;
 
     constructor() {
         super('MainScene');
@@ -144,16 +154,49 @@ export default class MainScene extends Phaser.Scene {
             this.defenseRangeDirty = true;
         }, 'MainScene');
 
-        EventBus.on('BUILDING_DAMAGED', ({ building }: { key: string; building: any; amount: number; hp: number; maxHp: number }) => {
+        EventBus.on('BUILDING_DAMAGED', ({ key, building }: { key: string; building: any; amount: number; hp: number; maxHp: number }) => {
             this.effectsManager.playBuildingDamaged(building);
+            this.currentWaveStats?.buildingsDamaged.add(key);
         }, 'MainScene');
 
-        EventBus.on('WAVE_STARTED', ({ routes }) => {
+        EventBus.on('BUILDING_DESTROYED', ({ key }: { key: string; building: any }) => {
+            this.currentWaveStats?.buildingsDestroyed.add(key);
+        }, 'MainScene');
+
+        EventBus.on('WAVE_STARTED', ({ wave, routes }) => {
+            const core = this.buildingManager.get('0,0') as Core | null;
+            this.currentWaveStats = {
+                wave,
+                enemiesDestroyed: 0,
+                coreHpBefore: core?.hp ?? 0,
+                confidenceBefore: core?.confidenceScore ?? 0,
+                buildingsDamaged: new Set<string>(),
+                buildingsDestroyed: new Set<string>()
+            };
             this.effectsManager.playWaveStart(routes);
         }, 'MainScene');
 
         EventBus.on('ENEMY_KILLED', ({ x, y }: { id: string; type: string; x: number; y: number; rewardSilicon: number }) => {
+            if (this.currentWaveStats) this.currentWaveStats.enemiesDestroyed++;
             this.effectsManager.playEnemyKilled(x, y);
+        }, 'MainScene');
+
+        EventBus.on('WAVE_ENDED', () => {
+            if (!this.currentWaveStats) return;
+            const core = this.buildingManager.get('0,0') as Core | null;
+            const summary = createWaveResultSummary({
+                wave: this.currentWaveStats.wave,
+                enemiesDestroyed: this.currentWaveStats.enemiesDestroyed,
+                coreHpBefore: this.currentWaveStats.coreHpBefore,
+                coreHpAfter: core?.hp ?? 0,
+                coreMaxHp: core?.maxHp ?? 1,
+                confidenceBefore: this.currentWaveStats.confidenceBefore,
+                confidenceAfter: core?.confidenceScore ?? this.currentWaveStats.confidenceBefore,
+                buildingsDamaged: this.currentWaveStats.buildingsDamaged.size,
+                buildingsDestroyed: this.currentWaveStats.buildingsDestroyed.size
+            });
+            this.uiManager.showWaveResultSummary(summary);
+            this.currentWaveStats = null;
         }, 'MainScene');
 
         this.events.on('shutdown', () => {
