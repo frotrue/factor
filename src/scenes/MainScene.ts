@@ -25,6 +25,7 @@ import Core from '../buildings/Core';
 import OverlayController from '../controllers/OverlayController';
 import InputController from '../controllers/InputController';
 import { createWaveResultSummary } from '../utils/waveResultSummary';
+import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -89,6 +90,7 @@ export default class MainScene extends Phaser.Scene {
     create(): void {
         this.input.addPointer(2);
         this.setupMobileLayoutDetection();
+        this.cameras.main.setBackgroundColor(VISUAL_THEME.world.background);
 
         this.mapManager = new MapManager();
         this.initializeDefenseModelStates();
@@ -304,13 +306,17 @@ export default class MainScene extends Phaser.Scene {
         this.ghostGraphics.clear();
 
         if (mode === 'REMOVE') {
-            this.ghostGraphics.lineStyle(2, 0xff0000);
+            this.ghostGraphics.fillStyle(VISUAL_THEME.overlays.remove, 0.08);
+            this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+            this.ghostGraphics.lineStyle(2, VISUAL_THEME.overlays.remove, 0.9);
             this.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.ghostGraphics.lineBetween(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.ghostGraphics.lineBetween(CONFIG.GRID_SIZE, 0, 0, CONFIG.GRID_SIZE);
             this.cursorContainer.setAlpha(1);
         } else if (mode === 'BASIC' || mode === 'FIBER') {
-            this.ghostGraphics.lineStyle(2, CONFIG.CABLES[mode].COLOR);
+            this.ghostGraphics.fillStyle(mode === 'FIBER' ? VISUAL_THEME.cables.fiber : VISUAL_THEME.cables.basic, 0.07);
+            this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+            this.ghostGraphics.lineStyle(2, mode === 'FIBER' ? VISUAL_THEME.cables.fiber : VISUAL_THEME.cables.basic, 0.86);
             this.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
             this.cursorContainer.setAlpha(1);
         } else {
@@ -319,12 +325,16 @@ export default class MainScene extends Phaser.Scene {
             const w = bConfig.WIDTH || 1;
             const h = bConfig.HEIGHT || 1;
 
-            this.ghostGraphics.fillStyle(bConfig.COLOR || 0xaaaaaa, 0.5);
-            this.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
+            const accent = getCategoryColor(bConfig.CATEGORY);
+            this.ghostGraphics.fillStyle(accent, 0.14);
+            this.ghostGraphics.fillRoundedRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h, 5);
+            this.ghostGraphics.fillStyle(VISUAL_THEME.buildings.panelDark, 0.48);
+            this.ghostGraphics.fillRoundedRect(3, 3, CONFIG.GRID_SIZE * w - 6, CONFIG.GRID_SIZE * h - 6, 4);
 
             const cx = (CONFIG.GRID_SIZE * w) / 2;
             const cy = (CONFIG.GRID_SIZE * h) / 2;
-            this.ghostGraphics.lineStyle(2, 0xffffff);
+            this.ghostGraphics.lineStyle(2, accent, 0.92);
+            this.ghostGraphics.strokeRoundedRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h, 5);
 
             switch (this.currentRotation) {
                 case 0:
@@ -396,7 +406,9 @@ export default class MainScene extends Phaser.Scene {
             const center = this.cableManager.getBuildingCenter(this.cableStartKey);
             const cx1 = center.x;
             const cy1 = center.y;
-            this.cableDraftGraphics.lineStyle(2, 0xffffff, 0.5);
+            this.cableDraftGraphics.lineStyle(7, VISUAL_THEME.cables.fiber, 0.1);
+            this.cableDraftGraphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, worldPoint.x, worldPoint.y));
+            this.cableDraftGraphics.lineStyle(2, 0xffffff, 0.62);
             this.cableDraftGraphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, worldPoint.x, worldPoint.y));
         } else {
             this.cableDraftGraphics.clear();

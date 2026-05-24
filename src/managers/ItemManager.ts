@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import { GameItem } from '../types';
+import { getItemColor } from '../visuals/visualTheme';
 
 export default class ItemManager {
     scene: Phaser.Scene;
@@ -24,21 +25,34 @@ export default class ItemManager {
         const x = gridX + CONFIG.GRID_SIZE / 2;
         const y = gridY + CONFIG.GRID_SIZE / 2;
         const itemConfig = CONFIG.ITEMS[type] || CONFIG.ITEMS.RAW_DATA;
+        const color = getItemColor(type);
 
         let sprite = this.pool.getFirstDead(false) as Phaser.GameObjects.Arc | null;
 
         if (!sprite) {
-            sprite = this.scene.add.circle(x, y, itemConfig.RADIUS, itemConfig.COLOR);
-            sprite.setStrokeStyle(2, 0xffffff);
+            sprite = this.scene.add.circle(x, y, itemConfig.RADIUS, color);
+            sprite.setStrokeStyle(2, 0x07111f, 0.95);
             sprite.setDepth(20);
             this.pool.add(sprite);
         } else {
             sprite.setActive(true);
             sprite.setVisible(true);
             sprite.setPosition(x, y);
-            sprite.setFillStyle(itemConfig.COLOR);
+            sprite.setFillStyle(color);
+            sprite.setStrokeStyle(2, 0x07111f, 0.95);
             sprite.setRadius(itemConfig.RADIUS);
         }
+        sprite.setAlpha(0.95);
+        sprite.setScale(1);
+
+        this.scene.tweens.add({
+            targets: sprite,
+            scaleX: 1.16,
+            scaleY: 1.16,
+            yoyo: true,
+            duration: 260,
+            ease: 'Sine.easeInOut'
+        });
 
         const item: GameItem = { gridX, gridY, sprite, type };
         this.items.push(item);

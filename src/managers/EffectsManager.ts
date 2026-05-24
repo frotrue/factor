@@ -4,6 +4,7 @@ import type MainScene from '../scenes/MainScene';
 import BaseBuilding from '../buildings/BaseBuilding';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { getSpawnPointForRoute, type IntrusionRouteId } from '../utils/waveSimulation';
+import { getItemColor, VISUAL_THEME } from '../visuals/visualTheme';
 
 interface InferenceLockMarker {
     target: BaseEnemy;
@@ -36,7 +37,7 @@ export default class EffectsManager {
             ease: 'Back.easeOut'
         });
 
-        const color = CONFIG.BUILDINGS[type]?.COLOR ?? 0x00f3ff;
+        const color = VISUAL_THEME.categories[CONFIG.BUILDINGS[type]?.CATEGORY as keyof typeof VISUAL_THEME.categories] ?? CONFIG.BUILDINGS[type]?.COLOR ?? 0x00f3ff;
         const ring = this.scene.add.circle(building.x + CONFIG.GRID_SIZE / 2, building.y + CONFIG.GRID_SIZE / 2, 8, color, 0);
         ring.setDepth(28);
         ring.setStrokeStyle(2, color, 0.9);
@@ -51,7 +52,7 @@ export default class EffectsManager {
     }
 
     playBuildingRemoved(x: number, y: number): void {
-        const effect = this.scene.add.rectangle(x + CONFIG.GRID_SIZE / 2, y + CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, 0xff4444);
+        const effect = this.scene.add.rectangle(x + CONFIG.GRID_SIZE / 2, y + CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, VISUAL_THEME.buildings.danger);
         effect.setDepth(28);
         this.scene.tweens.add({
             targets: effect,
@@ -82,7 +83,7 @@ export default class EffectsManager {
             this.scene.cameras.main.midPoint.y,
             this.scene.scale.width / this.scene.cameras.main.zoom,
             this.scene.scale.height / this.scene.cameras.main.zoom,
-            0xff4444,
+            VISUAL_THEME.buildings.danger,
             0.12
         );
         flash.setDepth(90);
@@ -146,9 +147,9 @@ export default class EffectsManager {
         };
         const graphics = this.scene.add.graphics();
         graphics.setDepth(18);
-        graphics.lineStyle(3, 0xff4444, 0.45);
+        graphics.lineStyle(3, VISUAL_THEME.buildings.danger, 0.45);
         graphics.lineBetween(spawn.x, spawn.y, core.x, core.y);
-        graphics.lineStyle(18, 0xff4444, 0.08);
+        graphics.lineStyle(18, VISUAL_THEME.buildings.danger, 0.08);
         graphics.lineBetween(spawn.x, spawn.y, core.x, core.y);
 
         const portLabel = this.scene.add.text(spawn.x, spawn.y, `${route} PORT`, {
@@ -169,9 +170,9 @@ export default class EffectsManager {
     }
 
     playEnemyKilled(x: number, y: number): void {
-        const burst = this.scene.add.circle(x, y, 6, 0x39ff14, 0);
+        const burst = this.scene.add.circle(x, y, 6, VISUAL_THEME.buildings.online, 0);
         burst.setDepth(41);
-        burst.setStrokeStyle(2, 0x39ff14, 0.8);
+        burst.setStrokeStyle(2, VISUAL_THEME.buildings.online, 0.8);
         this.scene.tweens.add({
             targets: burst,
             radius: 22,
@@ -184,10 +185,13 @@ export default class EffectsManager {
     playDefenseShot(x: number, y: number, targetX: number, targetY: number, onHit: () => void): void {
         const trail = this.scene.add.graphics();
         trail.setDepth(39);
-        trail.lineStyle(2, 0xffffff, 0.55);
+        trail.lineStyle(5, 0x69e7ff, 0.12);
+        trail.strokeLineShape(new Phaser.Geom.Line(x, y, targetX, targetY));
+        trail.lineStyle(2, 0xffffff, 0.68);
         trail.strokeLineShape(new Phaser.Geom.Line(x, y, targetX, targetY));
 
         const proj = this.scene.add.circle(x, y, 3, 0xffffff);
+        proj.setStrokeStyle(2, 0x69e7ff, 0.8);
         proj.setDepth(40);
 
         this.scene.tweens.add({
@@ -206,7 +210,7 @@ export default class EffectsManager {
                 proj.destroy();
                 const impact = this.scene.add.circle(targetX, targetY, 4, 0xffffff, 0);
                 impact.setDepth(41);
-                impact.setStrokeStyle(2, 0xffffff, 0.8);
+                impact.setStrokeStyle(2, 0x69e7ff, 0.88);
                 this.scene.tweens.add({
                     targets: impact,
                     radius: 14,
@@ -448,7 +452,7 @@ export default class EffectsManager {
     }
 
     playModelTrainingPulse(building: BaseBuilding, itemType: string): void {
-        const color = itemType === 'TRAINED_MODEL' ? 0xa855f7 : itemType === 'INFERENCE_UNIT' ? 0xec4899 : 0x14b8a6;
+        const color = itemType === 'WEIGHT_UPDATE' ? getItemColor('WEIGHT_UPDATE') : itemType === 'TRAINED_MODEL' ? getItemColor('TRAINED_MODEL') : itemType === 'INFERENCE_UNIT' ? getItemColor('INFERENCE_UNIT') : 0x14b8a6;
         const x = building.x + CONFIG.GRID_SIZE / 2;
         const y = building.y + CONFIG.GRID_SIZE / 2;
         const ring = this.scene.add.circle(x, y, 6, color, 0);

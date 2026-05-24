@@ -8,6 +8,7 @@ import ModelTrainingLab from '../buildings/ModelTrainingLab';
 import NeuralTrainer from '../buildings/NeuralTrainer';
 import { getBuildingName, getCableName, getItemName, t, textForKey } from '../i18n';
 import { getSquareCoverageOffsets } from '../utils/powerPreview';
+import { VISUAL_THEME } from '../visuals/visualTheme';
 
 export default class InputController {
     constructor(private scene: MainScene) {}
@@ -167,8 +168,10 @@ export default class InputController {
                 const isUnlocked = !cConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(cConfig.UNLOCK_REQUIRED);
                 if (!isUnlocked) {
                     scene.ghostGraphics.clear();
-                    scene.ghostGraphics.fillStyle(0xff0000, 0.5);
+                    scene.ghostGraphics.fillStyle(VISUAL_THEME.overlays.invalid, 0.34);
                     scene.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+                    scene.ghostGraphics.lineStyle(2, VISUAL_THEME.overlays.invalid, 0.9);
+                    scene.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
                 } else {
                     scene.updateCursorGraphics();
                 }
@@ -181,8 +184,10 @@ export default class InputController {
 
                     if (!isUnlocked || scene.isBlocked(snappedX, snappedY, w, h)) {
                         scene.ghostGraphics.clear();
-                        scene.ghostGraphics.fillStyle(0xff0000, 0.5);
+                        scene.ghostGraphics.fillStyle(VISUAL_THEME.overlays.invalid, 0.28);
                         scene.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
+                        scene.ghostGraphics.lineStyle(2, VISUAL_THEME.overlays.invalid, 0.9);
+                        scene.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
                     } else {
                         scene.updateCursorGraphics();
                         this.drawPlacementRangePreview(mode, w, h);
@@ -286,18 +291,18 @@ export default class InputController {
         if (!bConfig) return;
 
         let range = 0;
-        let color = 0x00f3ff;
+        let color = VISUAL_THEME.overlays.valid;
         if (bConfig.DEFENSE?.RANGE) {
             range = bConfig.DEFENSE.RANGE + scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
-            color = 0xff4444;
+            color = VISUAL_THEME.overlays.defense;
         } else if ((bConfig.POWER?.RANGE || 0) > 0) {
             range = bConfig.POWER.RANGE || 0;
-            color = 0xfde047;
+            color = VISUAL_THEME.overlays.power;
             this.drawSquareCoveragePreview(range, color);
             return;
         } else if (type === 'ACCESS_POINT') {
             range = CONFIG.ACCESS_POINT.RANGE + scene.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
-            color = 0x38bdf8;
+            color = VISUAL_THEME.cables.wireless;
         }
 
         if (range <= 0) return;
@@ -307,7 +312,7 @@ export default class InputController {
         const radius = range * CONFIG.GRID_SIZE;
         scene.ghostGraphics.fillStyle(color, 0.08);
         scene.ghostGraphics.fillCircle(centerX, centerY, radius);
-        scene.ghostGraphics.lineStyle(2, color, 0.45);
+        scene.ghostGraphics.lineStyle(2, color, 0.52);
         scene.ghostGraphics.strokeCircle(centerX, centerY, radius);
     }
 

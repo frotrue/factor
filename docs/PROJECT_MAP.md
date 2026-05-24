@@ -27,6 +27,7 @@ Neural Factory는 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타
 | `src/buildings/` | 건물 기반 클래스와 건물별 동작 |
 | `src/enemies/` | 적 런타임 객체와 이동/공격/특수 효과 |
 | `src/controllers/` | 입력과 오버레이 그리기 로직 분리 |
+| `src/visuals/` | 캔버스 그래픽 패치용 팔레트와 의미 색상 |
 | `src/utils/` | 순수 로직/시뮬레이션/요약/마이그레이션/게이트 함수 |
 | `src/styles/` | DOM UI와 모바일 레이아웃 CSS |
 | `public/assets/buildings/` | 건물 텍스처 PNG |
@@ -96,11 +97,13 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 | 파일 | 자주 바뀌는 이유 |
 |---|---|
 | `src/config.ts` | 건물/적/연구/난이도/레시피 수치와 해금 조건의 중심 |
+| `src/visuals/visualTheme.ts` | 인게임 그래픽 톤, 건물 카테고리/아이템/적/오버레이 색의 단일 팔레트 |
 | `src/scenes/MainScene.ts` | 매니저 조립, 이벤트 연결, 런타임 상태 추가 지점 |
 | `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔, 툴팁, 게임오버 등 DOM UI 중심 |
 | `src/styles/main.css` | PC 인게임 HUD shell, 모달/튜토리얼/모바일 회귀 레이아웃과 시각 상태 |
 | `src/managers/WaveManager.ts` + `src/utils/waveSimulation.ts` | 웨이브 압박, 경로, 브리핑, 난이도 조정 |
 | `src/buildings/*` | 새 건물/건물별 생산/방어/물류 동작 |
+| `src/managers/GridRenderer.ts`, `src/buildings/BaseBuilding.ts`, `src/enemies/BaseEnemy.ts` | 월드 그리드, 건물 프레임, 적 실루엣의 핵심 캔버스 그래픽 |
 | `src/utils/*` | 테스트 가능한 순수 로직 분리 지점 |
 | `tests/e2e/app-smoke.spec.ts` | 실제 캔버스+DOM 흐름 회귀 검증 |
 

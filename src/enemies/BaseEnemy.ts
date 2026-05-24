@@ -5,6 +5,7 @@ import BaseBuilding from '../buildings/BaseBuilding';
 import BuildingManager from '../managers/BuildingManager';
 import { IMainScene } from '../types';
 import { selectEnemyBuildingTarget } from '../utils/enemyBuildingInteraction';
+import { getEnemyColor, VISUAL_THEME } from '../visuals/visualTheme';
 
 interface GridPoint {
     x: number;
@@ -53,8 +54,9 @@ export default class BaseEnemy {
         this.attackTimer = 0;
         this.auraSpeedMultiplier = 1;
 
-        this.sprite = scene.add.circle(x, y, config.RADIUS, config.COLOR);
-        this.sprite.setStrokeStyle(1, 0xffffff);
+        const color = getEnemyColor(type);
+        this.sprite = scene.add.circle(x, y, config.RADIUS, color);
+        this.sprite.setStrokeStyle(2, 0x060914, 0.95);
         this.sprite.setDepth(30);
 
         this.hpBar = scene.add.graphics();
@@ -99,10 +101,11 @@ export default class BaseEnemy {
         const height = 3;
         const percent = Math.max(0, this.hp / this.maxHp);
 
-        this.hpBar.fillStyle(0xff0000, 1);
+        this.hpBar.fillStyle(0x270914, 0.92);
         this.hpBar.fillRect(this.x - width / 2, this.y - 12, width, height);
 
-        this.hpBar.fillStyle(0x00ff00, 1);
+        const hpColor = percent > 0.5 ? VISUAL_THEME.buildings.online : percent > 0.25 ? VISUAL_THEME.buildings.warning : VISUAL_THEME.buildings.danger;
+        this.hpBar.fillStyle(hpColor, 1);
         this.hpBar.fillRect(this.x - width / 2, this.y - 12, width * percent, height);
     }
 
@@ -217,25 +220,30 @@ export default class BaseEnemy {
         if (!this.active) return;
 
         if (this.type === 'DDOS_BOT') {
-            this.statusGraphics.lineStyle(1, 0x00ff88, 0.75);
+            this.statusGraphics.lineStyle(1, VISUAL_THEME.enemies.DDOS_BOT, 0.85);
             this.statusGraphics.lineBetween(this.x - 8, this.y, this.x + 8, this.y);
             this.statusGraphics.lineBetween(this.x, this.y - 8, this.x, this.y + 8);
+            this.statusGraphics.strokeCircle(this.x, this.y, 9);
         } else if (this.type === 'MALWARE') {
-            this.statusGraphics.lineStyle(2, 0xff00aa, 0.9);
+            this.statusGraphics.lineStyle(2, VISUAL_THEME.enemies.MALWARE, 0.92);
             this.statusGraphics.strokeCircle(this.x, this.y, 14);
-            this.statusGraphics.fillStyle(0xff00aa, 0.9);
+            this.statusGraphics.fillStyle(VISUAL_THEME.enemies.MALWARE, 0.9);
             this.statusGraphics.fillCircle(this.x + 10, this.y - 10, 3);
         } else if (this.type === 'ADVERSARIAL') {
-            this.statusGraphics.lineStyle(2, 0x22d3ee, 0.9);
+            this.statusGraphics.lineStyle(2, VISUAL_THEME.enemies.ADVERSARIAL, 0.92);
             this.statusGraphics.strokeCircle(this.x, this.y, 12);
             this.statusGraphics.lineBetween(this.x - 8, this.y - 8, this.x + 8, this.y + 8);
+            this.statusGraphics.lineBetween(this.x + 8, this.y - 8, this.x - 8, this.y + 8);
         } else if (this.type === 'OVERFITTED_MODEL' && this.auraGraphics) {
-            this.auraGraphics.fillStyle(0x7c3aed, 0.08);
-            this.auraGraphics.lineStyle(2, 0x7c3aed, 0.35);
+            this.auraGraphics.fillStyle(VISUAL_THEME.enemies.OVERFITTED_MODEL, 0.08);
+            this.auraGraphics.lineStyle(2, VISUAL_THEME.enemies.OVERFITTED_MODEL, 0.36);
             this.auraGraphics.fillCircle(this.x, this.y, CONFIG.GRID_SIZE * 8);
             this.auraGraphics.strokeCircle(this.x, this.y, CONFIG.GRID_SIZE * 8);
             this.statusGraphics.fillStyle(0xffffff, 0.9);
             this.statusGraphics.fillCircle(this.x, this.y - 20, 4);
+        } else {
+            this.statusGraphics.lineStyle(1, VISUAL_THEME.enemies.NOISE, 0.72);
+            this.statusGraphics.strokeCircle(this.x, this.y, (CONFIG.ENEMIES[this.type]?.RADIUS ?? 8) + 4);
         }
     }
 

@@ -64,6 +64,7 @@ npm run test:e2e -- --workers=1
 | 모바일 조작/CSS | E2E `mobile-*` projects. PC HUD shell 변경 시 모바일 터치 지점이 HUD/빌드 콘솔에 가로막히지 않는지 확인 |
 | 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹됨 |
 | 게임오버/결과 요약 | `runResultSummary.test.ts`, `waveResultSummary.test.ts`, E2E wave summary |
+| 캔버스 그래픽/팔레트 | `npm run build`, `npm test`, `npx playwright test --workers=1`, 데스크톱 스크린샷. `visualTheme`, `GridRenderer`, `BaseBuilding`, `BaseEnemy`, `CableManager`, `OverlayController`를 함께 확인 |
 
 ## 새 기능 추가 시 테스트 추가 기준
 
@@ -72,6 +73,7 @@ npm run test:e2e -- --workers=1
 - 새 저장 필드는 `saveMigration.test.ts`에 구버전/누락 필드 복원 케이스를 추가합니다.
 - 새 DOM UI나 실제 조작은 `tests/e2e/app-smoke.spec.ts`에 desktop/mobile 중 필요한 프로젝트만 추가합니다.
 - PC 인게임 UI shell 변경은 `#top-hud`, `#mission-panel`, `#threat-panel`, `#bottom-ui-container`, `#tutorial-panel`, 빌드 카테고리 전환, 설정 모달 회귀를 함께 확인합니다.
+- 캔버스 그래픽 패치는 테스트가 픽셀 아트를 직접 판정하지 않으므로 1280x720 스크린샷과 DOM 박스 좌표를 증거로 남깁니다.
 - 새 건물은 최소한 생성, 비용/해금, 버퍼/생산, 저장 복원 중 위험한 축을 테스트합니다.
 - 새 적/웨이브는 `waveSimulation.test.ts`로 수량/HP/경로를 먼저 고정하고, 필요하면 실제 E2E smoke를 보강합니다.
 

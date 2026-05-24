@@ -35,7 +35,7 @@ export const CONFIG: GameConfig = {
         MINER: {
             ID: 'MINER',
             NAME: '자원 추출기 (Extractor)',
-            COLOR: 0xef4444,
+            COLOR: 0x59e0ff,
             TEXTURE: 'building-miner',
             PRODUCTION_RATE: 2,
             HP: 140,
@@ -46,7 +46,7 @@ export const CONFIG: GameConfig = {
         DATA_DOWNLOADER: {
             ID: 'DATA_DOWNLOADER',
             NAME: '데이터 다운로더 (Data Downloader)',
-            COLOR: 0x00ffff,
+            COLOR: 0x52f7ff,
             PRODUCTION_RATE: 2,
             HP: 120,
             DESCRIPTION: '전력만 공급되면 어디서든 Signal Packet을 다운로드합니다.',
@@ -57,7 +57,7 @@ export const CONFIG: GameConfig = {
         CONVEYOR: {
             ID: 'CONVEYOR',
             NAME: '컨베이어 벨트 (Conveyor)',
-            COLOR: 0x3b82f6,
+            COLOR: 0x5aa9ff,
             TEXTURE: 'building-conveyor',
             HP: 80,
             DESCRIPTION: 'Silicon 같은 물리 자원을 한 방향으로 운반합니다.',
@@ -68,7 +68,7 @@ export const CONFIG: GameConfig = {
         CORE: {
             ID: 'CORE',
             NAME: '메인 서버 (Neural Core)',
-            COLOR: 0x10b981,
+            COLOR: 0x63ffb1,
             TEXTURE: 'building-core',
             WIDTH: 4,
             HEIGHT: 4,
@@ -79,7 +79,7 @@ export const CONFIG: GameConfig = {
         PROCESSOR: {
             ID: 'PROCESSOR',
             NAME: '데이터 가공소 (Data Processor)',
-            COLOR: 0xa855f7,
+            COLOR: 0xb789ff,
             TEXTURE: 'building-processor',
             HP: 160,
             DESCRIPTION: 'Signal Packet을 라벨링된 데이터로 가공합니다.',
@@ -90,7 +90,7 @@ export const CONFIG: GameConfig = {
         WEIGHT_TRAINER: {
             ID: 'WEIGHT_TRAINER',
             NAME: '가중치 학습기 (Weight Trainer)',
-            COLOR: 0x9370db,
+            COLOR: 0xa970ff,
             HP: 170,
             DESCRIPTION: '라벨링된 데이터로 가중치를 업데이트합니다.',
             POWER: { CONSUMPTION: 15, PRODUCTION: 0 },
@@ -100,7 +100,7 @@ export const CONFIG: GameConfig = {
         RECYCLER: {
             ID: 'RECYCLER',
             NAME: 'Recycler',
-            COLOR: 0x78716c,
+            COLOR: 0x7dd3fc,
             HP: 150,
             DESCRIPTION: 'Converts any two data items into one Silicon.',
             POWER: { CONSUMPTION: 8, PRODUCTION: 0 },
@@ -111,7 +111,7 @@ export const CONFIG: GameConfig = {
         POWER_NODE: {
             ID: 'POWER_NODE',
             NAME: '전력 송신탑 (Power Node)',
-            COLOR: 0xf59e0b,
+            COLOR: 0xffdf6e,
             TEXTURE: 'building-power-node',
             HP: 140,
             DESCRIPTION: '전력을 주변 건물로 중계합니다.',
@@ -122,7 +122,7 @@ export const CONFIG: GameConfig = {
         POWER_PLANT: {
             ID: 'POWER_PLANT',
             NAME: '에너지 발전소 (Power Plant)',
-            COLOR: 0xfacc15,
+            COLOR: 0xffe873,
             TEXTURE: 'building-power-plant',
             HP: 190,
             DESCRIPTION: 'Energy Cell 매립지에서 전력을 생산합니다.',
@@ -133,7 +133,7 @@ export const CONFIG: GameConfig = {
         STORAGE: {
             ID: 'STORAGE',
             NAME: '자원 창고 (Storage)',
-            COLOR: 0x6b7280,
+            COLOR: 0x8fa4bd,
             TEXTURE: 'building-storage',
             HP: 220,
             DESCRIPTION: '대량의 물리 자원 또는 데이터를 보관합니다. (2x2)',
@@ -146,7 +146,7 @@ export const CONFIG: GameConfig = {
         DATA_CACHE: {
             ID: 'DATA_CACHE',
             NAME: 'Data Cache',
-            COLOR: 0x38bdf8,
+            COLOR: 0x74a7ff,
             HP: 130,
             DESCRIPTION: 'Stores up to 20 data items as a cable-friendly buffer.',
             MAX_BUFFER: 20,
@@ -157,7 +157,7 @@ export const CONFIG: GameConfig = {
         UNLOADER: {
             ID: 'UNLOADER',
             NAME: '하역기 (Unloader)',
-            COLOR: 0xf97316,
+            COLOR: 0x59e0ff,
             HP: 120,
             DESCRIPTION: '인접한 창고에서 자원을 빼냅니다.',
             POWER: { CONSUMPTION: 5, PRODUCTION: 0 },
@@ -166,7 +166,7 @@ export const CONFIG: GameConfig = {
         CLASSIFIER: {
             ID: 'CLASSIFIER',
             NAME: '분류 모델 (Classifier)',
-            COLOR: 0xd946ef,
+            COLOR: 0xff6888,
             TEXTURE: 'building-classifier',
             HP: 260,
             DESCRIPTION: '단일 대상에게 높은 피해를 주는 방어 타워입니다.',
@@ -179,7 +179,7 @@ export const CONFIG: GameConfig = {
         FILTER: {
             ID: 'FILTER',
             NAME: '이상 탐지 엔진 (Anomaly Detection Engine)',
-            COLOR: 0x8b5cf6,
+            COLOR: 0xb789ff,
             TEXTURE: 'building-filter',
             HP: 240,
             DESCRIPTION: 'Weight Update로 학습된 이상 탐지 모델이 주변의 비정상 트래픽 패턴을 분석하고 범위 피해를 적용합니다.',
@@ -192,7 +192,7 @@ export const CONFIG: GameConfig = {
         FIREWALL: {
             ID: 'FIREWALL',
             NAME: '방화벽 (Firewall)',
-            COLOR: 0xe11d48,
+            COLOR: 0xff4d6d,
             TEXTURE: 'building-firewall',
             DESCRIPTION: '적의 이동을 막고 접촉 시 피해를 줍니다.',
             POWER: { CONSUMPTION: 5, PRODUCTION: 0 },
@@ -204,7 +204,7 @@ export const CONFIG: GameConfig = {
         FAST_LINK: {
             ID: 'FAST_LINK',
             NAME: '고속 컨베이어 (Fast Link)',
-            COLOR: 0x2563eb,
+            COLOR: 0x50f4ff,
             TEXTURE: 'building-fast-link',
             HP: 95,
             DESCRIPTION: 'Silicon을 일반 컨베이어보다 빠르게 운반합니다.',
@@ -238,7 +238,7 @@ export const CONFIG: GameConfig = {
         SOLAR_PANEL: {
             ID: 'SOLAR_PANEL',
             NAME: '태양광 패널 (Solar Panel)',
-            COLOR: 0xfde047,
+            COLOR: 0xffdf6e,
             HP: 90,
             DESCRIPTION: '독립형 전력 패널. 자신의 주변 1x1(본인을 중심으로 8칸)의 전력 공급 범위를 가집니다.',
             POWER: { CONSUMPTION: 0, PRODUCTION: 10, RANGE: 1 },
@@ -249,7 +249,7 @@ export const CONFIG: GameConfig = {
         NEURAL_TRAINER: {
             ID: 'NEURAL_TRAINER',
             NAME: '신경망 학습기 (Neural Trainer)',
-            COLOR: 0x6366f1,
+            COLOR: 0x8fb3ff,
             HP: 260,
             DESCRIPTION: '고급 데이터 아이템을 생산하는 2x2 가공소입니다.',
             WIDTH: 2,
@@ -262,7 +262,7 @@ export const CONFIG: GameConfig = {
         MODEL_TRAINING_LAB: {
             ID: 'MODEL_TRAINING_LAB',
             NAME: 'Model Training Lab',
-            COLOR: 0x14b8a6,
+            COLOR: 0x64ffcf,
             HP: 280,
             DESCRIPTION: 'Consumes Weight Updates and trained AI artifacts to improve a selected defense model.',
             WIDTH: 2,
@@ -275,7 +275,7 @@ export const CONFIG: GameConfig = {
         ACCESS_POINT: {
             ID: 'ACCESS_POINT',
             NAME: 'AP (Access Point)',
-            COLOR: 0x22d3ee,
+            COLOR: 0x50f4ff,
             HP: 130,
             DESCRIPTION: 'Relays data sessions between nearby producers and receivers without Ethernet cables.',
             POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
@@ -288,7 +288,7 @@ export const CONFIG: GameConfig = {
         BASIC: {
             ID: 'BASIC',
             NAME: '이더넷 케이블 (Ethernet)',
-            COLOR: 0x3b82f6,
+            COLOR: 0x5aa9ff,
             BANDWIDTH: 3,
             COST_PER_TILE: 1,
             MAX_QUEUE: 10
@@ -296,7 +296,7 @@ export const CONFIG: GameConfig = {
         FIBER: {
             ID: 'FIBER',
             NAME: '광섬유 케이블 (Fiber Optic)',
-            COLOR: 0x06b6d4,
+            COLOR: 0x50f4ff,
             BANDWIDTH: 8,
             COST_PER_TILE: 3,
             MAX_QUEUE: 20,
@@ -307,7 +307,7 @@ export const CONFIG: GameConfig = {
     ACCESS_POINT: {
         ID: 'ACCESS_POINT',
         NAME: 'AP (Access Point)',
-        COLOR: 0x22d3ee,
+        COLOR: 0x50f4ff,
         RANGE: 5,
         BANDWIDTH: 2,
         POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
@@ -347,31 +347,31 @@ export const CONFIG: GameConfig = {
         RAW_DATA: {
             ID: 'RAW_DATA',
             NAME: 'Signal Packet',
-            COLOR: 0x00ffff,
+            COLOR: 0x52f7ff,
             RADIUS: 6
         },
         LABELED_DATA: {
             ID: 'LABELED_DATA',
             NAME: 'Labeled Data',
-            COLOR: 0x38bdf8,
+            COLOR: 0x6fb8ff,
             RADIUS: 7
         },
         WEIGHT_UPDATE: {
             ID: 'WEIGHT_UPDATE',
             NAME: 'Weight Update',
-            COLOR: 0xf472b6,
+            COLOR: 0xff78cb,
             RADIUS: 8
         },
         SILICON: {
             ID: 'SILICON',
             NAME: 'Silicon',
-            COLOR: 0x94a3b8,
+            COLOR: 0xb9c7d8,
             RADIUS: 6
         },
         ENERGY: {
             ID: 'ENERGY',
             NAME: 'Energy Cell',
-            COLOR: 0xfde047,
+            COLOR: 0xffe873,
             RADIUS: 6
         },
         PROJECTILE: {
@@ -383,27 +383,27 @@ export const CONFIG: GameConfig = {
         TRAINED_MODEL: {
             ID: 'TRAINED_MODEL',
             NAME: 'Trained Model',
-            COLOR: 0xa855f7,
+            COLOR: 0xb98cff,
             RADIUS: 8
         },
         INFERENCE_UNIT: {
             ID: 'INFERENCE_UNIT',
             NAME: 'Inference Unit',
-            COLOR: 0xec4899,
+            COLOR: 0xff5ebc,
             RADIUS: 8
         }
     },
 
     RESOURCE_PATCHES: {
-        SILICON: 0x94a3b8,
-        ENERGY: 0xfde047
+        SILICON: 0x93c5fd,
+        ENERGY: 0xf8e27d
     },
 
     TERRAIN: {
         BLOCKER: {
             ID: 'BLOCKER',
             NAME: 'Data Debris',
-            COLOR: 0x475569,
+            COLOR: 0x162235,
             BLOCKS_BUILDING: true,
             BLOCKS_ENEMY: true
         }
@@ -413,7 +413,7 @@ export const CONFIG: GameConfig = {
         NOISE: {
             ID: 'NOISE',
             NAME: 'Noise',
-            COLOR: 0xff4444,
+            COLOR: 0xff5d68,
             BASE_HP: 50,
             SPEED: 30,
             DAMAGE: 10,
@@ -423,7 +423,7 @@ export const CONFIG: GameConfig = {
         MALWARE: {
             ID: 'MALWARE',
             NAME: 'Malware',
-            COLOR: 0xff0044,
+            COLOR: 0xff2a8b,
             BASE_HP: 150,
             SPEED: 25,
             DAMAGE: 30,
@@ -433,7 +433,7 @@ export const CONFIG: GameConfig = {
         ADVERSARIAL: {
             ID: 'ADVERSARIAL',
             NAME: 'Adversarial',
-            COLOR: 0x8800ff,
+            COLOR: 0xa970ff,
             BASE_HP: 80,
             SPEED: 50,
             DAMAGE: 20,
@@ -443,7 +443,7 @@ export const CONFIG: GameConfig = {
         OVERFITTED_MODEL: {
             ID: 'OVERFITTED_MODEL',
             NAME: 'Overfitted Model',
-            COLOR: 0x4c1d95,
+            COLOR: 0x6d35ff,
             BASE_HP: 1500,
             SPEED: 15,
             DAMAGE: 100,
@@ -453,7 +453,7 @@ export const CONFIG: GameConfig = {
         DDOS_BOT: {
             ID: 'DDOS_BOT',
             NAME: 'DDoS Packet',
-            COLOR: 0x00ff88,
+            COLOR: 0x46ff9a,
             BASE_HP: 15,
             SPEED: 55,
             DAMAGE: 4,

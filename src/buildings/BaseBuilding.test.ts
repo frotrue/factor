@@ -8,6 +8,7 @@ function createSceneStub(textureExists: boolean) {
         clear() {},
         fillStyle() { return this; },
         fillRoundedRect() { return this; },
+        fillRect() { return this; },
         lineStyle() { return this; },
         strokeRoundedRect() { return this; },
         strokeCircle() { return this; },

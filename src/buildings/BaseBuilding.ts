@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CONFIG } from '../config';
 import { BuildingOptions, GameItem, IMainScene, MoveTarget } from '../types';
 import EventBus from '../managers/EventBus';
+import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
 
 /**
  * 모든 건물의 기반 클래스
@@ -119,20 +120,30 @@ export default class BaseBuilding {
         const cy = 0;
 
         this.graphics.clear();
-        this.graphics.fillStyle(color, 0.92);
-        this.graphics.fillRoundedRect(left + 2, top + 2, width - 4, height - 4, 3);
-        this.graphics.lineStyle(1, 0xffffff, 0.22);
-        this.graphics.strokeRoundedRect(left + 2, top + 2, width - 4, height - 4, 3);
+        const accent = getCategoryColor(CONFIG.BUILDINGS[this.type]?.CATEGORY);
+        this.graphics.fillStyle(VISUAL_THEME.buildings.shadow, 0.36);
+        this.graphics.fillRoundedRect(left + 4, top + 5, width - 4, height - 4, 5);
+        this.graphics.fillStyle(VISUAL_THEME.buildings.panelDark, 0.96);
+        this.graphics.fillRoundedRect(left + 2, top + 2, width - 4, height - 4, 5);
+        this.graphics.fillStyle(color, 0.28);
+        this.graphics.fillRoundedRect(left + 5, top + 5, width - 10, height - 10, 4);
+        this.graphics.lineStyle(1, accent, 0.5);
+        this.graphics.strokeRoundedRect(left + 2, top + 2, width - 4, height - 4, 5);
+        this.graphics.lineStyle(1, VISUAL_THEME.buildings.bevel, 0.18);
+        this.graphics.strokeRoundedRect(left + 6, top + 6, width - 12, height - 12, 3);
+        this.graphics.fillStyle(accent, 0.16);
+        this.graphics.fillRect(left + 6, top + 6, width - 12, 3);
 
-        this.graphics.lineStyle(2, 0x0a0a0c, 0.42);
+        this.graphics.lineStyle(2, 0xdbeafe, 0.52);
         switch (this.type) {
             case 'MINER':
                 this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.24);
-                this.graphics.lineBetween(cx - 7, cy, cx + 7, cy);
-                this.graphics.lineBetween(cx, cy - 7, cx, cy + 7);
+                this.graphics.lineStyle(2, accent, 0.75);
+                this.graphics.lineBetween(cx - 8, cy, cx + 8, cy);
+                this.graphics.lineBetween(cx, cy - 8, cx, cy + 8);
                 break;
             case 'DATA_DOWNLOADER':
-                this.graphics.lineStyle(2, 0x00ffff, 0.75);
+                this.graphics.lineStyle(2, accent, 0.82);
                 this.graphics.lineBetween(cx, cy + 8, cx, cy - 8);
                 this.graphics.strokeCircle(cx, cy - 10, 5);
                 this.graphics.strokeCircle(cx, cy - 10, 11);
@@ -145,8 +156,11 @@ export default class BaseBuilding {
                 break;
             case 'CONVEYOR':
             case 'FAST_LINK':
-                this.graphics.lineStyle(2, 0xffffff, 0.55);
+                this.graphics.lineStyle(2, accent, 0.75);
                 this.graphics.lineBetween(left + 7, cy, left + width - 7, cy);
+                this.graphics.lineStyle(1, 0xffffff, 0.38);
+                this.graphics.lineBetween(left + width - 13, cy - 5, left + width - 7, cy);
+                this.graphics.lineBetween(left + width - 13, cy + 5, left + width - 7, cy);
                 break;
             case 'PROCESSOR':
             case 'WEIGHT_TRAINER':
@@ -157,7 +171,7 @@ export default class BaseBuilding {
                     this.graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
                 }
                 if (this.type === 'MODEL_TRAINING_LAB') {
-                    this.graphics.lineStyle(2, 0x0f172a, 0.65);
+                    this.graphics.lineStyle(2, accent, 0.72);
                     this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.18);
                     this.graphics.lineStyle(1, 0xffffff, 0.45);
                     this.graphics.lineBetween(cx - 12, cy, cx + 12, cy);
@@ -176,14 +190,14 @@ export default class BaseBuilding {
                 this.graphics.lineBetween(left + width / 2, top + 5, left + width / 2, top + height - 5);
                 this.graphics.lineBetween(left + 5, top + height / 2, left + width - 5, top + height / 2);
                 if (this.type === 'DATA_CACHE') {
-                    this.graphics.fillStyle(0x00ffff, 0.35);
+                    this.graphics.fillStyle(accent, 0.42);
                     this.graphics.fillCircle(cx, cy, 5);
                 }
                 break;
             case 'POWER_NODE':
             case 'POWER_PLANT':
             case 'SOLAR_PANEL':
-                this.graphics.lineStyle(2, 0xfde047, 0.8);
+                this.graphics.lineStyle(2, accent, 0.86);
                 this.graphics.lineBetween(cx - 4, top + 7, cx + 5, cy - 1);
                 this.graphics.lineBetween(cx + 5, cy - 1, cx - 2, cy - 1);
                 this.graphics.lineBetween(cx - 2, cy - 1, cx + 4, top + height - 7);
@@ -191,7 +205,7 @@ export default class BaseBuilding {
             case 'CLASSIFIER':
             case 'FILTER':
             case 'FIREWALL':
-                this.graphics.lineStyle(2, 0xffffff, 0.58);
+                this.graphics.lineStyle(2, accent, 0.82);
                 this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.22);
                 this.graphics.lineBetween(cx, top + 8, cx, top + height - 8);
                 break;
@@ -204,23 +218,17 @@ export default class BaseBuilding {
 
     drawCategoryAccent(w: number, h: number): void {
         const bConfig = CONFIG.BUILDINGS[this.type];
-        const categoryColors: Record<string, number> = {
-            EXTRACTION: 0x67e8f9,
-            PRODUCTION: 0xc084fc,
-            LOGISTICS: 0x60a5fa,
-            POWER: 0xfde047,
-            DEFENSE: 0xfb7185
-        };
-        const color = categoryColors[bConfig.CATEGORY || ''];
-        if (!color) return;
+        const color = getCategoryColor(bConfig.CATEGORY);
 
         const width = w * CONFIG.GRID_SIZE;
         const height = h * CONFIG.GRID_SIZE;
         const left = -width / 2;
         const top = -height / 2;
-        this.graphics.lineStyle(3, color, 0.9);
-        this.graphics.lineBetween(left + 5, top + 5, left + Math.min(width * 0.45, 18), top + 5);
-        this.graphics.lineBetween(left + 5, top + 5, left + 5, top + Math.min(height * 0.45, 18));
+        this.graphics.lineStyle(2, color, 0.92);
+        this.graphics.lineBetween(left + 6, top + 6, left + Math.min(width * 0.55, 22), top + 6);
+        this.graphics.lineBetween(left + 6, top + 6, left + 6, top + Math.min(height * 0.55, 22));
+        this.graphics.fillStyle(color, 0.75);
+        this.graphics.fillCircle(left + 8, top + 8, 2);
     }
 
     ensureHpBar(): void {

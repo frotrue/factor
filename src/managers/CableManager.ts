@@ -7,6 +7,7 @@ import EventBus from './EventBus';
 import AccessPoint from '../buildings/AccessPoint';
 import BaseBuilding from '../buildings/BaseBuilding';
 import { getAvailableInputSpace, isAPAutoRelaySource, selectAPRelayTarget } from '../utils/apRelay';
+import { getItemColor, VISUAL_THEME } from '../visuals/visualTheme';
 
 const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
@@ -317,13 +318,16 @@ export default class CableManager {
         const cx2 = center2.x;
         const cy2 = center2.y;
 
-        const itemConfig = CONFIG.ITEMS[itemType] || CONFIG.ITEMS.RAW_DATA;
+        const color = getItemColor(itemType);
 
-        const pulse = this.scene.add.circle(cx1, cy1, 4, itemConfig.COLOR);
+        const pulse = this.scene.add.circle(cx1, cy1, 4, color);
         pulse.setDepth(16);
+        pulse.setStrokeStyle(1, 0xffffff, 0.55);
         const trail = this.scene.add.graphics();
         trail.setDepth(15);
-        trail.lineStyle(1, itemConfig.COLOR, 0.28);
+        trail.lineStyle(5, color, 0.1);
+        trail.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+        trail.lineStyle(1, color, 0.45);
         trail.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
 
         this.scene.tweens.add({
@@ -359,12 +363,17 @@ export default class CableManager {
             const cy2 = center2.y;
 
             const config = CONFIG.CABLES[cable.cableType];
-            const color = config ? config.COLOR : 0xaaaaaa;
+            const color = cable.cableType === 'FIBER' ? VISUAL_THEME.cables.fiber : VISUAL_THEME.cables.basic;
             const maxQueue = config ? config.MAX_QUEUE : 10;
             const isThrottling = cable.queue.length > maxQueue * 0.5;
 
-            this.graphics.lineStyle(isThrottling ? 4 : 2, isThrottling ? 0xfacc15 : color, 0.8);
+            this.graphics.lineStyle(isThrottling ? 8 : 5, isThrottling ? VISUAL_THEME.cables.throttled : color, 0.12);
             this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+            this.graphics.lineStyle(isThrottling ? 3 : 2, isThrottling ? VISUAL_THEME.cables.throttled : color, isThrottling ? 0.9 : 0.72);
+            this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+            this.graphics.fillStyle(color, isThrottling ? 0.75 : 0.45);
+            this.graphics.fillCircle(cx1, cy1, 3);
+            this.graphics.fillCircle(cx2, cy2, 3);
         }
     }
 
