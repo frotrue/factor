@@ -248,11 +248,7 @@ export default class BaseBuilding {
 
         if (this.hp <= 0) {
             this.destroyed = true;
-            EventBus.emit('BUILDING_DESTROYED', {
-                key: `${this.x},${this.y}`,
-                building: this
-            });
-            (this.scene as IMainScene).buildingManager?.remove(`${this.x},${this.y}`);
+            (this.scene as IMainScene).buildingManager?.destroyBuilding(`${this.x},${this.y}`);
         }
     }
 

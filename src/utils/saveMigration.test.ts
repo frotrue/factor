@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../config';
+import { getRestoredEnemyHp } from './enemyRestore';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from './saveMigration';
 
 describe('migrateSaveData', () => {
@@ -64,5 +65,12 @@ describe('migrateSaveData', () => {
         expect(migrated.settings.language).toBe('en');
         expect(migrated.settings.masterVolume).toBe(0.6);
         expect(migrated.settings.muted).toBe(true);
+    });
+
+    it('restores enemy max HP with effective wave and difficulty scaling', () => {
+        const restored = getRestoredEnemyHp('NOISE', 9999, 1.5);
+
+        expect(restored.maxHp).toBe(CONFIG.ENEMIES.NOISE.BASE_HP * 1.5);
+        expect(restored.hp).toBe(restored.maxHp);
     });
 });

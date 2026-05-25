@@ -10,6 +10,7 @@ import {
     getSpawnPointForRoute,
     selectActiveIntrusionRoutes
 } from '../utils/waveSimulation';
+import { getWaveBriefingKey } from '../utils/waveBriefingKey';
 import type { IntrusionRoute } from '../utils/waveSimulation';
 
 export default class WaveManager {
@@ -31,6 +32,7 @@ export default class WaveManager {
     ddosBotsToSpawn: number;
     ddosRewardGranted: boolean;
     activeRoutes: IntrusionRoute[];
+    lastBriefingKey: string | null;
 
     constructor(scene: IMainScene, buildingManager: BuildingManager) {
         this.scene = scene;
@@ -52,6 +54,7 @@ export default class WaveManager {
         this.ddosBotsToSpawn = 0;
         this.ddosRewardGranted = false;
         this.activeRoutes = selectActiveIntrusionRoutes(1, this.difficultyId);
+        this.lastBriefingKey = null;
         EventBus.on('ENEMY_KILLED', ({ id, type, rewardSilicon }: { id: string; type: string; rewardSilicon: number }) => {
             this.enemies.delete(id);
             this.grantSiliconReward(rewardSilicon);
@@ -80,6 +83,10 @@ export default class WaveManager {
 
     getDifficulty() {
         return CONFIG.DIFFICULTY[this.difficultyId] || CONFIG.DIFFICULTY.NORMAL;
+    }
+
+    getEffectiveHpMultiplier(): number {
+        return this.hpMultiplier * this.getDifficulty().ENEMY_HP_MULTIPLIER;
     }
 
     startWave(): void {
@@ -111,7 +118,11 @@ export default class WaveManager {
     }
 
     private emitNextWaveBriefing(): void {
-        EventBus.emit('WAVE_BRIEFING_UPDATED', createWaveBriefing(this.currentWave + 1, this.difficultyId));
+        const nextWave = this.currentWave + 1;
+        const briefingKey = getWaveBriefingKey(nextWave, this.difficultyId);
+        if (briefingKey === this.lastBriefingKey) return;
+        this.lastBriefingKey = briefingKey;
+        EventBus.emit('WAVE_BRIEFING_UPDATED', createWaveBriefing(nextWave, this.difficultyId));
     }
 
     spawnEnemy(typeOverride?: string): void {
@@ -135,7 +146,7 @@ export default class WaveManager {
             if (this.currentWave > 15 && Math.random() < 0.2) type = 'ADVERSARIAL';
         }
 
-        const enemy = new BaseEnemy(this.scene, type, x, y, this.hpMultiplier * this.getDifficulty().ENEMY_HP_MULTIPLIER, id, this.buildingManager);
+        const enemy = new BaseEnemy(this.scene, type, x, y, this.getEffectiveHpMultiplier(), id, this.buildingManager);
         this.enemies.set(id, enemy);
     }
 

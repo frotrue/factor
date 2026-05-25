@@ -52,7 +52,7 @@ flowchart TD
 
 - 커서 위치와 그리드 갱신
 - `TickSystem.update(time)`로 고정 틱 처리
-- `WaveManager.update(delta * gameSpeed)`로 웨이브/적 처리
+- `WaveManager.update(delta * gameSpeed)`로 웨이브/적 처리. next-wave briefing은 wave/difficulty 변경 시에만 발행하고, countdown 숫자는 `WAVE_UPDATE`로 갱신합니다.
 - `SaveManager.update(delta)`로 자동 저장
 - `UIManager.update()`로 HUD/패널 갱신
 - `CameraController.update()`로 카메라 이동
@@ -110,7 +110,7 @@ flowchart TD
 - 자원/지형 맵
 - 연구 해금 목록
 
-`SaveManager.loadGame()`은 `migrateSaveData()`로 기본값을 보정한 뒤 기존 Phaser 객체를 정리하고, Core/연구/방어모델/건물/아이템/케이블/웨이브/설정을 재생성합니다.
+`SaveManager.loadGame()`은 `migrateSaveData()`로 기본값을 보정한 뒤 기존 Phaser 객체를 정리하고, Core/연구/방어모델/건물/아이템/케이블/웨이브/설정을 재생성합니다. 저장된 active wave 적은 현재 wave HP 배율과 난이도 HP 배율을 합친 effective multiplier로 max HP를 복원하고, 저장 HP를 그 범위로 clamp합니다.
 
 저장 포맷 변경 시 해야 할 일:
 
@@ -124,12 +124,12 @@ flowchart TD
 - `MainScene` -> 모든 manager 생성과 Scene lifecycle 관리
 - `BuildingManager` -> `BuildingFactory` -> `buildings/*`
 - `TickSystem` -> `PowerManager`, `CableManager`, `BaseBuilding.onTick()`
-- `WaveManager` -> `waveSimulation`, `BaseEnemy`
-- `BaseEnemy` -> `enemyBuildingInteraction`, `BuildingManager`, `MapManager`
+- `WaveManager` -> `waveSimulation`, `waveBriefingKey`, `BaseEnemy`
+- `BaseEnemy` -> `gridPath`, `enemyBuildingInteraction`, `BuildingManager`, `MapManager`
 - `CableManager` -> `apRelay`, `AccessPoint`, 건물 버퍼
 - `UIManager` -> `progressionGates`, `waveSimulation`, `runResultSummary`, 하위 UI managers
 - `ResearchManager` -> `CONFIG.RESEARCH`, Core confidence
-- `SaveManager` -> 거의 모든 manager + `saveMigration`
+- `SaveManager` -> 거의 모든 manager + `saveMigration`, `enemyRestore`
 
 ## 신규 기능 추가 위치와 일반 절차
 
@@ -156,8 +156,9 @@ flowchart TD
 
 1. `CONFIG.ENEMIES` 수치 추가
 2. `WaveManager.spawnEnemy()`와 `BaseEnemy` 특수 효과/시각 갱신
-3. `utils/waveSimulation.ts`에 수량/브리핑/추정 HP 반영
-4. `waveSimulation.test.ts`, 필요하면 E2E threat panel 갱신
+3. 이동/pathfinding 규칙이면 `utils/gridPath.ts`와 `BaseEnemy.getMoveTarget()` fallback을 함께 확인
+4. `utils/waveSimulation.ts`에 수량/브리핑/추정 HP 반영
+5. `waveSimulation.test.ts`, `gridPath.test.ts`, 필요하면 E2E threat panel 갱신
 
 ### 새 저장 상태
 

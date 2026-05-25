@@ -5,12 +5,8 @@ import BaseBuilding from '../buildings/BaseBuilding';
 import BuildingManager from '../managers/BuildingManager';
 import { IMainScene } from '../types';
 import { selectEnemyBuildingTarget } from '../utils/enemyBuildingInteraction';
+import { findGridPath, type GridPoint } from '../utils/gridPath';
 import { getEnemyColor, VISUAL_THEME } from '../visuals/visualTheme';
-
-interface GridPoint {
-    x: number;
-    y: number;
-}
 
 export default class BaseEnemy {
     scene: Phaser.Scene;
@@ -256,59 +252,24 @@ export default class BaseEnemy {
             this.path = this.findPath(targetX, targetY);
             this.pathTimer = 700;
         }
-        return this.path[0] || { x: targetX, y: targetY };
+        return this.path[0] || { x: this.x, y: this.y };
     }
 
     findPath(targetX: number, targetY: number): GridPoint[] {
         const gridSize = CONFIG.GRID_SIZE;
-        const start = { x: Math.floor(this.x / gridSize), y: Math.floor(this.y / gridSize) };
-        const target = { x: Math.floor(targetX / gridSize), y: Math.floor(targetY / gridSize) };
-        const startKey = `${start.x},${start.y}`;
-        const targetKey = `${target.x},${target.y}`;
-        const queue = [start];
-        const visited = new Set<string>([startKey]);
-        const cameFrom = new Map<string, string>();
-        const dirs = CONFIG.DIRECTIONS.map(d => ({ x: d.x, y: d.y }));
-
-        while (queue.length > 0 && visited.size < 900) {
-            const current = queue.shift()!;
-            if (`${current.x},${current.y}` === targetKey) break;
-
-            const sortedDirs = dirs.slice().sort((a, b) => {
-                const da = Math.abs(target.x - (current.x + a.x)) + Math.abs(target.y - (current.y + a.y));
-                const db = Math.abs(target.x - (current.x + b.x)) + Math.abs(target.y - (current.y + b.y));
-                return da - db;
-            });
-
-            for (const dir of sortedDirs) {
-                const next = { x: current.x + dir.x, y: current.y + dir.y };
-                const key = `${next.x},${next.y}`;
-                if (visited.has(key)) continue;
-                if (Math.abs(next.x - start.x) > 35 || Math.abs(next.y - start.y) > 35) continue;
-
-                const worldKey = `${next.x * gridSize},${next.y * gridSize}`;
+        return findGridPath({
+            startWorld: { x: this.x, y: this.y },
+            targetWorld: { x: targetX, y: targetY },
+            gridSize,
+            directions: CONFIG.DIRECTIONS.map(d => ({ x: d.x, y: d.y })),
+            isBlocked: (worldX, worldY, isTarget) => {
+                const worldKey = `${worldX},${worldY}`;
                 const blockingBuilding = this.buildingManager.get(worldKey) as BaseBuilding | null;
-                const blocksEnemy = (this.scene as IMainScene).mapManager?.blocksEnemyAt(next.x * gridSize, next.y * gridSize);
-                const isTarget = key === targetKey;
-                if (blocksEnemy && !isTarget) continue;
-                if (blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget) continue;
-
-                visited.add(key);
-                cameFrom.set(key, `${current.x},${current.y}`);
-                queue.push(next);
+                const blocksEnemy = (this.scene as IMainScene).mapManager?.blocksEnemyAt(worldX, worldY);
+                if (blocksEnemy && !isTarget) return true;
+                return Boolean(blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget);
             }
-        }
-
-        if (!cameFrom.has(targetKey)) return [];
-
-        const path: GridPoint[] = [];
-        let currentKey = targetKey;
-        while (currentKey !== startKey) {
-            const [gx, gy] = currentKey.split(',').map(Number);
-            path.unshift({ x: gx * gridSize + gridSize / 2, y: gy * gridSize + gridSize / 2 });
-            currentKey = cameFrom.get(currentKey)!;
-        }
-        return path.slice(0, 8);
+        });
     }
 
     tryInfectBuilding(): void {

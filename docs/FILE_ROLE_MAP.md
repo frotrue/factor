@@ -12,9 +12,9 @@
 | `src/i18n.ts` | 한국어/영어 번역과 언어 저장 | 메뉴, HUD, 툴팁, 테스트 텍스트 | 새 UI 키 추가 시 ko/en 모두 추가 | `src/i18n.test.ts`, E2E language smoke |
 | `src/styles/main.css` | DOM UI와 모바일 레이아웃 | PC HUD shell, 우측 정보 레일, 하단 빌드 콘솔, 모달, 모바일 액션바 | DOM id/class와 Playwright 셀렉터 영향. 모바일에서는 HUD가 터치 배치를 가로막지 않게 pointer-events 주의 | `tests/e2e/app-smoke.spec.ts` |
 | `src/visuals/visualTheme.ts` | 캔버스 그래픽 패치 팔레트 | 월드, 건물 카테고리, 아이템, 적, 케이블, 오버레이 색상 | 색상만 바꿔도 UI swatch와 캔버스 의미 색이 어긋날 수 있어 `config.ts`와 함께 확인 | build, E2E visual smoke |
-| `src/managers/BuildingManager.ts` | 건물 배치/철거/조회, 비용 차감, 멀티타일 등록 | 입력 배치, 저장 복원, 적 공격, 인벤토리 | 멀티타일 건물은 모든 타일 key에 같은 객체 등록 | E2E placement, `BaseBuilding.test.ts` 보조 |
+| `src/managers/BuildingManager.ts` | 건물 배치/철거/조회, 비용 차감, 멀티타일 등록, 제거/파괴 이벤트 분리 | 입력 배치, 저장 복원, 적 공격, 인벤토리 | 멀티타일 건물은 모든 타일 key에 같은 객체 등록. 수동 철거는 `BUILDING_REMOVED`, 전투 파괴는 `BUILDING_DESTROYED`로 유지 | E2E placement, `src/utils/buildingLifecycle.test.ts` |
 | `src/buildings/BuildingFactory.ts` | 건물 ID -> 클래스 매핑 | 모든 건물 생성 | 새 건물 추가 시 registry 누락 위험 | `src/config.test.ts` 간접 |
-| `src/buildings/BaseBuilding.ts` | 모든 건물 공통 상태, 버퍼, HP, 감염, 코드 기반 렌더 기본 | 생산, 전투, 저장, UI tooltip, 건물 패널 그래픽 | `takeDamage()`가 `BuildingManager.remove()`까지 호출. 그래픽 변경 시 배경/카테고리 팔레트와 식별성을 같이 확인 | `src/buildings/BaseBuilding.test.ts` |
+| `src/buildings/BaseBuilding.ts` | 모든 건물 공통 상태, 버퍼, HP, 감염, 코드 기반 렌더 기본 | 생산, 전투, 저장, UI tooltip, 건물 패널 그래픽 | `takeDamage()`는 전투 파괴 경로로 BuildingManager에 위임. 그래픽 변경 시 배경/카테고리 팔레트와 식별성을 같이 확인 | `src/buildings/BaseBuilding.test.ts` |
 | `src/buildings/AbstractProcessor.ts` | 레시피 기반 입력 소비/가공/출력 공통 로직 | Processor, WeightTrainer, NeuralTrainer, Recycler | 연구 속도 배율과 진행바 계산 영향 | `src/utils/productionSimulation.test.ts` 간접 |
 | `src/buildings/Miner.ts` | 자원 타일에서 Silicon/Energy 생산 | 자원 추출, 컨베이어 물류 | 자원 타일 위에 있어야 실제 생산 | 추정: `productionSimulation`은 Downloader 중심 |
 | `src/buildings/DataDownloader.ts` | 전력 기반 RAW_DATA 생산 | 초반 데이터 라인 시작 | `MINING_RATE_MULTIPLIER` 효과를 함께 받음 | `src/utils/productionSimulation.test.ts` |
@@ -34,11 +34,11 @@
 | `src/managers/TickSystem.ts` | 고정 틱 실행, 전력/케이블/건물 onTick 순서 | 생산, 전력, AP, 케이블 | `gameSpeed`가 tick interval을 나눔 | 생산/파워 관련 테스트 간접 |
 | `src/managers/CableManager.ts` | 케이블 연결, 큐, 데이터 이동, AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | 큐 방향, bandwidth, AP 제외 정책 변경 시 테스트 필요. 그래픽만 바꿀 때도 케이블 E2E 유지 | `src/utils/apRelay.test.ts`, E2E cable |
 | `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 소비자 할당, blackout 적용 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서가 전체 런타임에 영향 | `src/utils/powerPreview.test.ts` 보조 |
-| `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 보상, boss aura | 방어 압박, 연구 개방 신호 | 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음 | `src/utils/waveSimulation.test.ts`, E2E threat panel |
-| `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과/적 실루엣 렌더 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의 | `src/utils/enemyBuildingInteraction.test.ts` |
+| `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 보상, boss aura, next-wave briefing 발행 | 방어 압박, 연구 개방 신호 | 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음. briefing 이벤트는 wave/difficulty 변경 시에만 발행 | `src/utils/waveSimulation.test.ts`, `src/utils/waveBriefingKey.test.ts`, E2E threat panel |
+| `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과/적 실루엣 렌더 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의. 경로 계산은 `utils/gridPath.ts`로 분리 | `src/utils/gridPath.test.ts`, `src/utils/enemyBuildingInteraction.test.ts` |
 | `src/managers/MapManager.ts` | 자원 패치와 BLOCKER 지형 생성 | 초기 맵, 저장 복원, 적 경로 차단 | spawn safe zone과 early lane blockers 보존 | `src/managers/MapManager.test.ts` |
 | `src/managers/GridRenderer.ts` | 배경, 섹터 그리드, 자원 패치, BLOCKER 지형 렌더 | 카메라 이동/줌 중 월드 시각화 | camera dirty 기반 렌더이므로 무거운 per-tile 효과 주의 | build, E2E startup |
-| `src/managers/SaveManager.ts` | localStorage 저장/로드, 런타임 재구성 | 자동 저장, 설정, 연구, 케이블/적/건물 복원 | 포맷 변경 시 migration과 SaveData 갱신 | `src/utils/saveMigration.test.ts`, E2E save |
+| `src/managers/SaveManager.ts` | localStorage 저장/로드, 런타임 재구성 | 자동 저장, 설정, 연구, 케이블/적/건물 복원 | 포맷 변경 시 migration과 SaveData 갱신. 적 복원 HP는 wave+difficulty effective multiplier 기준 | `src/utils/saveMigration.test.ts`, `src/utils/enemyRestore.ts`, E2E save |
 | `src/utils/saveMigration.ts` | 구버전 저장 데이터 기본값 보정 | 로드 안정성 | 새 필드는 기본값과 버전 처리 필요 | `src/utils/saveMigration.test.ts` |
 | `src/managers/ResearchManager.ts` | 연구 해금 조건/비용/효과 누적 | 연구 UI, 건물 해금, 밸런스 보정 | multiplier 효과는 곱하고 bonus는 더함 | config/research 간접 |
 | `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔/선택 도구 요약, 툴팁, 모달 위임 | 모든 DOM UI | DOM id/text는 E2E와 연결. 빌드 버튼 id는 유지해야 hotkey/E2E 회귀가 적음 | E2E 전반 |
@@ -50,6 +50,10 @@
 | `src/controllers/OverlayController.ts` | 방어 범위/전력망 오버레이 그리기 | F1/F2, 모바일 토글 | 연구 보너스 반영 | E2E overlay |
 | `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |
 | `src/utils/waveSimulation.ts` | 웨이브 수량/HP/경로/브리핑 순수 계산 | WaveManager, UI threat panel, tests | 난이도/경로 정책의 기준 파일 | `src/utils/waveSimulation.test.ts` |
+| `src/utils/gridPath.ts` | 적 경로 BFS 순수 계산 | BaseEnemy 이동/pathfinding | no-path는 빈 배열로 유지해 런타임이 blocked fallback을 결정 | `src/utils/gridPath.test.ts` |
+| `src/utils/buildingLifecycle.ts` | 건물 수동 제거/전투 파괴 이벤트 매핑 | BuildingManager lifecycle events | 이벤트 의미가 웨이브 통계와 피드백에 연결됨 | `src/utils/buildingLifecycle.test.ts` |
+| `src/utils/enemyRestore.ts` | 저장된 적 HP/maxHP 복원 계산 | SaveManager active wave load | difficulty multiplier 누락 방지 | `src/utils/saveMigration.test.ts` |
+| `src/utils/waveBriefingKey.ts` | next-wave briefing 중복 발행 방지 key | WaveManager -> UIManager briefing | countdown-only 변경은 `WAVE_UPDATE`로 처리 | `src/utils/waveBriefingKey.test.ts` |
 | `src/utils/progressionGates.ts` | 초반 목표와 고급 시스템 숨김 정책 | UI 빌드바/목표 패널 | 초반 AP/Fast/Fiber/Unloader 노출 정책 | `src/utils/progressionGates.test.ts` |
 | `src/utils/productionSimulation.ts` | 생산 라인 장기 시뮬레이션 | 밸런스 검증용 순수 모델 | 실제 CableManager와 완전 동일하지 않을 수 있음 | `src/utils/productionSimulation.test.ts` |
 | `src/utils/apRelay.ts` | AP 소스/타겟 선택 정책 | CableManager 무선 릴레이 | Storage/DataCache를 자동 source에서 제외 | `src/utils/apRelay.test.ts` |

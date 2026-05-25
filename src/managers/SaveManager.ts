@@ -6,6 +6,7 @@ import { CONFIG } from '../config';
 import { getLanguage, setLanguage } from '../i18n';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
+import { getRestoredEnemyHp } from '../utils/enemyRestore';
 
 export default class SaveManager {
     scene: MainScene;
@@ -280,9 +281,10 @@ export default class SaveManager {
             }
 
             data.wave.enemies.forEach(e => {
-                const enemy = new BaseEnemy(this.scene, e.type, e.x, e.y, 1, e.id, this.scene.buildingManager);
-                enemy.maxHp = CONFIG.ENEMIES[e.type].BASE_HP * data.wave.hpMultiplier;
-                enemy.hp = e.hp;
+                const enemy = new BaseEnemy(this.scene, e.type, e.x, e.y, this.scene.waveManager.getEffectiveHpMultiplier(), e.id, this.scene.buildingManager);
+                const restoredHp = getRestoredEnemyHp(e.type, e.hp, this.scene.waveManager.getEffectiveHpMultiplier());
+                enemy.maxHp = restoredHp.maxHp;
+                enemy.hp = restoredHp.hp;
                 enemy.drawHpBar();
                 this.scene.waveManager.enemies.set(e.id, enemy);
             });

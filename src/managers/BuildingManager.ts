@@ -4,6 +4,7 @@ import { createBuilding } from '../buildings/BuildingFactory';
 import BaseBuilding from '../buildings/BaseBuilding';
 import EventBus from './EventBus';
 import { BuildingCost, BuildingOptions, IMainScene } from '../types';
+import { getBuildingLifecycleEvent, type BuildingRemovalReason } from '../utils/buildingLifecycle';
 
 export default class BuildingManager {
     scene: IMainScene;
@@ -53,6 +54,14 @@ export default class BuildingManager {
     }
 
     remove(key: string): void {
+        this.removeInternal(key, 'removed');
+    }
+
+    destroyBuilding(key: string): void {
+        this.removeInternal(key, 'destroyed');
+    }
+
+    private removeInternal(key: string, reason: BuildingRemovalReason): void {
         const building = this.buildings.get(key);
         if (building) {
             if (building.type === 'CORE') {
@@ -74,8 +83,12 @@ export default class BuildingManager {
                 }
             }
             building.destroy();
-            EventBus.emit('BUILDING_REMOVED', { key: baseKey });
-            EventBus.emit('BUILDING_DESTROYED', { key: baseKey, building, type: building.type });
+            const event = getBuildingLifecycleEvent(reason);
+            if (event === 'BUILDING_DESTROYED') {
+                EventBus.emit('BUILDING_DESTROYED', { key: baseKey, building, type: building.type });
+            } else {
+                EventBus.emit('BUILDING_REMOVED', { key: baseKey });
+            }
         }
     }
 
