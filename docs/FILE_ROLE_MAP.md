@@ -33,8 +33,8 @@
 | `src/buildings/AccessPoint.ts` | AP 시각/기본 범위/대역폭 상태 | 무선 데이터 릴레이 | 전송 정책은 `CableManager`와 `utils/apRelay.ts` | `src/utils/apRelay.test.ts` |
 | `src/managers/TickSystem.ts` | 고정 틱 실행, 전력/케이블/건물 onTick 순서 | 생산, 전력, AP, 케이블 | `gameSpeed`가 tick interval을 나눔 | 생산/파워 관련 테스트 간접 |
 | `src/managers/CableManager.ts` | 케이블 연결, 큐, 데이터 이동, AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | 큐 방향, bandwidth, AP 제외 정책 변경 시 테스트 필요. 그래픽만 바꿀 때도 케이블 E2E 유지 | `src/utils/apRelay.test.ts`, E2E cable |
-| `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 소비자 할당, blackout 적용 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서가 전체 런타임에 영향 | `src/utils/powerPreview.test.ts` 보조 |
-| `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 보상, boss aura, next-wave briefing 발행 | 방어 압박, 연구 개방 신호 | 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음. briefing 이벤트는 wave/difficulty 변경 시에만 발행 | `src/utils/waveSimulation.test.ts`, `src/utils/waveBriefingKey.test.ts`, E2E threat panel |
+| `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 풋프린트 중심 범위 계산, 소비자 할당, blackout 적용 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서와 멀티타일 건물 중심 범위가 전체 런타임에 영향 | `src/utils/powerPreview.test.ts`, `src/utils/geometry.test.ts` 보조 |
+| `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 코어 중심 target 전달, 보상, boss aura, next-wave briefing 발행 | 방어 압박, 연구 개방 신호 | 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음. 적 이동 target은 Core footprint center 기준 | `src/utils/waveSimulation.test.ts`, `src/utils/waveBriefingKey.test.ts`, `src/utils/gridPath.test.ts`, E2E threat panel |
 | `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과/적 실루엣 렌더 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의. 경로 계산은 `utils/gridPath.ts`로 분리 | `src/utils/gridPath.test.ts`, `src/utils/enemyBuildingInteraction.test.ts` |
 | `src/managers/MapManager.ts` | 자원 패치와 BLOCKER 지형 생성 | 초기 맵, 저장 복원, 적 경로 차단 | spawn safe zone과 early lane blockers 보존 | `src/managers/MapManager.test.ts` |
 | `src/managers/GridRenderer.ts` | 배경, 섹터 그리드, 자원 패치, BLOCKER 지형 렌더 | 카메라 이동/줌 중 월드 시각화 | camera dirty 기반 렌더이므로 무거운 per-tile 효과 주의 | build, E2E startup |
@@ -50,7 +50,8 @@
 | `src/controllers/OverlayController.ts` | 방어 범위/전력망 오버레이 그리기 | F1/F2, 모바일 토글 | 연구 보너스 반영 | E2E overlay |
 | `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |
 | `src/utils/waveSimulation.ts` | 웨이브 수량/HP/경로/브리핑 순수 계산 | WaveManager, UI threat panel, tests | 난이도/경로 정책의 기준 파일 | `src/utils/waveSimulation.test.ts` |
-| `src/utils/gridPath.ts` | 적 경로 BFS 순수 계산 | BaseEnemy 이동/pathfinding | no-path는 빈 배열로 유지해 런타임이 blocked fallback을 결정 | `src/utils/gridPath.test.ts` |
+| `src/utils/gridPath.ts` | 적 경로 A* 순수 계산 | BaseEnemy 이동/pathfinding | no-path는 빈 배열로 유지해 런타임이 blocked fallback을 결정. 마지막 점은 정확한 target world 좌표를 보존 | `src/utils/gridPath.test.ts` |
+| `src/utils/geometry.ts` | 멀티타일 건물 footprint center와 중심 기반 범위 tile 계산 | WaveManager target, EffectsManager route guide, PowerManager coverage | grid size와 건물 WIDTH/HEIGHT 변경 시 중심 좌표 기대값 확인 | `src/utils/geometry.test.ts` |
 | `src/utils/buildingLifecycle.ts` | 건물 수동 제거/전투 파괴 이벤트 매핑 | BuildingManager lifecycle events | 이벤트 의미가 웨이브 통계와 피드백에 연결됨 | `src/utils/buildingLifecycle.test.ts` |
 | `src/utils/enemyRestore.ts` | 저장된 적 HP/maxHP 복원 계산 | SaveManager active wave load | difficulty multiplier 누락 방지 | `src/utils/saveMigration.test.ts` |
 | `src/utils/waveBriefingKey.ts` | next-wave briefing 중복 발행 방지 key | WaveManager -> UIManager briefing | countdown-only 변경은 `WAVE_UPDATE`로 처리 | `src/utils/waveBriefingKey.test.ts` |

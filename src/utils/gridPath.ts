@@ -26,7 +26,7 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
         gridSize,
         directions,
         isBlocked,
-        maxVisited = 900,
+        maxVisited = 2500,
         maxDistanceFromStart = 35,
         maxReturnedSteps = 8
     } = options;
@@ -34,13 +34,26 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
     const target = { x: Math.floor(targetWorld.x / gridSize), y: Math.floor(targetWorld.y / gridSize) };
     const startKey = `${start.x},${start.y}`;
     const targetKey = `${target.x},${target.y}`;
-    const queue = [start];
-    const visited = new Set<string>([startKey]);
+    const open = [start];
+    const closed = new Set<string>();
     const cameFrom = new Map<string, string>();
+    const gScore = new Map<string, number>([[startKey, 0]]);
 
-    while (queue.length > 0 && visited.size < maxVisited) {
-        const current = queue.shift()!;
-        if (`${current.x},${current.y}` === targetKey) break;
+    const heuristic = (point: { x: number; y: number }) => Math.abs(target.x - point.x) + Math.abs(target.y - point.y);
+
+    while (open.length > 0 && closed.size < maxVisited) {
+        open.sort((a, b) => {
+            const aKey = `${a.x},${a.y}`;
+            const bKey = `${b.x},${b.y}`;
+            const aScore = (gScore.get(aKey) ?? Infinity) + heuristic(a);
+            const bScore = (gScore.get(bKey) ?? Infinity) + heuristic(b);
+            return aScore - bScore;
+        });
+        const current = open.shift()!;
+        const currentKey = `${current.x},${current.y}`;
+        if (currentKey === targetKey) break;
+        if (closed.has(currentKey)) continue;
+        closed.add(currentKey);
 
         const sortedDirs = directions.slice().sort((a, b) => {
             const da = Math.abs(target.x - (current.x + a.x)) + Math.abs(target.y - (current.y + a.y));
@@ -51,7 +64,7 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
         for (const dir of sortedDirs) {
             const next = { x: current.x + dir.x, y: current.y + dir.y };
             const key = `${next.x},${next.y}`;
-            if (visited.has(key)) continue;
+            if (closed.has(key)) continue;
             if (Math.abs(next.x - start.x) > maxDistanceFromStart || Math.abs(next.y - start.y) > maxDistanceFromStart) continue;
 
             const worldX = next.x * gridSize;
@@ -59,9 +72,12 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
             const isTarget = key === targetKey;
             if (isBlocked(worldX, worldY, isTarget)) continue;
 
-            visited.add(key);
-            cameFrom.set(key, `${current.x},${current.y}`);
-            queue.push(next);
+            const tentativeG = (gScore.get(currentKey) ?? Infinity) + 1;
+            if (tentativeG >= (gScore.get(key) ?? Infinity)) continue;
+
+            cameFrom.set(key, currentKey);
+            gScore.set(key, tentativeG);
+            open.push(next);
         }
     }
 
@@ -71,7 +87,9 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
     let currentKey = targetKey;
     while (currentKey !== startKey) {
         const [gx, gy] = currentKey.split(',').map(Number);
-        path.unshift({ x: gx * gridSize + gridSize / 2, y: gy * gridSize + gridSize / 2 });
+        path.unshift(currentKey === targetKey
+            ? { x: targetWorld.x, y: targetWorld.y }
+            : { x: gx * gridSize + gridSize / 2, y: gy * gridSize + gridSize / 2 });
         currentKey = cameFrom.get(currentKey)!;
     }
     return path.slice(0, maxReturnedSteps);

@@ -40,7 +40,8 @@ npm run test:e2e -- --workers=1
 | `src/utils/apRelay.test.ts` | AP 자동 릴레이 source/target 선택 |
 | `src/utils/buildingLifecycle.test.ts` | 수동 제거와 전투 파괴 이벤트 의미 분리 |
 | `src/utils/enemyBuildingInteraction.test.ts` | 적의 건물 공격 우선순위 |
-| `src/utils/gridPath.test.ts` | 적 경로 계산, blocker no-path 처리 |
+| `src/utils/geometry.test.ts` | 멀티타일 건물 중심 좌표와 중심 기반 범위 tile 계산 |
+| `src/utils/gridPath.test.ts` | 적 A* 경로 계산, blocker no-path, 초기 blocker 지형에서 Core center 도달 |
 | `src/utils/powerPreview.test.ts` | 전력 범위 helper |
 | `src/utils/productionSimulation.test.ts` | 장기 생산 라인 시뮬레이션 |
 | `src/utils/saveMigration.test.ts` | 저장 데이터 기본값, HP/terrain/settings/buffer 보정, 적 HP 복원 clamp |
@@ -60,8 +61,8 @@ npm run test:e2e -- --workers=1
 | `src/config.ts` 밸런스/ID | `npm test -- src/config.test.ts`, 관련 utils 테스트 |
 | 건물 생산/버퍼 | `src/utils/productionSimulation.test.ts`, 관련 건물 테스트, E2E placement |
 | 케이블/AP | `src/utils/apRelay.test.ts`, `tests/e2e/app-smoke.spec.ts` cable tests |
-| 전력망/오버레이 | `src/utils/powerPreview.test.ts`, E2E hotkeys/overlays |
-| 웨이브/적/난이도 | `src/utils/waveSimulation.test.ts`, `gridPath.test.ts`, `enemyBuildingInteraction.test.ts`, E2E threat panel |
+| 전력망/오버레이 | `src/utils/powerPreview.test.ts`, `src/utils/geometry.test.ts`, E2E hotkeys/overlays |
+| 웨이브/적/난이도 | `src/utils/waveSimulation.test.ts`, `gridPath.test.ts`, `geometry.test.ts`, `enemyBuildingInteraction.test.ts`, E2E threat panel |
 | 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |
 | UI 텍스트/언어 | `src/i18n.test.ts`, E2E language smoke |
 | 모바일 조작/CSS | E2E `mobile-*` projects. PC HUD shell 변경 시 모바일 터치 지점이 HUD/빌드 콘솔에 가로막히지 않는지 확인 |
@@ -78,7 +79,7 @@ npm run test:e2e -- --workers=1
 - PC 인게임 UI shell 변경은 `#top-hud`, `#mission-panel`, `#threat-panel`, `#bottom-ui-container`, `#tutorial-panel`, 빌드 카테고리 전환, 설정 모달 회귀를 함께 확인합니다.
 - 캔버스 그래픽 패치는 테스트가 픽셀 아트를 직접 판정하지 않으므로 1280x720 스크린샷과 DOM 박스 좌표를 증거로 남깁니다.
 - 새 건물은 최소한 생성, 비용/해금, 버퍼/생산, 저장 복원 중 위험한 축을 테스트합니다.
-- 새 적/웨이브는 `waveSimulation.test.ts`로 수량/HP/브리핑을, `gridPath.test.ts`로 이동 경로/blocked fallback을 먼저 고정하고, 필요하면 실제 E2E smoke를 보강합니다.
+- 새 적/웨이브는 `waveSimulation.test.ts`로 수량/HP/브리핑을, `gridPath.test.ts`와 `geometry.test.ts`로 이동 경로/target 중심/blocked fallback을 먼저 고정하고, 필요하면 실제 E2E smoke를 보강합니다.
 
 ## 테스트 실패 시 먼저 확인할 부분
 
@@ -87,7 +88,7 @@ npm run test:e2e -- --workers=1
 - Canvas 클릭 실패: viewport별 좌표, camera zoom/centering, `getScreenPointForTile()` 계산 영향
 - Config 테스트 실패: `CONFIG.BUILDINGS` ID와 `BuildingFactory`, `types.ts`, texture 파일 누락
 - Save migration 실패: `SaveData` 타입과 `migrateSaveData()` 기본값 불일치
-- Wave 테스트 실패: `CONFIG.DIFFICULTY`, `CONFIG.ENEMIES`, `waveSimulation.ts`, `gridPath.ts`, `waveBriefingKey.ts` 계산식 변경 영향
+- Wave 테스트 실패: `CONFIG.DIFFICULTY`, `CONFIG.ENEMIES`, `waveSimulation.ts`, `gridPath.ts`, `geometry.ts`, `waveBriefingKey.ts` 계산식 변경 영향
 - 언어 테스트 실패: ko/en 키 중 한쪽만 추가했는지 확인
 
 ## CI/빌드 검증 흐름

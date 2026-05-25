@@ -4,6 +4,7 @@ import type MainScene from '../scenes/MainScene';
 import BaseBuilding from '../buildings/BaseBuilding';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { getSpawnPointForRoute, type IntrusionRouteId } from '../utils/waveSimulation';
+import { getFootprintCenter } from '../utils/geometry';
 import { getItemColor, VISUAL_THEME } from '../visuals/visualTheme';
 
 interface InferenceLockMarker {
@@ -141,10 +142,8 @@ export default class EffectsManager {
         if (!this.isRouteId(route)) return;
 
         const spawn = getSpawnPointForRoute(route, 0.5);
-        const core = {
-            x: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE * 2,
-            y: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE * 2
-        };
+        const coreConfig = CONFIG.BUILDINGS.CORE;
+        const core = getFootprintCenter(0, 0, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
         const graphics = this.scene.add.graphics();
         graphics.setDepth(18);
         graphics.lineStyle(3, VISUAL_THEME.buildings.danger, 0.45);

@@ -11,6 +11,7 @@ import {
     selectActiveIntrusionRoutes
 } from '../utils/waveSimulation';
 import { getWaveBriefingKey } from '../utils/waveBriefingKey';
+import { getFootprintCenter, type Point } from '../utils/geometry';
 import type { IntrusionRoute } from '../utils/waveSimulation';
 
 export default class WaveManager {
@@ -25,8 +26,6 @@ export default class WaveManager {
     enemiesSpawned: number;
     hpMultiplier: number;
     enemyIdCounter: number;
-    coreX: number;
-    coreY: number;
     difficultyId: string;
     ddosSwarmSpawned: boolean;
     ddosBotsToSpawn: number;
@@ -47,8 +46,6 @@ export default class WaveManager {
         this.hpMultiplier = 1;
         this.enemyIdCounter = 0;
         
-        this.coreX = CONFIG.GRID_SIZE * 2;
-        this.coreY = CONFIG.GRID_SIZE * 2;
         this.difficultyId = 'NORMAL';
         this.ddosSwarmSpawned = false;
         this.ddosBotsToSpawn = 0;
@@ -87,6 +84,17 @@ export default class WaveManager {
 
     getEffectiveHpMultiplier(): number {
         return this.hpMultiplier * this.getDifficulty().ENEMY_HP_MULTIPLIER;
+    }
+
+    getCoreTarget(): Point {
+        const core = this.buildingManager.get('0,0');
+        if (core) {
+            const coreConfig = CONFIG.BUILDINGS[core.type];
+            return getFootprintCenter(core.x, core.y, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
+        }
+
+        const coreConfig = CONFIG.BUILDINGS.CORE;
+        return getFootprintCenter(0, 0, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
     }
 
     startWave(): void {
@@ -183,8 +191,9 @@ export default class WaveManager {
         }
 
         this.applyBossAuras();
+        const coreTarget = this.getCoreTarget();
         this.enemies.forEach(enemy => {
-            enemy.update(delta, this.coreX, this.coreY);
+            enemy.update(delta, coreTarget.x, coreTarget.y);
         });
     }
 

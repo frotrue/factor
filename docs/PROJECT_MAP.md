@@ -104,7 +104,7 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 | `src/managers/WaveManager.ts` + `src/utils/waveSimulation.ts` + `src/utils/waveBriefingKey.ts` | 웨이브 압박, 브리핑, 난이도 조정 |
 | `src/buildings/*` | 새 건물/건물별 생산/방어/물류 동작 |
 | `src/managers/GridRenderer.ts`, `src/buildings/BaseBuilding.ts`, `src/enemies/BaseEnemy.ts` | 월드 그리드, 건물 프레임, 적 실루엣의 핵심 캔버스 그래픽 |
-| `src/utils/*` | 테스트 가능한 순수 로직 분리 지점. 적 경로는 `gridPath`, 건물 lifecycle 이벤트는 `buildingLifecycle`, 저장 적 HP 복원은 `enemyRestore`를 우선 확인 |
+| `src/utils/*` | 테스트 가능한 순수 로직 분리 지점. 적 경로는 `gridPath`, 멀티타일 중심/범위는 `geometry`, 건물 lifecycle 이벤트는 `buildingLifecycle`, 저장 적 HP 복원은 `enemyRestore`를 우선 확인 |
 | `tests/e2e/app-smoke.spec.ts` | 실제 캔버스+DOM 흐름 회귀 검증 |
 
 ## 건드리면 위험한 파일 또는 주의 영역
@@ -115,7 +115,7 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 - `src/managers/SaveManager.ts` + `src/utils/saveMigration.ts` + `src/types.ts`: 저장 포맷 변경은 마이그레이션과 테스트를 같이 갱신해야 합니다.
 - `src/managers/PowerManager.ts`: 전력망은 건물 `hasPower`를 직접 바꾸므로 생산/케이블/방어 전체에 영향이 큽니다.
 - `src/managers/CableManager.ts`: 케이블 큐, AP 자동 릴레이, 연구 보너스, 저장 큐 복원과 연결됩니다.
-- `src/enemies/BaseEnemy.ts`: 이동/건물 공격/코어 피해/특수 적 효과가 한 파일에 모여 있어 밸런스 변경의 파급이 큽니다. 경로 계산 자체는 `src/utils/gridPath.ts` 테스트로 먼저 고정하세요.
+- `src/enemies/BaseEnemy.ts`: 이동/건물 공격/코어 피해/특수 적 효과가 한 파일에 모여 있어 밸런스 변경의 파급이 큽니다. 경로 계산은 `src/utils/gridPath.ts`, target/범위 중심은 `src/utils/geometry.ts` 테스트로 먼저 고정하세요.
 - `index.html`과 `src/styles/main.css`: Playwright가 DOM id와 텍스트 일부에 의존합니다. id 변경 시 E2E를 같이 수정하세요.
 
 ## 현재 문서화 기준의 불확실성

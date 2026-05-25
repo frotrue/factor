@@ -4,6 +4,7 @@ import EventBus from './EventBus';
 import BuildingManager from './BuildingManager';
 import BaseBuilding from '../buildings/BaseBuilding';
 import { PowerNetwork, PowerNodeInfo } from '../types';
+import { getCenteredCoverageTiles } from '../utils/geometry';
 
 interface PowerNode extends PowerNodeInfo {
     key: string;
@@ -86,7 +87,9 @@ export default class PowerManager {
             const key = `${building.x},${building.y}`;
             const range = pConfig.RANGE || 0;
             const production = this.getEffectiveProduction(building);
-            const tiles = this.getCoveredTiles(building.x, building.y, range);
+            const width = CONFIG.BUILDINGS[building.type]?.WIDTH || 1;
+            const height = CONFIG.BUILDINGS[building.type]?.HEIGHT || 1;
+            const tiles = this.getCoveredTiles(building.x, building.y, range, width, height);
 
             nodes.push({ key, building, x: building.x, y: building.y, range, tiles, production });
             this.nodes.push({ x: building.x, y: building.y, range });
@@ -202,19 +205,8 @@ export default class PowerManager {
         return pConfig.PRODUCTION || 0;
     }
 
-    getCoveredTiles(x: number, y: number, range: number): Set<string> {
-        const tiles = new Set<string>();
-        const cx = Math.floor(x / this.gridSize);
-        const cy = Math.floor(y / this.gridSize);
-        const effectiveRange = Math.max(0, range);
-
-        for (let dx = -effectiveRange; dx <= effectiveRange; dx++) {
-            for (let dy = -effectiveRange; dy <= effectiveRange; dy++) {
-                tiles.add(`${(cx + dx) * this.gridSize},${(cy + dy) * this.gridSize}`);
-            }
-        }
-
-        return tiles;
+    getCoveredTiles(x: number, y: number, range: number, widthTiles: number = 1, heightTiles: number = 1): Set<string> {
+        return getCenteredCoverageTiles(x, y, widthTiles, heightTiles, range, this.gridSize);
     }
 
     tilesOverlap(a: Set<string>, b: Set<string>): boolean {
