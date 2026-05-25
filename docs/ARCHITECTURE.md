@@ -2,7 +2,7 @@
 
 ## 전체 구조 개요
 
-Neural Factory는 Phaser Scene이 캔버스 런타임을 담당하고, DOM 기반 HUD/모달이 그 위에 겹쳐지는 구조입니다. `MainScene`이 매니저들을 직접 생성해 소유하며, 하위 시스템은 `EventBus`와 Scene 참조를 통해 느슨하게 연결됩니다.
+Gradium은 Phaser Scene이 캔버스 런타임을 담당하고, DOM 기반 HUD/모달이 그 위에 겹쳐지는 구조입니다. `MainScene`이 매니저들을 직접 생성해 소유하며, 하위 시스템은 `EventBus`와 Scene 참조를 통해 느슨하게 연결됩니다.
 
 핵심 데이터는 `CONFIG`와 런타임 매니저 상태로 나뉩니다.
 
@@ -61,9 +61,9 @@ flowchart TD
 
 ## 캔버스 그래픽 방향
 
-인게임 캔버스는 `src/visuals/visualTheme.ts`의 차가운 데이터 센터/침입 경보 팔레트를 공유합니다. `GridRenderer`는 어두운 배경, 섹터 그리드, 자원 패치, BLOCKER 지형을 렌더링하고, `BaseBuilding`, `BaseEnemy`, `CableManager`, `ItemManager`, `EffectsManager`, `OverlayController`, `InputController`가 같은 의미 색상을 재사용합니다.
+인게임 캔버스는 `src/visuals/visualTheme.ts`의 차가운 데이터 센터/침입 경보 팔레트를 공유합니다. `GridRenderer`는 어두운 배경, 섹터 그리드, 자원 패치, BLOCKER 지형을 렌더링하고, `BaseBuilding`, `BaseEnemy`, `CableManager`, `ItemManager`, `EffectsManager`, `OverlayController`, `InputController`가 같은 의미 색상을 재사용합니다. 건물은 PNG 텍스처를 preload하지 않고 `BaseBuilding`의 코드 기반 패널/아이콘 렌더를 사용해 배경과 톤을 맞춥니다.
 
-그래픽 패치는 gameplay 수치와 분리되어야 합니다. `src/config.ts`의 `COLOR` 값은 빌드 버튼 swatch와 기본 fallback 렌더 색으로도 쓰이므로, 색 변경은 허용되지만 HP/속도/비용/해금 조건과 섞어 수정하지 않는 것이 안전합니다.
+그래픽 패치는 gameplay 수치와 분리되어야 합니다. `src/config.ts`의 `COLOR` 값은 빌드 버튼 swatch와 건물 렌더 색으로도 쓰이므로, 색 변경은 허용되지만 HP/속도/비용/해금 조건과 섞어 수정하지 않는 것이 안전합니다.
 
 `TickSystem` 내부에서는 매 틱마다 케이블 전송을 처리하고, 짝수 tick마다 전력망 갱신, AP 연결 갱신, 건물 `onTick()` 생산/가공을 수행합니다.
 
@@ -82,7 +82,7 @@ flowchart TD
 | 연구 | `ResearchManager.unlockedResearch` |
 | 방어 모델 | `MainScene.defenseModelStates` |
 | UI 선택/모달 | `UIManager`와 하위 UI 매니저 |
-| 저장 데이터 | `localStorage.neural_factory_save` |
+| 저장 데이터 | `localStorage.gradium_save` |
 
 전역 상태 저장소는 없고, `MainScene`이 매니저들을 직접 들고 있습니다. 순수 로직은 `utils`로 분리되어 테스트됩니다.
 
@@ -140,7 +140,7 @@ flowchart TD
 3. `src/buildings/`에 클래스 추가 또는 기존 기반 클래스 확장
 4. `src/buildings/BuildingFactory.ts` registry에 등록
 5. `src/i18n.ts`에 건물명/설명 키 추가
-6. 필요하면 `public/assets/buildings/`에 텍스처 추가
+6. `BaseBuilding.drawBody()`의 코드 기반 식별 표시가 필요한지 확인
 7. UI 카테고리/해금/비용이 맞는지 `UIManager`와 `progressionGates` 확인
 8. `src/config.test.ts`와 관련 유닛/E2E 추가
 

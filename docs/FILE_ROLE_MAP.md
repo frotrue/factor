@@ -4,8 +4,8 @@
 
 | 파일 | 역할 | 관련 흐름 | 수정 시 주의점 | 관련 테스트 |
 |---|---|---|---|---|
-| `src/main.ts` | Phaser 게임 생성, `window.__NEURAL_FACTORY_GAME__` 노출 | 앱 시작, Playwright 상태 조회 | Scene 배열 순서가 메뉴->게임 흐름을 결정 | `tests/e2e/app-smoke.spec.ts` |
-| `src/scenes/MainMenuScene.ts` | 난이도 선택 메뉴, 건물 텍스처 preload | 메뉴 UI, 난이도 전달 | 시작 버튼 좌표/텍스트는 E2E가 기다림 | `tests/e2e/app-smoke.spec.ts` |
+| `src/main.ts` | Phaser 게임 생성, `window.__GRADIUM_GAME__` 노출 | 앱 시작, Playwright 상태 조회 | Scene 배열 순서가 메뉴->게임 흐름을 결정 | `tests/e2e/app-smoke.spec.ts` |
+| `src/scenes/MainMenuScene.ts` | 난이도 선택 메뉴 | 메뉴 UI, 난이도 전달 | 시작 버튼 좌표/텍스트는 E2E가 기다림 | `tests/e2e/app-smoke.spec.ts` |
 | `src/scenes/MainScene.ts` | 게임 런타임 조립, 매니저 초기화, 프레임 update, 이벤트 연결 | 거의 모든 게임 흐름의 중심 | 매니저 초기화 순서, EventBus owner cleanup, 모바일 layout 상태 주의 | E2E 전반 |
 | `src/config.ts` | 건물/아이템/레시피/적/연구/난이도/타이밍 설정 | 밸런스, UI, 팩토리, 테스트의 단일 원천 | 새 ID 추가 시 `types.ts`, `BuildingFactory`, i18n, 테스트 동시 갱신 | `src/config.test.ts`, 다수 utils 테스트 |
 | `src/types.ts` | 핵심 타입, 저장 포맷, Scene 인터페이스 | 타입 계약, SaveData, manager 접근 | SaveData 변경 시 `SaveManager`와 migration 필수 | `src/utils/saveMigration.test.ts` |
@@ -14,7 +14,7 @@
 | `src/visuals/visualTheme.ts` | 캔버스 그래픽 패치 팔레트 | 월드, 건물 카테고리, 아이템, 적, 케이블, 오버레이 색상 | 색상만 바꿔도 UI swatch와 캔버스 의미 색이 어긋날 수 있어 `config.ts`와 함께 확인 | build, E2E visual smoke |
 | `src/managers/BuildingManager.ts` | 건물 배치/철거/조회, 비용 차감, 멀티타일 등록 | 입력 배치, 저장 복원, 적 공격, 인벤토리 | 멀티타일 건물은 모든 타일 key에 같은 객체 등록 | E2E placement, `BaseBuilding.test.ts` 보조 |
 | `src/buildings/BuildingFactory.ts` | 건물 ID -> 클래스 매핑 | 모든 건물 생성 | 새 건물 추가 시 registry 누락 위험 | `src/config.test.ts` 간접 |
-| `src/buildings/BaseBuilding.ts` | 모든 건물 공통 상태, 버퍼, HP, 감염, 렌더 기본 | 생산, 전투, 저장, UI tooltip, 건물 패널 그래픽 | `takeDamage()`가 `BuildingManager.remove()`까지 호출. 그래픽 변경 시 texture fallback 테스트 stub도 확인 | `src/buildings/BaseBuilding.test.ts` |
+| `src/buildings/BaseBuilding.ts` | 모든 건물 공통 상태, 버퍼, HP, 감염, 코드 기반 렌더 기본 | 생산, 전투, 저장, UI tooltip, 건물 패널 그래픽 | `takeDamage()`가 `BuildingManager.remove()`까지 호출. 그래픽 변경 시 배경/카테고리 팔레트와 식별성을 같이 확인 | `src/buildings/BaseBuilding.test.ts` |
 | `src/buildings/AbstractProcessor.ts` | 레시피 기반 입력 소비/가공/출력 공통 로직 | Processor, WeightTrainer, NeuralTrainer, Recycler | 연구 속도 배율과 진행바 계산 영향 | `src/utils/productionSimulation.test.ts` 간접 |
 | `src/buildings/Miner.ts` | 자원 타일에서 Silicon/Energy 생산 | 자원 추출, 컨베이어 물류 | 자원 타일 위에 있어야 실제 생산 | 추정: `productionSimulation`은 Downloader 중심 |
 | `src/buildings/DataDownloader.ts` | 전력 기반 RAW_DATA 생산 | 초반 데이터 라인 시작 | `MINING_RATE_MULTIPLIER` 효과를 함께 받음 | `src/utils/productionSimulation.test.ts` |

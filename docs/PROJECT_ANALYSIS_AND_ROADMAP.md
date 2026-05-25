@@ -4,79 +4,77 @@ Updated: 2026-05-23
 
 ## Current Status
 
-Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype with automated regression coverage. The core loop, early onboarding, fixed intrusion ports, terrain blockers, destructible buildings, AP relay logistics, power networks, research, save/load, mobile controls, first-pass tactical HUD realignment, wave result summaries, clearer model-training payoff, and game-over run stats are implemented.
+Gradium now playable Phaser 3 + TypeScript factory-defense prototype with regression coverage. Core loop, onboarding, fixed intrusion ports, terrain blockers, destructible buildings, AP relay logistics, power networks, research, save/load, mobile controls, tactical HUD pass, wave results, model-training payoff, game-over stats done.
 
 ## Implemented Systems
 
 ### Core Factory Loop
 
-- Silicon and Energy resource patches
-- Extractor and Data Downloader
+- Silicon + Energy patches
+- Extractor + Data Downloader
 - Processor, Weight Trainer, Neural Trainer, Model Training Lab
-- Confidence Score gained through Core data delivery
-- Recycler and Data Cache support buildings
+- Core delivery -> Confidence Score
+- Recycler + Data Cache support
 
 ### Logistics
 
-- Conveyor and Fast Link for physical Silicon movement
-- Ethernet and Fiber Cable for data movement
-- AP Access Point session relay for nearby producers/receivers
-- Storage/Data Cache exclusion rules for AP source selection
-- Cable cleanup when buildings are destroyed
+- Conveyor + Fast Link move physical Silicon
+- Ethernet + Fiber Cable move data
+- AP Access Point relays nearby producers/receivers
+- Storage/Data Cache excluded from AP source selection
+- Destroyed buildings clean cables
 
 ### Power
 
 - Core, Power Plant, Power Node, Solar Panel
-- Power network merging and blackout state
-- Power grid overlay and placement previews
+- Network merge + blackout state
+- Power overlay + placement preview
 
 ### Defense And Waves
 
 - Classifier, Filter, Firewall
-- Enemy types: Noise, Malware, Adversarial, DDoS Packet, Overfitted Model
-- Fixed onboarding port policy:
+- Enemies: Noise, Malware, Adversarial, DDoS Packet, Overfitted Model
+- Fixed onboarding ports:
   - Normal Wave 1~10: North Port
   - Normal Wave 11+: North + East
-- Wave briefing metadata: route names, threat level, special threat, recommended defense
-- Wave result summary after wave completion: enemies removed, factory Confidence gained, Core integrity, damaged/lost buildings
-- Wave-start route labels and corridor hints
-- Enemies attack non-core buildings when encountered or adjacent
-- Building target priority: Firewall, defense buildings, utility buildings
+- Wave briefing: route names, threat level, special threat, recommended defense
+- Wave result summary: enemies removed, Confidence gained, Core integrity, damaged/lost buildings
+- Wave-start route labels + corridor hints
+- Enemies attack non-core buildings when encountered/adjacent
+- Target priority: Firewall, defense buildings, utility buildings
 
 ### Terrain
 
-- BLOCKER terrain
-- Blocks building placement
-- Blocks enemy pathing
-- Generated around the North Port opening lane without covering Core or guaranteed resource patches
-- Saved and loaded through `terrainMap`
+- BLOCKER terrain blocks placement + enemy pathing
+- Generated around North Port opening lane, avoids Core + guaranteed resources
+- Saved/loaded through `terrainMap`
 
 ### UI/UX
 
-- Korean-first UI with English language toggle
-- Tutorial checklist for the first factory-defense loop
-- Tactical panels for current objective, next wave, defense status, and power state
-- Post-first-defense objectives now emphasize the expand-production vs immediate-defense decision
-- Model Training Lab UI explains training input and permanent model growth
-- Game-over screen shows reached wave, Core integrity, Confidence, research count, and strongest model
-- Research is hidden until the first successful defense
-- AP, Fiber, Fast Link, and Unloader are hidden from early build choices until first defense success
+- Korean-first UI + English toggle
+- Tutorial checklist for first factory-defense loop
+- Tactical panels: objective, next wave, defense, power
+- Post-first-defense objectives frame expand-production vs immediate-defense
+- Model Training Lab UI explains training input + permanent growth
+- Game-over stats: reached wave, Core integrity, Confidence, research count, strongest model
+- Research hidden until first successful defense
+- AP, Fiber, Fast Link, Unloader hidden until first defense success
 - Compact mobile controls
-- Tooltip/status information for power, buffers, AP relay, model training, defense stats
-- Placement ghost displays direction; installed buildings do not show extra direction arrows
-- Visible building labels have been moved toward data/network/security terminology
+- Tooltips/status for power, buffers, AP relay, model training, defense stats
+- Placement ghost shows direction; installed buildings no extra arrows
+- Visible labels moved toward data/network/security terms
 
 ### Persistence
 
 - `localStorage` save/load
 - Save migration through `CURRENT_SAVE_VERSION = 1.1.0`
-- Saves wave state, buildings, building HP, items, cables, terrain, resources, research, language, audio, tutorial state
+- Saves wave state, buildings, HP, items, cables, terrain, resources, research, language, audio, tutorial state
 
 ### Tests
 
-- Vitest unit/config/simulation tests, including wave result, progression gate, model training summary, and run result helpers
+- Vitest unit/config/simulation tests: wave result, progression gates, model training summary, run result helpers
 - Playwright desktop/mobile smoke tests
-- Current standard commands:
+- Standard commands:
   - `npm test`
   - `npm run test:e2e`
   - `npm run build`
@@ -85,67 +83,68 @@ Neural Factory is now a playable Phaser 3 + TypeScript factory-defense prototype
 
 ### Balance Risk
 
-Building HP and enemy building attacks are implemented, but the exact damage pacing still needs real playtesting. If regular buildings break too often, the early game may feel punitive.
+Building HP + enemy building attacks work, but pacing still needs real play. If regular buildings break too often, early game feels punitive.
 
 ### Visual Clarity Risk
 
-BLOCKER terrain now has a small data-debris visual treatment, but the broader building/enemy art direction is still simple. It may need a stronger pass once the interaction model is stable.
+BLOCKER has data-debris treatment, but building/enemy art remains simple. Stronger pass likely after interaction model stabilizes.
 
 ### Documentation Encoding History
 
-Some archived documents contain old mojibake text. Active documents have been rewritten for the current project state; archive files should be treated as historical references.
+Some archive docs have old mojibake. Active docs rewritten for current state; treat archive as historical.
 
 ### Code Size
 
-`MainScene`, `UIManager`, and `EffectsManager` remain large coordination files. They are manageable now, but future feature work should prefer small helper modules when possible.
+`MainScene`, `UIManager`, `EffectsManager` still large coordination files. Manageable now; future features should use small helpers.
 
 ## Recommended Roadmap
 
 ### P0: Manual Playtest And Tuning
 
-- Play Normal Wave 1~15 and record:
+- Play Normal Wave 1~15, record:
   - first failure point
-  - buildings most frequently destroyed
-  - whether North Port defense is understandable
-  - whether Wave 11 second-port introduction feels fair
+  - most destroyed buildings
+  - North Port defense readability
+  - Wave 11 second-port fairness
 - Tune:
   - building HP
   - enemy building attack interval/damage
   - BLOCKER layout
   - early rewards
-  - whether reduced DDoS pressure from Wave 8 still creates enough midgame stress
+  - whether reduced Wave 8 DDoS pressure still stresses midgame enough
 
 ### P1: Damage And Threat UX
 
-- Add clearer "under attack" status chips for buildings.
-- Add stronger destroyed-building feedback.
-- Add localized log copy for damaged and destroyed buildings.
-- Review whether the tactical panels need additional alert states during active waves.
+- Add clearer `under attack` building status chips.
+- Strengthen destroyed-building feedback.
+- Localize damaged/destroyed logs.
+- Check tactical panel alert states during active waves.
 
 ### P1: Save Compatibility Hardening
 
-- Add tests for loading saves with missing `terrainMap` and missing building `hp`.
-- Consider bumping save version when terrain and building HP become permanent.
+- Test loading saves with missing `terrainMap`.
+- Test loading saves with missing building `hp`.
+- Consider save version bump when terrain + building HP become permanent.
 
 ### P2: Terrain Expansion
 
-- Add optional removable debris after a research unlock.
-- Add positive terrain such as Signal Conduit tiles.
-- Add map seeds for reproducible testing.
+- Optional removable debris after research unlock.
+- Positive terrain: Signal Conduit tiles.
+- Map seeds for reproducible tests.
 
 ### P2: Enemy Role Differentiation
 
 - Noise: Core pressure
-- Malware: infection and production disruption
+- Malware: infection + production disruption
 - Adversarial: defense disruption
 - DDoS: buffer/AP stress
-- Overfitted Model: aura and lane-breaking pressure
+- Overfitted Model: aura + lane-breaking pressure
 
 ### P3: Release Prep
 
 - Add reset-save UI.
-- Refresh README screenshots or GIFs after visual art stabilizes.
-- Review mobile layout on physical devices.
+- Refresh README screenshots/GIFs after art stabilizes.
+- Test mobile layout on physical devices.
 
 ## Recently Completed
 
@@ -153,19 +152,19 @@ Some archived documents contain old mojibake text. Active documents have been re
 - Wave briefing metadata
 - Route guidance overlays
 - BLOCKER terrain
-- Building HP and destruction
+- Building HP/destruction
 - Enemy building attacks
-- Save/load for terrain and damaged HP
-- Removal of installed-building direction arrows while preserving ghost direction arrows
-- Direction realignment report and implementation plan
+- Terrain + damaged HP save/load
+- Removed installed-building direction arrows; kept ghost arrows
+- Direction realignment report + implementation plan
 - Tactical objective/wave/defense/power panels
-- Research and advanced logistics gating after first defense success
+- Research + advanced logistics gating after first defense
 - Cyber/data terminology pass for high-impact building names
 - BLOCKER data-debris visual treatment
-- Wave result summary and factory-growth feedback
+- Wave result summary + factory-growth feedback
 - Expand-vs-defend objective states after first defense
-- Model Training Lab permanent-growth copy and defense status training line
-- Early Unloader gating alongside advanced logistics
-- Game-over run stats screen
+- Model Training Lab permanent-growth copy + defense status training line
+- Early Unloader gating with advanced logistics
+- Game-over run stats
 - Reduced default DDoS pressure for Wave 8+ from 10/8-12 to 6/6-8
 - Category accent marks on building visuals

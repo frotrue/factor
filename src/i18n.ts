@@ -3,11 +3,11 @@ export type Language = 'ko' | 'en';
 export type TranslationKey = keyof typeof TRANSLATIONS.ko;
 
 export const DEFAULT_LANGUAGE: Language = 'ko';
-export const LANGUAGE_STORAGE_KEY = 'neural_factory_language';
+export const LANGUAGE_STORAGE_KEY = 'gradium_language';
 
 export const TRANSLATIONS = {
     ko: {
-        'app.title': 'NEURAL FACTORY',
+        'app.title': 'GRADIUM',
         'menu.subtitle': 'v1.0 - 초기 가중치',
         'menu.difficulty': '난이도',
         'menu.start': '> 시스템 초기화 <',
@@ -230,7 +230,7 @@ export const TRANSLATIONS = {
         'tooltip.blockerDescription': '건설 불가 | 적 이동 차단\n협곡 지형을 활용해 좁은 입구를 설계하세요.'
     },
     en: {
-        'app.title': 'NEURAL FACTORY',
+        'app.title': 'GRADIUM',
         'menu.subtitle': 'v1.0 - The Initial Weight',
         'menu.difficulty': 'Difficulty',
         'menu.start': '> Initialize System <',

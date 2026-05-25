@@ -1,10 +1,10 @@
-# Neural Factory Concept
+# Gradium Concept
 
 Updated: 2026-05-23
 
 ## One-Line Pitch
 
-Neural Factory is a compact cyber factory-defense game. The player builds a
+Gradium is a compact cyber factory-defense game. The player builds a
 data-processing factory, places a readable defense line, survives intrusion
 waves, and later uses model training to make defensive systems stronger.
 Current direction weights this as factory automation 60 / tower defense 40:

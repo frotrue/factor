@@ -5,7 +5,7 @@ import MainScene from './scenes/MainScene';
 
 declare global {
     interface Window {
-        __NEURAL_FACTORY_GAME__?: Phaser.Game;
+        __GRADIUM_GAME__?: Phaser.Game;
     }
 }
 
@@ -24,4 +24,4 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
-window.__NEURAL_FACTORY_GAME__ = game;
+window.__GRADIUM_GAME__ = game;

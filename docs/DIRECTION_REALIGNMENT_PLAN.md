@@ -1,28 +1,18 @@
-# Neural Factory Direction Realignment Plan
+# Gradium Direction Realignment Plan
 
 Updated: 2026-05-23
 
-Status: Active product direction. The second implementation pass is complete as
-of 2026-05-23.
+Status: Active product direction. Second implementation pass complete as of 2026-05-23.
 
 ## Purpose
 
-This document captures the agreed direction for the current realignment pass.
-The goal is not to remake the game from scratch. The goal is to preserve the
-current playable factory-defense prototype, clarify its core experience, and
-reduce early-game ambiguity through onboarding, UI structure, terminology, and
-system exposure order.
+Capture agreed direction for current realignment pass. Do not remake game from scratch. Preserve playable factory-defense prototype, clarify core experience, reduce early-game ambiguity through onboarding, UI structure, terminology, system exposure order.
 
 ## Agreed Core Direction
 
-Neural Factory is a compact cyber factory-defense game where the player builds a
-data-processing factory, places defensive infrastructure, and survives intrusion
-waves. Early play should reward good building placement and defensive line
-construction. Later play should make the data pipeline and model training feel
-like a second-stage defense growth engine.
+Gradium: compact cyber factory-defense game. Player builds data-processing factory, places defensive infrastructure, survives intrusion waves. Early play rewards placement + readable defense line. Later play makes data pipeline + model training feel like second-stage defense growth.
 
-Current weighting: factory automation 60 / tower defense 40. The factory is the
-main long-term power source; waves are the pressure and validation layer.
+Current weight: factory automation 60 / tower defense 40. Factory = long-term power source; waves = pressure + validation.
 
 Short direction statement:
 
@@ -31,7 +21,7 @@ Short direction statement:
 
 ## Genre Position
 
-The project should remain a balanced hybrid:
+Balanced hybrid:
 
 - Factory automation: high importance
 - Tower defense: high importance
@@ -39,22 +29,18 @@ The project should remain a balanced hybrid:
 - Strategy: medium importance
 - Idle/resource-only progression: low importance
 
-The game should not drift into pure tower defense or pure factory automation.
-The strongest identity is the connection between production decisions and
-defense outcomes.
+Do not drift into pure tower defense or pure factory automation. Strongest identity: production decisions connect to defense outcomes.
 
 ## Player Experience Target
 
-The player should feel:
+Player should feel:
 
-- In the first minutes: "My placement and defense line decisions matter."
-- After the first successful defense: "I can grow stronger by improving the
-  factory."
-- In the midgame: "My data pipeline is feeding better defense models."
-- Under pressure: "The next intrusion wave forces me to adjust production,
-  power, logistics, or defense."
+- First minutes: "My placement and defense line decisions matter."
+- After first successful defense: "I can grow stronger by improving the factory."
+- Midgame: "My data pipeline is feeding better defense models."
+- Under pressure: "Next intrusion wave forces production, power, logistics, or defense adjustment."
 
-The main moment to protect is:
+Main moment to protect:
 
 > A player builds a small working system, sees it help the defense survive, then
 > understands why expanding the data pipeline matters.
@@ -63,15 +49,14 @@ The main moment to protect is:
 
 Recommended loop:
 
-1. Place initial data and resource infrastructure.
-2. Build a small data-processing line.
-3. Place a readable defense line against the known intrusion route.
-4. Survive the first wave through building placement and defense coverage.
-5. Open research after the first defense success.
-6. Expand production, power, logistics, and defense in response to wave pressure.
-7. Unlock model training so processed data upgrades defensive models.
-8. Review wave results so the player sees factory growth, defense outcome, and
-   Core integrity together.
+1. Place initial data + resource infrastructure.
+2. Build small data-processing line.
+3. Place readable defense line against known intrusion route.
+4. Survive first wave through placement + coverage.
+5. Open research after first defense success.
+6. Expand production, power, logistics, defense in response to waves.
+7. Unlock model training so processed data upgrades defense models.
+8. Review wave results: factory growth, defense outcome, Core integrity.
 
 Condensed loop:
 
@@ -82,93 +67,85 @@ Improve factory -> Train defense models -> Handle stronger intrusions
 
 ## Early Game Priorities
 
-The first five minutes should emphasize only the systems needed to understand the
-core experience.
+First five minutes show only systems needed for core experience.
 
 ### Show Early
 
-- Neural Core as the protected center
+- Neural Core as protected center
 - Data Downloader / basic data production
-- Processor or Weight Trainer as the first data-processing step
-- Classifier and/or Firewall as the first obvious defense tools
-- North Port as the first intrusion route
-- Basic wave warning and route guidance
+- Processor or Weight Trainer as first data-processing step
+- Classifier and/or Firewall as obvious first defense tools
+- North Port as first intrusion route
+- Basic wave warning + route guidance
 
 ### De-Emphasize Early
 
 - AP relays
 - Fiber cable
 - Fast Link
-- Complex research tree choices
+- Complex research choices
 - Blackout optimization
 - Advanced model training
-- Solar or auxiliary power optimization
+- Solar/auxiliary power optimization
 
-These systems should not be removed. They should be introduced after the player
-understands that production and defense are connected.
+Do not remove these systems. Introduce after player understands production-defense link.
 
 ## Research Timing
 
-Research should open after the first successful defense, not before the player
-understands the threat.
+Research opens after first successful defense, not before threat is understood.
 
 Recommended behavior:
 
-- First wave success unlocks or highlights the research UI.
-- The first research choices should reinforce the factory-defense identity.
-- Research should feel like a reward for survival, not another system competing
-  for attention during onboarding.
+- First wave success unlocks/highlights research UI.
+- First research choices reinforce factory-defense identity.
+- Research feels like survival reward, not onboarding attention tax.
 
 ## Defense Growth Timing
 
-Early defense growth should come primarily from building placement and defense
-line construction.
+Early defense growth comes from placement + defense line construction.
 
-Model training should be introduced later as a second-stage growth layer:
+Model training introduced later as second-stage growth:
 
 - Before model training: "Good placement helped me survive."
 - After model training: "My data pipeline makes the same defense smarter."
 
-This preserves the value of `Model Training Lab` while preventing the early game
-from becoming too abstract.
+Preserve `Model Training Lab` value while avoiding abstract early game.
 
 ## Power System Direction
 
-Power should remain, but early burden should be reduced.
+Power remains, but early burden reduced.
 
 Recommended early behavior:
 
-- Core-adjacent power is enough for the first learning loop.
-- Power status should be visible but not dominant.
-- Warnings should appear only when power becomes a practical problem.
-- Blackout and grid optimization should become meaningful in the midgame.
+- Core-adjacent power enough for first learning loop.
+- Power status visible, not dominant.
+- Warnings only when power becomes practical problem.
+- Blackout/grid optimization becomes meaningful midgame.
 
-Power is a support pressure, not the first lesson.
+Power = support pressure, not first lesson.
 
 ## UI Realignment Scope
 
-UI changes are allowed and likely necessary. The terminal/cyber identity should
-remain, but the information structure can be reorganized.
+UI changes allowed. Keep terminal/cyber identity; reorganize information.
 
 First UI goals:
 
-1. Separate wave briefing from the cramped wave timer.
-2. Show defensive readiness and growth more clearly.
+1. Separate wave briefing from cramped wave timer.
+2. Show defensive readiness + growth clearly.
 3. Improve current objective/tutorial guidance.
 
 Recommended first-pass panels:
 
-- Current Objective: the next action the player should understand
+- Current Objective: next action player should understand
 - Next Wave: route, threat type, special threat, recommended response
 - Defense Status: active defense tools, coverage, model confidence when unlocked
-- Power Status: compact summary and warning state
+- Power Status: compact summary + warning state
 
-Avoid a full visual reset until the interaction structure is clearer.
+Avoid full visual reset until interaction structure clearer.
 
 ## Terminology Direction
 
-Keep existing systems where possible, but improve names that feel too generic or
-too much like a traditional factory game.
+Keep systems where possible; improve names that feel generic/traditional-factory.
 
 Candidates for later naming review:
 
@@ -184,8 +161,7 @@ Candidates for later naming review:
 | Data Downloader | Packet Ingestor |
 | Fast Link | High-Speed Bus |
 
-Do not rename everything at once. Rename only when the new term improves player
-understanding.
+Do not rename everything at once. Rename only when new term improves player understanding.
 
 ## System Classification
 
@@ -195,8 +171,8 @@ understanding.
 - Data pipeline items: Signal Packet, Labeled Data, Weight Update
 - Confidence Score
 - Classifier, Anomaly Engine, Firewall
-- Fixed intrusion ports and wave pressure
-- Building damage and enemy attacks
+- Fixed intrusion ports + wave pressure
+- Building damage + enemy attacks
 
 ### Keep But Improve
 
@@ -205,7 +181,7 @@ understanding.
 - Defense model state display
 - Power warning UX
 - BLOCKER terrain explanation
-- Building role icons and silhouettes
+- Building role icons/silhouettes
 
 ### Rename Or Clarify
 
@@ -231,9 +207,9 @@ understanding.
 - Large new building sets
 - Large new enemy sets
 - Removing existing systems
-- Converting the game into pure tower defense
-- Converting the game into pure factory automation
-- Full art reset before UX structure is settled
+- Pure tower-defense conversion
+- Pure factory-automation conversion
+- Full art reset before UX structure settled
 
 ## Visual Direction
 
@@ -244,87 +220,80 @@ Target style:
 - Readable 2D top-down modules
 - Compact factory/tower-defense objects
 - Data/network/factory identity visible at small scale
-- Simple shapes, but not generic placeholder icons
+- Simple shapes, not generic placeholder icons
 - Avoid overly detailed sci-fi illustration
 
 Visual rules to keep:
 
-- Strong neon cyan/magenta/green accent language
+- Strong neon cyan/magenta/green accents
 - Compact grid-based building silhouettes
-- Data pulses and route guidance
-- Clear contrast between buildings, terrain, enemies, and UI
+- Data pulses + route guidance
+- Clear contrast among buildings, terrain, enemies, UI
 
 Visual rules to improve:
 
-- Buildings should communicate category through silhouette, not only color.
-- Defense buildings should read differently from production buildings at 32x32.
-- Enemy types should be distinguishable by motion/marker as well as color.
-- BLOCKER terrain needs a clearer "data debris / blocked route" identity.
+- Buildings communicate category through silhouette, not only color.
+- Defense buildings differ from production at 32x32.
+- Enemy types distinguish by motion/marker plus color.
+- BLOCKER terrain needs clearer "data debris / blocked route" identity.
 
 ## Recommended Implementation Order
 
 Completed first pass:
 
-1. Documented and locked the first five-minute intended flow.
-2. Added Current Objective, Next Wave, Defense Status, and Power Status panels.
-3. Improved objective/tutorial guidance around the first defense success.
-4. Added defense readiness and compact model-confidence status.
-5. Moved research reveal to after first successful defense.
-6. Reduced early exposure of AP, Fiber, Fast Link, and advanced systems.
-7. Renamed high-impact generic visible labels toward data/network/security terms.
-8. Tuned visual language for BLOCKER terrain as data debris.
+1. Documented + locked first five-minute flow.
+2. Added Current Objective, Next Wave, Defense Status, Power Status panels.
+3. Improved objective/tutorial guidance around first defense success.
+4. Added defense readiness + compact model-confidence status.
+5. Moved research reveal after first successful defense.
+6. Reduced early exposure of AP, Fiber, Fast Link, advanced systems.
+7. Renamed high-impact generic labels toward data/network/security terms.
+8. Tuned BLOCKER terrain visual language as data debris.
 
 Second pass completed:
 
-1. Added wave result summaries after completed waves.
-2. Added post-first-defense objective states for expand-vs-defend choices.
+1. Added wave result summaries.
+2. Added post-first-defense expand-vs-defend objective states.
 3. Improved Model Training Lab permanent-growth explanation.
 4. Added defense status training line for active model training.
 5. Delayed Unloader exposure until after first defense success.
 6. Added game-over run stats.
-7. Reduced Wave 8+ DDoS pressure to keep special pressure readable.
+7. Reduced Wave 8+ DDoS pressure for readability.
 8. Added small category accent marks to buildings.
 
-Next pass should focus on manual playtest tuning, stronger damaged/destroyed
-building feedback, and release-readiness polish.
+Next pass: manual playtest tuning, stronger damaged/destroyed building feedback, release-readiness polish.
 
 ## Immediate Next Decisions
 
-User decisions from the interview:
+User interview decisions:
 
-- Early defense growth comes from building placement first.
-- Model training opens later and should feel like a second-stage power increase.
-- Research opens after the first successful defense.
-- UI needs a tactical-panel restructure instead of only text tweaks.
+- Early defense growth from placement first.
+- Model training opens later as second-stage power increase.
+- Research opens after first successful defense.
+- UI needs tactical-panel restructure, not text-only tweaks.
 
 Remaining product decisions:
 
-- Which exact visible names should ship for every building after another
-  playtest pass.
-- Whether the reduced DDoS pressure still creates enough midgame stress.
-- Whether damaged building triage should be solved with status chips, stronger
-  effects, or both.
-- Whether game-over stats need deeper economy metrics beyond current live-state
-  values.
+- Exact visible names for every building after another playtest pass.
+- Whether reduced DDoS pressure creates enough midgame stress.
+- Whether damaged building triage uses status chips, stronger effects, or both.
+- Whether game-over stats need deeper economy metrics beyond current live-state values.
 
 ## Non-Goals
 
-- Do not delete major systems as the first response to ambiguity.
-- Do not add a large amount of new content before clarifying existing content.
-- Do not reframe the game as pure tower defense.
-- Do not reframe the game as pure factory automation.
-- Do not perform a full art reset before the UI and onboarding structure are
-  decided.
+- Do not delete major systems as first response to ambiguity.
+- Do not add lots of new content before clarifying existing content.
+- Do not reframe as pure tower defense.
+- Do not reframe as pure factory automation.
+- Do not full-art-reset before UI/onboarding structure decided.
 
 ## Success Criteria
 
-The realignment pass is successful when:
+Realignment successful when:
 
-- A new player understands within five minutes that building and defense are
-  connected.
-- The first wave is readable and fair.
-- Research feels like a reward after survival.
-- Model training feels like a meaningful second-stage defense growth system.
-- Power, logistics, and advanced networking support the core loop instead of
-  obscuring it.
-- Existing implemented systems are preserved wherever practical.
+- New player understands within five minutes that building + defense connect.
+- First wave readable + fair.
+- Research feels like reward after survival.
+- Model training feels like meaningful second-stage defense growth.
+- Power, logistics, advanced networking support core loop instead of obscuring it.
+- Existing implemented systems preserved wherever practical.

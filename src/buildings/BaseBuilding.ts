@@ -15,7 +15,6 @@ export default class BaseBuilding {
     rotation: number;
     container: Phaser.GameObjects.Container;
     graphics: Phaser.GameObjects.Graphics;
-    buildingSprite?: Phaser.GameObjects.Image;
     inputBuffer: string[];
     outputBuffer: string[];
     maxBufferSize: number;
@@ -51,14 +50,8 @@ export default class BaseBuilding {
         );
 
         this.graphics = scene.add.graphics();
-        this.buildingSprite = this.createBuildingSprite(bConfig.TEXTURE, w, h);
-        if (this.buildingSprite) {
-            this.container.add(this.buildingSprite);
-        }
         this.container.add(this.graphics);
-        if (!this.buildingSprite) {
-            this.drawBody(config.color || bConfig.COLOR || 0xaaaaaa, w, h);
-        }
+        this.drawBody(config.color || bConfig.COLOR || 0xaaaaaa, w, h);
         this.drawCategoryAccent(w, h);
 
         this.inputBuffer = [];
@@ -72,18 +65,6 @@ export default class BaseBuilding {
         this.infectionMarker = scene.add.graphics();
         this.infectionMarker.setDepth(35);
         this.container.add(this.infectionMarker);
-    }
-
-    createBuildingSprite(textureKey: string | undefined, w: number, h: number): Phaser.GameObjects.Image | undefined {
-        if (!textureKey || !this.scene.textures?.exists(textureKey)) {
-            return undefined;
-        }
-
-        const sprite = this.scene.add.image(0, 0, textureKey);
-        sprite.setDisplaySize(w * CONFIG.GRID_SIZE, h * CONFIG.GRID_SIZE);
-        sprite.setAngle(CONFIG.DIRECTIONS[this.rotation]?.angle ?? 0);
-        sprite.setDepth(0);
-        return sprite;
     }
 
     canAcceptItem(_type: string): boolean {

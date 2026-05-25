@@ -41,7 +41,6 @@ export interface BuildingConfig {
     ID: string;
     NAME: string;
     COLOR: number;
-    TEXTURE?: string;
     DESCRIPTION?: string;
     POWER: PowerConfig;
     PRODUCTION_RATE?: number;

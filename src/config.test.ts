@@ -2,20 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { CONFIG } from './config';
 
 describe('CONFIG integrity', () => {
-    const texturedBuildingIds = [
-        'CORE',
-        'MINER',
-        'CONVEYOR',
-        'FAST_LINK',
-        'STORAGE',
-        'PROCESSOR',
-        'POWER_NODE',
-        'POWER_PLANT',
-        'CLASSIFIER',
-        'FILTER',
-        'FIREWALL'
-    ];
-
     it('references existing research nodes from unlock requirements', () => {
         const researchIds = new Set(Object.keys(CONFIG.RESEARCH));
         const missing: string[] = [];
@@ -85,13 +71,12 @@ describe('CONFIG integrity', () => {
         expect(CONFIG.RECIPES.INFERENCE_UNIT_PRODUCTION.OUTPUT).toBe('INFERENCE_UNIT');
     });
 
-    it('assigns neon building textures to the core visual upgrade set', () => {
-        const missing = texturedBuildingIds.filter(id => !CONFIG.BUILDINGS[id]?.TEXTURE);
+    it('keeps building visuals generated from theme graphics instead of texture assets', () => {
+        const textured = Object.values(CONFIG.BUILDINGS)
+            .filter(building => 'TEXTURE' in building)
+            .map(building => building.ID);
 
-        expect(missing).toEqual([]);
-        texturedBuildingIds.forEach(id => {
-            expect(CONFIG.BUILDINGS[id].TEXTURE).toBe(`building-${id.toLowerCase().replaceAll('_', '-')}`);
-        });
+        expect(textured).toEqual([]);
     });
 
     it('uses a 4x4 footprint for the neural core', () => {

@@ -1,4 +1,4 @@
-# Neural Factory Documentation
+# Gradium Documentation
 
 Last updated: 2026-05-21
 

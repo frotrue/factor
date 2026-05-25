@@ -10,8 +10,8 @@ import {
 import { t } from '../i18n';
 import EventBus from './EventBus';
 
-const STORAGE_COMPLETED = 'neural_factory_tutorial_completed';
-const STORAGE_STEP = 'neural_factory_tutorial_step';
+const STORAGE_COMPLETED = 'gradium_tutorial_completed';
+const STORAGE_STEP = 'gradium_tutorial_step';
 
 export default class TutorialManager {
     private scene: IMainScene;

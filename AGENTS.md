@@ -1,4 +1,4 @@
-# Neural Factory Agent Instructions
+# Gradium Agent Instructions
 
 ## Encoding
 

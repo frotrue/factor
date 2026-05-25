@@ -4,7 +4,7 @@
 
 ## 프로젝트 목적과 현재 게임 개요
 
-Neural Factory는 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다.
+Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다.
 
 핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update -> Confidence Score` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, 연구와 방어 모델 훈련으로 공장을 성장시키는 흐름입니다. 현재 빌드는 난이도 선택, 튜토리얼, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 케이블/AP 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
 
@@ -30,14 +30,14 @@ Neural Factory는 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타
 | `src/visuals/` | 캔버스 그래픽 패치용 팔레트와 의미 색상 |
 | `src/utils/` | 순수 로직/시뮬레이션/요약/마이그레이션/게이트 함수 |
 | `src/styles/` | DOM UI와 모바일 레이아웃 CSS |
-| `public/assets/buildings/` | 건물 텍스처 PNG |
+| `public/assets/buildings/` | 미사용 건물 텍스처 PNG 보관 |
 | `tests/e2e/` | Playwright smoke 및 조작 테스트 |
 | `docs/` | 설계, QA, 로드맵, 코드베이스 지도 문서 |
 
 ## 핵심 실행 흐름
 
 1. `src/main.ts`가 `MainMenuScene`, `MainScene`을 Phaser 게임에 등록합니다.
-2. `MainMenuScene`이 건물 텍스처를 preload하고 난이도 선택 후 `MainScene`을 시작합니다.
+2. `MainMenuScene`이 난이도 선택 후 `MainScene`을 시작합니다.
 3. `MainScene.create()`가 매니저를 생성하고, 맵 자원/지형 생성, Core와 시작 Storage 배치, UI/입력/이벤트를 초기화합니다.
 4. 매 프레임 `MainScene.update()`가 커서, 그리드, 틱, 웨이브, 저장, UI, 카메라, 케이블, 이펙트, 오버레이를 갱신합니다.
 5. `TickSystem`은 고정 틱으로 전력망, AP/케이블 데이터 전송, 건물 `onTick()` 생산/가공을 처리합니다.
@@ -47,7 +47,7 @@ Neural Factory는 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타
 ## 주요 엔트리포인트
 
 - 앱 시작: `src/main.ts`
-- 메뉴/난이도/텍스처 preload: `src/scenes/MainMenuScene.ts`
+- 메뉴/난이도: `src/scenes/MainMenuScene.ts`
 - 게임 런타임 조립: `src/scenes/MainScene.ts`
 - 밸런스/설정 단일 원천: `src/config.ts`
 - 타입 계약: `src/types.ts`

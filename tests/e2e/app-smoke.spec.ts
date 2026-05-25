@@ -16,7 +16,7 @@ async function startGame(page: Page): Promise<void> {
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
     await page.waitForFunction(() => {
-        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainMenuScene') as any;
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainMenuScene') as any;
         return scene?.children?.list?.some((child: any) =>
             child.text === '> 시스템 초기화 <' || child.text === '> Initialize System <'
         );
@@ -48,7 +48,7 @@ async function getMainSceneState(page: Page): Promise<{
     savedGameExists: boolean;
 }> {
     return page.evaluate(() => {
-        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         const unique = new Set<object>();
         const buildings: Array<{ key: string; type: string }> = [];
         scene.buildingManager.buildings.forEach((building: any, key: string) => {
@@ -68,14 +68,14 @@ async function getMainSceneState(page: Page): Promise<{
             gameSpeed: scene.gameSpeed,
             mobileActionStatus: scene.uiManager.mobileActionStatus,
             mobileCableMenuOpen: Boolean(document.getElementById('mobile-cable-menu')?.classList.contains('open')),
-            savedGameExists: Boolean(localStorage.getItem('neural_factory_save'))
+            savedGameExists: Boolean(localStorage.getItem('gradium_save'))
         };
     });
 }
 
 async function getCameraCoreOffset(page: Page): Promise<{ dx: number; dy: number }> {
     return page.evaluate(() => {
-        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         const cameraCenter = scene.cameras.main.midPoint;
         const core = scene.buildingManager.get('0,0');
 
@@ -88,7 +88,7 @@ async function getCameraCoreOffset(page: Page): Promise<{ dx: number; dy: number
 
 async function unlockFirstDefenseProgress(page: Page): Promise<void> {
     await page.evaluate(() => {
-        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         scene.waveManager.currentWave = 1;
         scene.waveManager.waveActive = false;
         scene.uiManager.renderTacticalPanels();
@@ -105,7 +105,7 @@ async function expectBuildingCount(page: Page, type: string, count: number): Pro
 
 async function getScreenPointForTile(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
     return page.evaluate(({ x, y }) => {
-        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         const camera = scene.cameras.main;
         const canvas = document.querySelector('canvas')!;
         const rect = canvas.getBoundingClientRect();
@@ -184,7 +184,7 @@ test('desktop can show wave result summary', async ({ page }, testInfo) => {
 
     await startGame(page);
     await page.evaluate(() => {
-        const scene = window.__NEURAL_FACTORY_GAME__?.scene.getScene('MainScene') as any;
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         scene.uiManager.showWaveResultSummary({
             wave: 1,
             outcome: 'survived',

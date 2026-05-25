@@ -131,11 +131,11 @@ export default class SaveManager {
             research: this.scene.researchManager.getUnlockedResearch()
         };
 
-        localStorage.setItem('neural_factory_save', JSON.stringify(saveData));
+        localStorage.setItem('gradium_save', JSON.stringify(saveData));
     }
 
     loadGame(): boolean {
-        const saveString = localStorage.getItem('neural_factory_save');
+        const saveString = localStorage.getItem('gradium_save');
         if (!saveString) return false;
 
         try {
