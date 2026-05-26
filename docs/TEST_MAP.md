@@ -24,7 +24,7 @@ npm run test:e2e -- --workers=1
 | 구분 | 위치 | 설정 | 용도 |
 |---|---|---|---|
 | 유닛/순수 로직 | `src/**/*.test.ts` | `vitest.config.ts` | config, i18n, utils, 일부 manager/building 검증 |
-| E2E/smoke | `tests/e2e/app-smoke.spec.ts` | `playwright.config.ts` | 실제 브라우저 조작, DOM UI, PC HUD shell, 모바일/데스크톱 smoke |
+| E2E/smoke | `tests/e2e/*.spec.ts` | `playwright.config.ts` | 실제 브라우저 조작, DOM UI, PC HUD shell, 모바일/데스크톱 smoke, 튜토리얼 완료 흐름 |
 | 빌드 | 전체 소스 | `vite.config.ts`, `tsconfig.json` | 번들/타입/에셋 참조 검증 |
 
 ## 테스트 파일 위치와 검증 대상
@@ -45,7 +45,7 @@ npm run test:e2e -- --workers=1
 | `src/utils/powerPreview.test.ts` | 전력 범위 helper |
 | `src/utils/productionSimulation.test.ts` | 장기 생산 라인 시뮬레이션 |
 | `src/utils/saveMigration.test.ts` | 저장 데이터 기본값, HP/terrain/settings/buffer 보정, 적 HP 복원 clamp |
-| `src/utils/tutorialFlow.test.ts` | 튜토리얼 단계/진행 |
+| `src/utils/tutorialFlow.test.ts` | 튜토리얼 단계/진행, 시각 힌트 데이터, 모델 학습 최종 단계 |
 | `src/utils/waveSimulation.test.ts` | 웨이브 수량, 난이도, DDoS/boss, 경로, 브리핑 |
 | `src/utils/waveBriefingKey.test.ts` | WaveManager briefing 중복 발행 방지 key |
 | `src/utils/waveResultSummary.test.ts` | 웨이브 결과 요약 계산/문구 |
@@ -53,6 +53,7 @@ npm run test:e2e -- --workers=1
 | `src/utils/modelTrainingSummary.test.ts` | 모델 훈련 입력 효과/요약 |
 | `src/utils/runResultSummary.test.ts` | 게임오버/런 결과 요약 |
 | `tests/e2e/app-smoke.spec.ts` | 시작, 카메라, 설정/연구/언어, 배치/케이블/철거, save, 모바일 조작 |
+| `tests/e2e/tutorial-guidance.spec.ts` | 튜토리얼 힌트 좌표, 리소스 타일 정합성, 가중치 업데이트 학습소 흐름, 이벤트 기반 전체 튜토리얼 완료 |
 
 ## 변경 유형별 추천 테스트
 
@@ -66,7 +67,7 @@ npm run test:e2e -- --workers=1
 | 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |
 | UI 텍스트/언어 | `src/i18n.test.ts`, E2E language smoke |
 | 모바일 조작/CSS | E2E `mobile-*` projects. PC HUD shell 변경 시 모바일 터치 지점이 HUD/빌드 콘솔에 가로막히지 않는지 확인 |
-| 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹됨 |
+| 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, `tests/e2e/tutorial-guidance.spec.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹되며 캔버스 고스트/흐름 힌트는 `tutorialFlow.visualHints` 데이터와 `TutorialManager` 렌더러를 함께 확인 |
 | 게임오버/결과 요약 | `runResultSummary.test.ts`, `waveResultSummary.test.ts`, E2E wave summary |
 | 캔버스 그래픽/팔레트 | `npm run build`, `npm test`, `npx playwright test --workers=1`, 데스크톱 스크린샷. `visualTheme`, `GridRenderer`, `BaseBuilding`, `BaseEnemy`, `CableManager`, `OverlayController`를 함께 확인 |
 

@@ -132,6 +132,8 @@ flowchart TD
 - `UIManager` -> `progressionGates`, `waveSimulation`, `runResultSummary`, 하위 UI managers
 - `ResearchManager` -> `CONFIG.RESEARCH`, Core confidence
 - `SaveManager` -> 거의 모든 manager + `saveMigration`, `enemyRestore`
+- `tutorialFlow` -> 튜토리얼 단계/허용 건물/월드 시각 힌트 데이터, `TutorialManager`가 이를 렌더링
+- `ModelTrainingLab` -> `MODEL_TRAINING_TARGET_SET` 이벤트로 튜토리얼 최종 모델 학습 단계와 연결
 
 ## 신규 기능 추가 위치와 일반 절차
 

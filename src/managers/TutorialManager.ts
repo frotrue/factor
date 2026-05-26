@@ -6,11 +6,12 @@ import {
     completeTutorialStep,
     createTutorialSteps,
     getTutorialProgressIndex,
-    TutorialStep,
     TutorialStepId
 } from '../utils/tutorialFlow';
+import type { TutorialAreaHint, TutorialGhostHint, TutorialStep } from '../utils/tutorialFlow';
 import { t } from '../i18n';
 import EventBus from './EventBus';
+import { getItemColor } from '../visuals/visualTheme';
 
 const STORAGE_COMPLETED = 'gradium_tutorial_completed';
 const STORAGE_STEP = 'gradium_tutorial_step';
@@ -131,9 +132,9 @@ export default class TutorialManager {
             }
         }, 'TutorialManager');
 
-        EventBus.on('RESEARCH_UNLOCKED', () => {
+        EventBus.on('MODEL_TRAINING_TARGET_SET', ({ targetType }) => {
             const activeStep = this.steps.find(step => !step.completed);
-            if (activeStep?.id === 'RESEARCH') {
+            if (activeStep?.id === 'RESEARCH' && targetType) {
                 this.completeStep('RESEARCH');
             }
         }, 'TutorialManager');
@@ -285,54 +286,49 @@ export default class TutorialManager {
         const pulse = 0.5 + 0.2 * Math.sin(time / 200);
         const glowPulse = 0.2 + 0.1 * Math.sin(time / 200);
 
-        const colorValid = 0x64ff9f; // Neon green
-        const colorGlow = 0x59e0ff;  // Neon cyan/blue
+        const hints = activeStep.visualHints;
+        if (!hints) return;
 
-        if (activeStep.id === 'POWER') {
-            // Power node at (-96, -32), 1x1
-            this.drawNeonBox(-96, -32, 1, 1, colorValid, colorGlow, pulse, glowPulse);
-            this.drawSymbol(-96, -32, 'POWER');
-        } else if (activeStep.id === 'DATA_SOURCE') {
-            // Miner at (-128, -64), 1x1
-            this.drawNeonBox(-128, -64, 1, 1, colorValid, colorGlow, pulse, glowPulse);
-            this.drawSymbol(-128, -64, 'MINER');
+        const isExplicit = hints.mode === 'explicit';
+        const ghostAlpha = isExplicit ? pulse : pulse * 0.72;
+        const glowAlpha = isExplicit ? glowPulse : glowPulse * 0.68;
 
-            // Data downloader at (-160, -96), 1x1
-            this.drawNeonBox(-160, -96, 1, 1, colorValid, colorGlow, pulse, glowPulse);
-            this.drawSymbol(-160, -96, 'DOWNLOAD');
-        } else if (activeStep.id === 'CONNECTION') {
-            // Cable line from Miner (-128, -64) to Storage (-64, 0)
-            this.drawNeonLine(-128 + 16, -64 + 16, -64 + 16, 0 + 16, 0xb9c7d8, pulse, time);
+        hints.areas?.forEach(area => this.drawAreaHint(area.x, area.y, area.radius, area.color ?? 0x59e0ff, area.kind, pulse, time));
+        hints.ghosts?.forEach(ghost => this.drawGhostHint(ghost, ghostAlpha, glowAlpha));
+        hints.flows?.forEach(flow => {
+            const color = flow.color ?? (flow.itemType ? getItemColor(flow.itemType) : 0x52f7ff);
+            this.drawNeonLine(flow.from.x, flow.from.y, flow.to.x, flow.to.y, color, pulse, time, flow.dotted ?? false);
+        });
+    }
 
-            // Cable line from Packet Ingestor (-160, -96) to Processor (-96, -96)
-            this.drawNeonLine(-160 + 16, -96 + 16, -96 + 16, -96 + 16, 0x52f7ff, pulse, time);
-        } else if (activeStep.id === 'PROCESSING') {
-            // Processor at (-96, -96), 1x1
-            this.drawNeonBox(-96, -96, 1, 1, colorValid, colorGlow, pulse, glowPulse);
-            this.drawSymbol(-96, -96, 'PROCESSOR');
-        } else if (activeStep.id === 'DEFENSE') {
-            // Classifier at (-32, -128), 1x1
-            this.drawNeonBox(-32, -128, 1, 1, colorValid, colorGlow, pulse, glowPulse);
-            this.drawSymbol(-32, -128, 'DEFENSE');
-        }
+    private drawGhostHint(ghost: TutorialGhostHint, pulse: number, glowPulse: number): void {
+        const colorValid = ghost.exact ? 0x64ff9f : 0x59e0ff;
+        const colorGlow = ghost.type === 'MODEL_LAB' ? 0x64ffcf : 0x59e0ff;
+        const width = ghost.width ?? 1;
+        const height = ghost.height ?? 1;
+
+        this.drawNeonBox(ghost.x, ghost.y, width, height, colorValid, colorGlow, pulse, glowPulse);
+        this.drawSymbol(ghost.x, ghost.y, ghost);
     }
 
     private drawNeonBox(x: number, y: number, w: number, h: number, color: number, glowColor: number, pulse: number, glowPulse: number): void {
         const sizeX = w * CONFIG.GRID_SIZE;
         const sizeY = h * CONFIG.GRID_SIZE;
 
-        // Draw outer thick glow line
         this.guideGraphics.lineStyle(6, glowColor, glowPulse);
         this.guideGraphics.strokeRect(x, y, sizeX, sizeY);
 
-        // Draw inner sharp line
+        this.guideGraphics.fillStyle(glowColor, glowPulse * 0.35);
+        this.guideGraphics.fillRect(x, y, sizeX, sizeY);
+
         this.guideGraphics.lineStyle(2, color, pulse);
         this.guideGraphics.strokeRect(x, y, sizeX, sizeY);
     }
 
-    private drawSymbol(x: number, y: number, type: 'POWER' | 'MINER' | 'DOWNLOAD' | 'PROCESSOR' | 'DEFENSE'): void {
-        const cx = x + CONFIG.GRID_SIZE / 2;
-        const cy = y + CONFIG.GRID_SIZE / 2;
+    private drawSymbol(x: number, y: number, ghost: TutorialGhostHint): void {
+        const cx = x + (ghost.width ?? 1) * CONFIG.GRID_SIZE / 2;
+        const cy = y + (ghost.height ?? 1) * CONFIG.GRID_SIZE / 2;
+        const type = ghost.type;
 
         this.guideGraphics.lineStyle(2, 0xffffff, 0.4);
 
@@ -357,7 +353,6 @@ export default class TutorialManager {
             this.guideGraphics.closePath();
             this.guideGraphics.strokePath();
         } else if (type === 'DOWNLOAD') {
-            // Download arrow
             this.guideGraphics.beginPath();
             this.guideGraphics.moveTo(cx, cy + 6);
             this.guideGraphics.lineTo(cx, cy - 6);
@@ -369,7 +364,6 @@ export default class TutorialManager {
             this.guideGraphics.lineTo(cx + 4, cy + 2);
             this.guideGraphics.strokePath();
         } else if (type === 'PROCESSOR') {
-            // Square chip with pins
             this.guideGraphics.strokeRect(cx - 5, cy - 5, 10, 10);
 
             this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
@@ -381,25 +375,56 @@ export default class TutorialManager {
             this.guideGraphics.lineBetween(cx + 3, cy - 7, cx + 3, cy - 5);
             this.guideGraphics.lineBetween(cx - 3, cy + 5, cx - 3, cy + 7);
             this.guideGraphics.lineBetween(cx + 3, cy + 5, cx + 3, cy + 7);
+        } else if (type === 'TRAINER') {
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.32);
+            [-7, 0, 7].forEach(iy => {
+                [-5, 5].forEach(oy => this.guideGraphics.lineBetween(cx - 8, cy + iy, cx + 8, cy + oy));
+            });
+            this.guideGraphics.fillStyle(0xa970ff, 0.78);
+            [-7, 0, 7].forEach(iy => this.guideGraphics.fillCircle(cx - 8, cy + iy, 2.5));
+            [-5, 5].forEach(oy => this.guideGraphics.fillCircle(cx + 8, cy + oy, 2.5));
         } else if (type === 'DEFENSE') {
-            // Shield or target crosshair
             this.guideGraphics.strokeCircle(cx, cy, 6);
             this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
             this.guideGraphics.lineBetween(cx - 9, cy, cx + 9, cy);
             this.guideGraphics.lineBetween(cx, cy - 9, cx, cy + 9);
+        } else if (type === 'STORAGE') {
+            this.guideGraphics.strokeRect(cx - 8, cy - 8, 16, 16);
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
+            this.guideGraphics.lineBetween(cx, cy - 8, cx, cy + 8);
+            this.guideGraphics.lineBetween(cx - 8, cy, cx + 8, cy);
+        } else if (type === 'MODEL_LAB') {
+            this.guideGraphics.strokeCircle(cx, cy, 12);
+            this.guideGraphics.lineStyle(1.5, 0x64ffcf, 0.72);
+            this.guideGraphics.strokeCircle(cx, cy, 5);
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.38);
+            this.guideGraphics.lineBetween(cx - 13, cy, cx + 13, cy);
+            this.guideGraphics.lineBetween(cx, cy - 13, cx, cy + 13);
         }
     }
 
-    private drawNeonLine(fromX: number, fromY: number, toX: number, toY: number, color: number, pulse: number, time: number): void {
-        // Draw glow line
+    private drawAreaHint(x: number, y: number, radius: number, color: number, kind: TutorialAreaHint['kind'], pulse: number, time: number): void {
+        const alpha = kind === 'resource' ? 0.18 : 0.12;
+        const wave = 0.85 + 0.08 * Math.sin(time / 260);
+
+        this.guideGraphics.lineStyle(kind === 'route' ? 3 : 2, color, alpha + pulse * 0.12);
+        this.guideGraphics.strokeCircle(x, y, radius * wave);
+
+        if (kind === 'model-growth') {
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
+            this.guideGraphics.strokeCircle(x, y, radius * 0.45);
+        }
+    }
+
+    private drawNeonLine(fromX: number, fromY: number, toX: number, toY: number, color: number, pulse: number, time: number, dotted = false): void {
         this.guideGraphics.lineStyle(5, color, 0.15);
         this.guideGraphics.lineBetween(fromX, fromY, toX, toY);
 
-        // Draw inner line
-        this.guideGraphics.lineStyle(1, color, 0.45);
-        this.guideGraphics.lineBetween(fromX, fromY, toX, toY);
+        if (!dotted) {
+            this.guideGraphics.lineStyle(1, color, 0.45);
+            this.guideGraphics.lineBetween(fromX, fromY, toX, toY);
+        }
 
-        // Draw animated flow dots
         const dx = toX - fromX;
         const dy = toY - fromY;
         const length = Math.sqrt(dx * dx + dy * dy);

@@ -21,7 +21,7 @@
 | `src/buildings/Processor.ts` | RAW_DATA -> LABELED_DATA | 핵심 데이터 라인 | `CONFIG.RECIPES.LABELLING` 의존 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | Confidence 성장 재료 | Core 점수와 모델 훈련 둘 다에 연결 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/NeuralTrainer.ts` | MODEL_TRAINING / INFERENCE_UNIT_PRODUCTION 레시피 전환 | 후반 생산, 고급 연구 | 클릭 시 레시피 전환하며 버퍼 초기화 | E2E는 간접 |
-| `src/buildings/ModelTrainingLab.ts` | 방어 모델 공유 상태 훈련 | 방어 모델 신뢰도/버전 성장 | `targetType`, `autoTrain`은 저장 customState 대상 | `src/utils/modelTrainingSummary.test.ts` 보조 |
+| `src/buildings/ModelTrainingLab.ts` | 방어 모델 공유 상태 훈련, 학습 대상 선택 이벤트 발행 | 방어 모델 신뢰도/버전 성장, 튜토리얼 최종 모델 학습 단계 | `targetType`, `autoTrain`은 저장 customState 대상. `setTarget()` 이벤트는 튜토리얼 완료와 UI 갱신에 영향 | `src/utils/modelTrainingSummary.test.ts` 보조 |
 | `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 상태 적용 및 실시간 타겟 추적/배리어/방화벽 요동 등 커스텀 벡터 비주얼 탑재 | 방어 전투, 적 제거 | Classifier(락온 타겟 실시간 포신 추적 및 지점 네온 크로스헤어), Filter(2중 원호 배리어), Firewall(요동치는 삼각 화염) 드로잉 및 누수 없는 트윈 클린업 구현 | E2E 방어 배치 smoke |
 | `src/buildings/Core.ts` | Core HP와 Confidence Score 수신 | 연구 비용, 게임오버, 점수 | WEIGHT_UPDATE는 +10, LABELED_DATA는 +2, 기타 +0.1 | E2E, save smoke |
 | `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push 및 스크롤 갈매기(Chevron) 벡터 렌더링 | 자원 라인 | 3중 네온 쉐브론 흐름선 스크롤링 및 레일 외곽선 효과, 누수 없는 트윈 적용 (FastLink 공통) | E2E placement smoke |
@@ -46,7 +46,7 @@
 | `src/managers/ResearchUI.ts` | 연구 모달 렌더링/해금 버튼 | 연구 진행 | 첫 방어 전 연구 버튼 gating과 연결 | E2E research smoke |
 | `src/managers/TrainingLabUI.ts` | 모델 훈련 연구소 DOM UI | 방어 모델 타겟 선택/훈련 | `ModelTrainingLab` 상태와 동기화 | E2E 간접 |
 | `src/managers/MobileUIManager.ts` | 모바일 액션바/케이블 메뉴/빌드 요약 | 모바일 조작 | touch gesture와 DOM guard 영향 | E2E mobile |
-| `src/managers/TutorialManager.ts` | 튜토리얼 패널, 단계별 건물 잠금, 월드 하이라이트, 튜토리얼 웨이브 진입 이벤트 처리 | 초반 온보딩, 빌드 버튼 갱신, WaveManager mock wave 연동 | DEFENSE 단계는 Classifier 배치 후 `WAVE_STARTED`로 완료되어야 mock wave 분기가 유지됨 | `src/utils/tutorialFlow.test.ts`, E2E startup |
+| `src/managers/TutorialManager.ts` | 튜토리얼 패널, 단계별 건물 잠금, 데이터 기반 월드 고스트/흐름/범위 힌트 렌더링, 튜토리얼 웨이브/모델 학습 이벤트 처리 | 초반 온보딩, 빌드 버튼 갱신, WaveManager mock wave 연동, 모델 학습 루프 안내 | DEFENSE 단계는 Classifier 배치 후 `WAVE_STARTED`로 완료되어야 mock wave 분기가 유지됨. 힌트 렌더는 `tutorialFlow.ts`의 `visualHints`를 단일 원천으로 사용 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | `src/controllers/InputController.ts` | 캔버스 입력, 배치/케이블/철거/툴팁/모바일 탭 | 실 조작의 중심 | DOM UI guard 셀렉터, 좌표 snap, unlock 체크 주의 | E2E interaction |
 | `src/controllers/OverlayController.ts` | 방어 범위/전력망 오버레이 그리기 | F1/F2, 모바일 토글 | 연구 보너스 반영 | E2E overlay |
 | `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |
@@ -60,6 +60,7 @@
 | `src/utils/productionSimulation.ts` | 생산 라인 장기 시뮬레이션 | 밸런스 검증용 순수 모델 | 실제 CableManager와 완전 동일하지 않을 수 있음 | `src/utils/productionSimulation.test.ts` |
 | `src/utils/apRelay.ts` | AP 소스/타겟 선택 정책 | CableManager 무선 릴레이 | Storage/DataCache를 자동 source에서 제외 | `src/utils/apRelay.test.ts` |
 | `src/utils/enemyBuildingInteraction.ts` | 적의 건물 공격 우선순위 | BaseEnemy 공격 타겟 | Core/Firewall/일반 건물 우선순위 확인 | `src/utils/enemyBuildingInteraction.test.ts` |
-| `src/utils/tutorialFlow.ts` | 튜토리얼 단계 정의/진행 | TutorialManager, UI copy | i18n 키와 단계 순서 연결 | `src/utils/tutorialFlow.test.ts` |
+| `src/utils/tutorialFlow.ts` | 튜토리얼 단계/진행/허용 건물/시각 힌트 정의 | TutorialManager, UI copy, 월드 고스트/흐름 힌트 | i18n 키와 단계 순서 연결. DEFENSE index와 final step compatibility가 WaveManager/save progress에 영향. 좌표는 spawn 리소스 패치와 비리소스 건물 칸이 섞이지 않게 유지 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | `tests/e2e/app-smoke.spec.ts` | 실제 브라우저 smoke, 배치/케이블/모바일/저장/언어 | 회귀 최종 방어선 | Phaser canvas 좌표 테스트라 viewport 변경 영향 큼 | Playwright |
+| `tests/e2e/tutorial-guidance.spec.ts` | 실제 브라우저 튜토리얼 힌트/완료 smoke | 튜토리얼 고스트 좌표, 리소스 정합성, 모델 훈련소 가중치 입력 | `tutorialFlow.ts` 좌표와 `WaveManager` 튜토리얼 완료 이벤트 변경 시 함께 갱신 | Playwright |
 | `index.html` | Phaser mount와 `#game-hud-shell` DOM UI 컨테이너 | UIManager가 id 기반으로 제어 | 기존 HUD/패널/빌드 id 변경은 E2E와 manager 코드 영향 | E2E 전반 |

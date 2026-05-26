@@ -22,6 +22,7 @@ export interface EventMap {
     'LOAD_REQUESTED': void;
     'RESEARCH_UNLOCKED': { id: string };
     'RESEARCH_OPENED': void;
+    'MODEL_TRAINING_TARGET_SET': { targetType: string | null };
     'TUTORIAL_RESET': void;
     'AUDIO_SETTINGS_CHANGED': { masterVolume: number; muted: boolean };
     'BLOOM_SETTINGS_CHANGED': { enabled: boolean };

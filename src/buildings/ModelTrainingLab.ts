@@ -3,6 +3,7 @@ import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
 import { BuildingOptions, IMainScene } from '../types';
 import { getBuildingName } from '../i18n';
+import EventBus from '../managers/EventBus';
 
 const TRAINING_ITEMS = new Set(['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
 const TRAINING_INTERVAL_BUILDING_TICKS = 4;
@@ -58,6 +59,7 @@ export default class ModelTrainingLab extends BaseBuilding {
     setTarget(type: string | null): void {
         this.targetType = type;
         this.refreshStatusText();
+        EventBus.emit('MODEL_TRAINING_TARGET_SET', { targetType: type });
     }
 
     getTargetState() {
