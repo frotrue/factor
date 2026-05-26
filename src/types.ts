@@ -174,7 +174,7 @@ export interface ResearchNode {
 }
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
-export type BuildingType = 
+export type BuildingType =
     | 'MINER' | 'DATA_DOWNLOADER' | 'CORE' | 'PROCESSOR'
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
@@ -297,6 +297,8 @@ export interface IMainScene extends Phaser.Scene {
     trainDefenseModelType(type: string, itemType: string): boolean;
     syncDefenseModelType(type: string): void;
     setGameSpeed(speed: number): void;
+    bloomEnabled: boolean;
+    setBloomEnabled(enabled: boolean): void;
 }
 
 // ── 적 (Enemy) ──
@@ -369,6 +371,7 @@ export interface SaveData {
         gameSpeed: number;
         showPowerGrid: boolean;
         showDefenseRange: boolean;
+        bloomEnabled?: boolean;
         difficulty?: string;
         language?: Language;
         masterVolume: number;

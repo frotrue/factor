@@ -10,6 +10,7 @@ export default class DataCache extends Storage {
         super(scene, x, y, { ...config, color: CONFIG.BUILDINGS.DATA_CACHE.COLOR }, 'DATA_CACHE');
         this.maxBufferSize = CONFIG.BUILDINGS.DATA_CACHE.MAX_BUFFER || 20;
         this.drawBody(CONFIG.BUILDINGS.DATA_CACHE.COLOR, 1, 1);
+        this.drawCapacityGauge();
     }
 
     canAcceptItem(type: string): boolean {

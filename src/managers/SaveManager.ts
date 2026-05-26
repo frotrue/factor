@@ -94,7 +94,7 @@ export default class SaveManager {
 
         const coreBuilding = this.scene.buildingManager.get(`0,0`) as Core | null;
         const audioSettings = this.scene.soundManager?.getSettings?.() ?? { masterVolume: 0.6, muted: false };
-        
+
         const saveData: SaveData = {
             version: CURRENT_SAVE_VERSION,
             timestamp: Date.now(),
@@ -120,6 +120,7 @@ export default class SaveManager {
                 gameSpeed: this.scene.gameSpeed,
                 showPowerGrid: this.scene.showPowerGrid,
                 showDefenseRange: this.scene.showDefenseRange,
+                bloomEnabled: this.scene.bloomEnabled,
                 difficulty: this.scene.difficultyId,
                 language: getLanguage(),
                 masterVolume: audioSettings.masterVolume,
@@ -145,10 +146,10 @@ export default class SaveManager {
             // Clean up existing state
             this.scene.buildingManager.forEach(b => b.destroy());
             this.scene.buildingManager.buildings.clear();
-            
+
             this.scene.itemManager.getItems().forEach(item => item.sprite.destroy());
             this.scene.itemManager.items = [];
-            
+
             this.scene.waveManager.enemies.forEach(e => {
                 if (e.sprite) e.sprite.destroy();
                 if (e.hpBar) e.hpBar.destroy();
@@ -185,10 +186,10 @@ export default class SaveManager {
                 core.totalDataReceived = data.core.totalDataReceived;
                 core.confidenceScore = data.core.confidenceScore;
                 core.drawHpBar();
-                EventBus.emit('CORE_DATA_RECEIVED', { 
-                    type: 'LOAD', 
-                    score: core.confidenceScore, 
-                    total: core.totalDataReceived 
+                EventBus.emit('CORE_DATA_RECEIVED', {
+                    type: 'LOAD',
+                    score: core.confidenceScore,
+                    total: core.totalDataReceived
                 });
             }
 
@@ -274,7 +275,7 @@ export default class SaveManager {
             this.scene.waveManager.enemiesToSpawn = data.wave.enemiesToSpawn;
             this.scene.waveManager.hpMultiplier = data.wave.hpMultiplier;
             this.scene.waveManager.enemyIdCounter = data.wave.enemyIdCounter;
-            
+
             if (data.wave.currentWave > 0 && data.wave.enemiesSpawned < data.wave.enemiesToSpawn) {
                 this.scene.waveManager.waveActive = true;
                 EventBus.emit('WAVE_STARTED', { wave: data.wave.currentWave });
@@ -292,12 +293,14 @@ export default class SaveManager {
             // Load Settings
             if (data.settings) {
                 this.scene.setGameSpeed(data.settings.gameSpeed || 1);
-                
+
                 this.scene.showPowerGrid = data.settings.showPowerGrid;
                 this.scene.powerGridDirty = true;
-                
+
                 this.scene.showDefenseRange = data.settings.showDefenseRange;
                 this.scene.defenseRangeDirty = true;
+
+                this.scene.setBloomEnabled(typeof data.settings.bloomEnabled === 'boolean' ? data.settings.bloomEnabled : true);
 
                 this.scene.soundManager?.setSettings?.(
                     typeof data.settings.masterVolume === 'number' ? data.settings.masterVolume : 0.6,

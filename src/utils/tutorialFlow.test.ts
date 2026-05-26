@@ -12,13 +12,12 @@ describe('tutorial flow', () => {
     it('defines a complete onboarding path for the factory loop', () => {
         expect(TUTORIAL_STEP_DEFINITIONS.map(step => step.id)).toEqual([
             'RESOURCE',
+            'POWER',
             'DATA_SOURCE',
-            'PROCESSING',
             'CONNECTION',
+            'PROCESSING',
             'DEFENSE',
-            'WAVE',
-            'RESEARCH',
-            'POWER'
+            'RESEARCH'
         ]);
     });
 
@@ -32,10 +31,10 @@ describe('tutorial flow', () => {
 
     it('uses Korean by default and refreshes created steps when language changes', () => {
         setLanguage('ko');
-        expect(createTutorialSteps()[1].title).toBe('데이터 수집 시작');
+        expect(createTutorialSteps()[1].title).toBe('전력 유지');
 
         setLanguage('en');
-        expect(createTutorialSteps()[1].title).toBe('Start data intake');
+        expect(createTutorialSteps()[1].title).toBe('Keep the grid powered');
 
         setLanguage('ko');
     });

@@ -22,17 +22,17 @@
 | `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | Confidence 성장 재료 | Core 점수와 모델 훈련 둘 다에 연결 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/NeuralTrainer.ts` | MODEL_TRAINING / INFERENCE_UNIT_PRODUCTION 레시피 전환 | 후반 생산, 고급 연구 | 클릭 시 레시피 전환하며 버퍼 초기화 | E2E는 간접 |
 | `src/buildings/ModelTrainingLab.ts` | 방어 모델 공유 상태 훈련 | 방어 모델 신뢰도/버전 성장 | `targetType`, `autoTrain`은 저장 customState 대상 | `src/utils/modelTrainingSummary.test.ts` 보조 |
-| `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 상태 적용 | 방어 전투, 적 제거 | 피해는 `CONFIG` + 연구 + 모델 신뢰도 조합 | E2E 방어 배치 smoke |
+| `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 상태 적용 및 실시간 타겟 추적/배리어/방화벽 요동 등 커스텀 벡터 비주얼 탑재 | 방어 전투, 적 제거 | Classifier(락온 타겟 실시간 포신 추적 및 지점 네온 크로스헤어), Filter(2중 원호 배리어), Firewall(요동치는 삼각 화염) 드로잉 및 누수 없는 트윈 클린업 구현 | E2E 방어 배치 smoke |
 | `src/buildings/Core.ts` | Core HP와 Confidence Score 수신 | 연구 비용, 게임오버, 점수 | WEIGHT_UPDATE는 +10, LABELED_DATA는 +2, 기타 +0.1 | E2E, save smoke |
-| `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push | 자원 라인 | 현재 물리 아이템은 `SILICON`만 허용 | E2E placement smoke |
-| `src/buildings/Storage.ts` | 단일 타입 저장, inputBuffer를 출력으로도 사용 | 인벤토리, 케이블/컨베이어 버퍼 | 한 Storage는 첫 아이템 타입만 계속 받음 | E2E storage placement |
-| `src/buildings/DataCache.ts` | 데이터 아이템 전용 Storage | 케이블/AP 데이터 버퍼 | RAW/Labeled/Weight/Trained/Inference만 허용 | AP relay 테스트 간접 |
-| `src/buildings/Unloader.ts` | Storage 뒤쪽에서 아이템 추출 | 저장고 -> 라인 연결 | 회전 방향의 back tile 기준 | E2E early gating |
-| `src/buildings/PowerPlant.ts` | Energy 자원 위 발전소 활성 여부 | 전력 생산 | Energy 타일이 아니면 생산 0 | PowerManager 간접 |
-| `src/buildings/PowerNode.ts`, `SolarPanel.ts` | 전력 범위 노드 | 전력망 확장 | 실질 계산은 `PowerManager` | `src/utils/powerPreview.test.ts` |
+| `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push 및 스크롤 갈매기(Chevron) 벡터 렌더링 | 자원 라인 | 3중 네온 쉐브론 흐름선 스크롤링 및 레일 외곽선 효과, 누수 없는 트윈 적용 (FastLink 공통) | E2E placement smoke |
+| `src/buildings/Storage.ts` | 단일 타입 저장, inputBuffer를 출력으로도 사용 및 실시간 잔여량 게이지 렌더링 | 인벤토리, 케이블/컨베이어 버퍼 | 저장 용량 비율(inputBuffer.length / maxBufferSize)에 연동되어 갱신되는 2중 원형 네온 아크(Arc) 게이지 탑재 | E2E storage placement |
+| `src/buildings/DataCache.ts` | 데이터 아이템 전용 Storage | 케이블/AP 데이터 버퍼 | RAW/Labeled/Weight/Trained/Inference 허용 및 용량 맞춤형 원형 네온 아크 게이지 연계 | AP relay 테스트 간접 |
+| `src/buildings/Unloader.ts` | Storage 뒤쪽에서 아이템 추출 및 진행 방향 피스톤 피드백 렌더링 | 저장고 -> 라인 연결 | 회전 방향을 정밀 매핑하여 1.2초 압축/팽창하는 네온 화살표 피스톤 애니메이션 및 누수 없는 트윈 탑재 | E2E early gating |
+| `src/buildings/PowerPlant.ts` | Energy 자원 위 발전소 활성 여부 및 융합 제어 코어 렌더링 | 전력 생산 | 액티브(녹색 융합 제어 코어 링, 3개 회전 노드, 확산 파동) 및 인액티브(적색 경고 링) 드로잉과 누수 없는 트윈 탑재 | PowerManager 간접 |
+| `src/buildings/PowerNode.ts`, `SolarPanel.ts` | 전력 범위 노드 및 솔라 표면 네온 그리드/반사광 연출 | 전력망 확장 | PowerNode(중앙 전하 스타 크리스탈 및 4개 회전 골드 틱), SolarPanel(2x2 그리드 셀 및 대각선 스크롤링 네온 반사 빔) 비주얼 탑재 | `src/utils/powerPreview.test.ts` |
 | `src/buildings/AccessPoint.ts` | AP 시각/기본 범위/대역폭 상태 | 무선 데이터 릴레이 | 전송 정책은 `CableManager`와 `utils/apRelay.ts` | `src/utils/apRelay.test.ts` |
 | `src/managers/TickSystem.ts` | 고정 틱 실행, 전력/케이블/건물 onTick 순서 | 생산, 전력, AP, 케이블 | `gameSpeed`가 tick interval을 나눔 | 생산/파워 관련 테스트 간접 |
-| `src/managers/CableManager.ts` | 케이블 연결, 큐, 데이터 이동, AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | 큐 방향, bandwidth, AP 제외 정책 변경 시 테스트 필요. 그래픽만 바꿀 때도 케이블 E2E 유지 | `src/utils/apRelay.test.ts`, E2E cable |
+| `src/managers/CableManager.ts` | 케이블 연결, 큐, 데이터 이동 (실리콘 케이블 전송 대응), AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | 큐 방향, bandwidth, AP 제외 정책 변경 시 테스트 필요. 실리콘 전송 기능 추가됨. | `src/utils/apRelay.test.ts`, E2E cable |
 | `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 풋프린트 중심 범위 계산, 소비자 할당, blackout 적용 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서와 멀티타일 건물 중심 범위가 전체 런타임에 영향 | `src/utils/powerPreview.test.ts`, `src/utils/geometry.test.ts` 보조 |
 | `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 코어 중심 target 전달, 보상, boss aura, next-wave briefing 발행 | 방어 압박, 연구 개방 신호 | 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음. 적 이동 target은 Core footprint center 기준 | `src/utils/waveSimulation.test.ts`, `src/utils/waveBriefingKey.test.ts`, `src/utils/gridPath.test.ts`, E2E threat panel |
 | `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과/적 실루엣 렌더 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의. 경로 계산은 `utils/gridPath.ts`로 분리 | `src/utils/gridPath.test.ts`, `src/utils/enemyBuildingInteraction.test.ts` |
@@ -46,6 +46,7 @@
 | `src/managers/ResearchUI.ts` | 연구 모달 렌더링/해금 버튼 | 연구 진행 | 첫 방어 전 연구 버튼 gating과 연결 | E2E research smoke |
 | `src/managers/TrainingLabUI.ts` | 모델 훈련 연구소 DOM UI | 방어 모델 타겟 선택/훈련 | `ModelTrainingLab` 상태와 동기화 | E2E 간접 |
 | `src/managers/MobileUIManager.ts` | 모바일 액션바/케이블 메뉴/빌드 요약 | 모바일 조작 | touch gesture와 DOM guard 영향 | E2E mobile |
+| `src/managers/TutorialManager.ts` | 튜토리얼 패널, 단계별 건물 잠금, 월드 하이라이트, 튜토리얼 웨이브 진입 이벤트 처리 | 초반 온보딩, 빌드 버튼 갱신, WaveManager mock wave 연동 | DEFENSE 단계는 Classifier 배치 후 `WAVE_STARTED`로 완료되어야 mock wave 분기가 유지됨 | `src/utils/tutorialFlow.test.ts`, E2E startup |
 | `src/controllers/InputController.ts` | 캔버스 입력, 배치/케이블/철거/툴팁/모바일 탭 | 실 조작의 중심 | DOM UI guard 셀렉터, 좌표 snap, unlock 체크 주의 | E2E interaction |
 | `src/controllers/OverlayController.ts` | 방어 범위/전력망 오버레이 그리기 | F1/F2, 모바일 토글 | 연구 보너스 반영 | E2E overlay |
 | `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |

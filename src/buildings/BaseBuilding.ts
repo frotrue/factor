@@ -117,82 +117,19 @@ export default class BaseBuilding {
 
         this.graphics.lineStyle(2, 0xdbeafe, 0.52);
         switch (this.type) {
-            case 'MINER':
-                this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.24);
-                this.graphics.lineStyle(2, accent, 0.75);
-                this.graphics.lineBetween(cx - 8, cy, cx + 8, cy);
-                this.graphics.lineBetween(cx, cy - 8, cx, cy + 8);
-                break;
-            case 'DATA_DOWNLOADER':
-                this.graphics.lineStyle(2, accent, 0.82);
-                this.graphics.lineBetween(cx, cy + 8, cx, cy - 8);
-                this.graphics.strokeCircle(cx, cy - 10, 5);
-                this.graphics.strokeCircle(cx, cy - 10, 11);
-                break;
-            case 'ACCESS_POINT':
-                this.graphics.lineStyle(2, 0xffffff, 0.55);
-                this.graphics.strokeCircle(cx, cy, 5);
-                this.graphics.strokeCircle(cx, cy, 11);
-                this.graphics.lineBetween(cx, cy + 5, cx, top + height - 7);
-                break;
-            case 'CONVEYOR':
-            case 'FAST_LINK':
-                this.graphics.lineStyle(2, accent, 0.75);
-                this.graphics.lineBetween(left + 7, cy, left + width - 7, cy);
-                this.graphics.lineStyle(1, 0xffffff, 0.38);
-                this.graphics.lineBetween(left + width - 13, cy - 5, left + width - 7, cy);
-                this.graphics.lineBetween(left + width - 13, cy + 5, left + width - 7, cy);
-                break;
-            case 'PROCESSOR':
-            case 'WEIGHT_TRAINER':
-            case 'NEURAL_TRAINER':
             case 'MODEL_TRAINING_LAB':
-            case 'RECYCLER':
                 for (let i = 0; i < 3; i++) {
                     this.graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
                 }
-                if (this.type === 'MODEL_TRAINING_LAB') {
-                    this.graphics.lineStyle(2, accent, 0.72);
-                    this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.18);
-                    this.graphics.lineStyle(1, 0xffffff, 0.45);
-                    this.graphics.lineBetween(cx - 12, cy, cx + 12, cy);
-                    this.graphics.lineBetween(cx, cy - 12, cx, cy + 12);
-                }
-                if (this.type === 'RECYCLER') {
-                    this.graphics.lineStyle(2, 0xffffff, 0.6);
-                    this.graphics.strokeCircle(cx, cy, 9);
-                    this.graphics.lineBetween(cx + 5, cy - 7, cx + 10, cy - 2);
-                    this.graphics.lineBetween(cx + 5, cy - 7, cx + 1, cy - 1);
-                }
-                break;
-            case 'STORAGE':
-            case 'DATA_CACHE':
-                this.graphics.lineStyle(1, 0xffffff, 0.28);
-                this.graphics.lineBetween(left + width / 2, top + 5, left + width / 2, top + height - 5);
-                this.graphics.lineBetween(left + 5, top + height / 2, left + width - 5, top + height / 2);
-                if (this.type === 'DATA_CACHE') {
-                    this.graphics.fillStyle(accent, 0.42);
-                    this.graphics.fillCircle(cx, cy, 5);
-                }
-                break;
-            case 'POWER_NODE':
-            case 'POWER_PLANT':
-            case 'SOLAR_PANEL':
-                this.graphics.lineStyle(2, accent, 0.86);
-                this.graphics.lineBetween(cx - 4, top + 7, cx + 5, cy - 1);
-                this.graphics.lineBetween(cx + 5, cy - 1, cx - 2, cy - 1);
-                this.graphics.lineBetween(cx - 2, cy - 1, cx + 4, top + height - 7);
-                break;
-            case 'CLASSIFIER':
-            case 'FILTER':
-            case 'FIREWALL':
-                this.graphics.lineStyle(2, accent, 0.82);
-                this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.22);
-                this.graphics.lineBetween(cx, top + 8, cx, top + height - 8);
+                this.graphics.lineStyle(2, accent, 0.72);
+                this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.18);
+                this.graphics.lineStyle(1, 0xffffff, 0.45);
+                this.graphics.lineBetween(cx - 12, cy, cx + 12, cy);
+                this.graphics.lineBetween(cx, cy - 12, cx, cy + 12);
                 break;
             default:
-                this.graphics.fillStyle(0xffffff, 0.2);
-                this.graphics.fillCircle(cx, cy, 4);
+                // 다른 모든 업그레이드된 건물은 각자의 생성자에서 고품질 동적 벡터 비주얼을 렌더링하므로,
+                // 기존의 단순 정적 아이콘 그리기는 생략하여 새로운 프리미엄 디자인이 가려지지 않도록 합니다.
                 break;
         }
     }

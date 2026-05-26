@@ -60,6 +60,7 @@ export default class MainScene extends Phaser.Scene {
     powerGridDirty: boolean = false;
     showDefenseRange: boolean = false;
     defenseRangeDirty: boolean = false;
+    bloomEnabled: boolean = true;
 
     powerGridGraphics!: Phaser.GameObjects.Graphics;
     defenseRangeGraphics!: Phaser.GameObjects.Graphics;
@@ -387,7 +388,7 @@ export default class MainScene extends Phaser.Scene {
     update(time: number, delta: number): void {
         this.updateCursorPosition();
         this.gridRenderer.draw();
-        
+
         this.tickSystem.update(time);
         this.waveManager.update(delta * this.gameSpeed);
         this.saveManager.update(delta);
@@ -458,5 +459,13 @@ export default class MainScene extends Phaser.Scene {
         this.gameSpeed = Math.max(1, Math.min(3, speed));
         // P9: tickRate는 TickSystem.update()에서 gameSpeed로 나누므로 여기서는 변경하지 않음
         EventBus.emit('GAME_SPEED_CHANGED', { speed: this.gameSpeed });
+    }
+
+    setBloomEnabled(enabled: boolean): void {
+        this.bloomEnabled = enabled;
+        if (this.cableManager) {
+            this.cableManager.dirty = true;
+        }
+        EventBus.emit('BLOOM_SETTINGS_CHANGED', { enabled });
     }
 }

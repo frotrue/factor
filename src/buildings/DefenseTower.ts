@@ -3,6 +3,7 @@ import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
 import { BuildingOptions, DefenseModelState, DefenseTowerConfig, IMainScene } from '../types';
 import BaseEnemy from '../enemies/BaseEnemy';
+import { getCategoryColor } from '../visuals/visualTheme';
 
 export default class DefenseTower extends BaseBuilding {
     fireTimer: number;
@@ -10,6 +11,9 @@ export default class DefenseTower extends BaseBuilding {
     modelVersion: number;
     inferenceCharge: number;
     lockedTarget: BaseEnemy | null;
+    towerGraphics: Phaser.GameObjects.Graphics;
+    animProgress: number;
+    towerTween: Phaser.Tweens.Tween;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}) {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
@@ -28,6 +32,135 @@ export default class DefenseTower extends BaseBuilding {
                 : 1;
             this.maxHp = Math.round(bConfig.HP * hpMultiplier);
             this.hp = this.maxHp;
+        }
+
+        this.towerGraphics = scene.add.graphics();
+        this.container.add(this.towerGraphics);
+
+        this.animProgress = 0;
+        this.towerTween = scene.tweens.add({
+            targets: this,
+            animProgress: 1.0,
+            duration: 2000,
+            repeat: -1,
+            onUpdate: () => this.drawTowerVisuals()
+        });
+    }
+
+    drawTowerVisuals(): void {
+        this.towerGraphics.clear();
+        if (this.destroyed) return;
+
+        const accent = getCategoryColor(CONFIG.BUILDINGS[this.type]?.CATEGORY) || 0xef4444;
+        const pulse = 0.55 + 0.35 * Math.sin(this.scene.time.now / 180);
+        const timeNow = this.scene.time.now;
+
+        if (this.type === 'CLASSIFIER') {
+            let angle = this.scene.time.now / 1500;
+            if (this.lockedTarget && this.lockedTarget.active) {
+                const localX = this.lockedTarget.x - (this.x + CONFIG.GRID_SIZE / 2);
+                const localY = this.lockedTarget.y - (this.y + CONFIG.GRID_SIZE / 2);
+                angle = Math.atan2(localY, localX);
+            }
+
+            this.towerGraphics.lineStyle(2, accent, 0.45);
+            this.towerGraphics.strokeCircle(0, 0, 10);
+
+            const barrelLen = 14;
+            const bx = Math.cos(angle) * barrelLen;
+            const by = Math.sin(angle) * barrelLen;
+
+            const orthoAngle = angle + Math.PI / 2;
+            const offsetDist = 2.5;
+            const ox = Math.cos(orthoAngle) * offsetDist;
+            const oy = Math.sin(orthoAngle) * offsetDist;
+
+            this.towerGraphics.lineStyle(2, accent, 0.5);
+            this.towerGraphics.lineBetween(-ox, -oy, bx - ox, by - oy);
+            this.towerGraphics.lineBetween(ox, oy, bx + ox, by + oy);
+
+            this.towerGraphics.lineStyle(1.5, 0xffffff, 0.85);
+            this.towerGraphics.lineBetween(-ox, -oy, bx * 0.9 - ox, by * 0.9 - oy);
+            this.towerGraphics.lineBetween(ox, oy, bx * 0.9 + ox, by * 0.9 + oy);
+
+            this.towerGraphics.fillStyle(0xffffff, 0.95);
+            this.towerGraphics.fillCircle(0, 0, 3);
+        }
+        else if (this.type === 'FILTER') {
+            this.towerGraphics.lineStyle(3.5, accent, 0.38 * pulse);
+            this.towerGraphics.beginPath();
+            this.towerGraphics.arc(0, 0, 13, Math.PI * 0.7, Math.PI * 1.3, false);
+            this.towerGraphics.strokePath();
+
+            this.towerGraphics.beginPath();
+            this.towerGraphics.arc(0, 0, 13, -Math.PI * 0.3, Math.PI * 0.3, false);
+            this.towerGraphics.strokePath();
+
+            this.towerGraphics.lineStyle(1.5, 0xffffff, 0.8 * pulse);
+            this.towerGraphics.beginPath();
+            this.towerGraphics.arc(0, 0, 13, Math.PI * 0.75, Math.PI * 1.25, false);
+            this.towerGraphics.strokePath();
+
+            this.towerGraphics.beginPath();
+            this.towerGraphics.arc(0, 0, 13, -Math.PI * 0.25, Math.PI * 0.25, false);
+            this.towerGraphics.strokePath();
+
+            this.towerGraphics.fillStyle(accent, 0.28 * pulse);
+            this.towerGraphics.lineStyle(1.5, accent, 0.85);
+            this.towerGraphics.strokeCircle(0, 0, 6);
+            this.towerGraphics.fillCircle(0, 0, 6);
+
+            const cAngle = timeNow / 300;
+            this.towerGraphics.fillStyle(0xffffff, 0.9);
+            this.towerGraphics.fillCircle(Math.cos(cAngle) * 3, Math.sin(cAngle) * 3, 1.8);
+        }
+        else if (this.type === 'FIREWALL') {
+            const fireSeed = timeNow / 60;
+            const segments = 3;
+
+            this.towerGraphics.lineStyle(1.5, accent, 0.38);
+            this.towerGraphics.strokeCircle(0, 0, 12);
+
+            for (let i = 0; i < segments; i++) {
+                const angleOffset = (i * Math.PI * 2) / segments;
+                const jitterAngle = angleOffset + 0.15 * Math.sin(fireSeed + i * 17);
+                const height = 11 + 6 * Math.abs(Math.sin(fireSeed * 1.8 + i * 23));
+                const width = 4 + 2 * Math.abs(Math.cos(fireSeed * 1.2 + i * 11));
+
+                const ax = Math.cos(jitterAngle) * height;
+                const ay = Math.sin(jitterAngle) * height;
+
+                const baseAngleLeft = jitterAngle + Math.PI / 2;
+                const baseAngleRight = jitterAngle - Math.PI / 2;
+                const baseDist = width;
+                const bx1 = Math.cos(baseAngleLeft) * baseDist;
+                const by1 = Math.sin(baseAngleLeft) * baseDist;
+                const bx2 = Math.cos(baseAngleRight) * baseDist;
+                const by2 = Math.sin(baseAngleRight) * baseDist;
+
+                const flameAlpha = 0.35 + 0.35 * Math.abs(Math.sin(fireSeed * 0.9 + i * 7));
+
+                this.towerGraphics.fillStyle(accent, flameAlpha * 0.45);
+                this.towerGraphics.lineStyle(3, accent, flameAlpha * 0.25);
+                this.towerGraphics.beginPath();
+                this.towerGraphics.moveTo(bx1, by1);
+                this.towerGraphics.lineTo(ax, ay);
+                this.towerGraphics.lineTo(bx2, by2);
+                this.towerGraphics.closePath();
+                this.towerGraphics.fillPath();
+                this.towerGraphics.strokePath();
+
+                this.towerGraphics.lineStyle(1.2, 0xffffff, flameAlpha * 0.9);
+                this.towerGraphics.beginPath();
+                this.towerGraphics.moveTo(bx1, by1);
+                this.towerGraphics.lineTo(ax, ay);
+                this.towerGraphics.lineTo(bx2, by2);
+                this.towerGraphics.closePath();
+                this.towerGraphics.strokePath();
+            }
+
+            this.towerGraphics.fillStyle(0xffffff, 0.9);
+            this.towerGraphics.fillCircle(0, 0, 3.5);
         }
     }
 
@@ -63,6 +196,7 @@ export default class DefenseTower extends BaseBuilding {
     }
 
     onTick(_tickCount: number): void {
+        super.onTick(_tickCount);
         const dConfig = CONFIG.BUILDINGS[this.type].DEFENSE;
         if (!dConfig) return;
 
@@ -85,8 +219,8 @@ export default class DefenseTower extends BaseBuilding {
         const researchManager = (this.scene as IMainScene).researchManager;
         const range = dConfig.RANGE + (researchManager?.getEffectValue('TOWER_RANGE_BONUS', 0) ?? 0);
         const enemies = waveManager.getEnemiesInRange(
-            this.x + (CONFIG.GRID_SIZE/2), 
-            this.y + (CONFIG.GRID_SIZE/2), 
+            this.x + (CONFIG.GRID_SIZE/2),
+            this.y + (CONFIG.GRID_SIZE/2),
             range
         );
 
@@ -122,12 +256,11 @@ export default class DefenseTower extends BaseBuilding {
                 this.resolveShot(enemy, actualDamage, hitChance);
             });
         } else if (this.type === 'FIREWALL') {
-            // 방화벽은 투사체 없이 직접 닿은 적에게 데미지
             enemies.forEach((enemy: BaseEnemy) => {
                 const dist = Phaser.Math.Distance.Between(this.x + CONFIG.GRID_SIZE/2, this.y + CONFIG.GRID_SIZE/2, enemy.x, enemy.y);
                 if (dist <= CONFIG.GRID_SIZE) {
                     enemy.takeDamage(actualDamage);
-                    this.takeDamage(enemy.damage / 5); // 방화벽도 피해를 입음
+                    this.takeDamage(enemy.damage / 5);
                 }
             });
         } else {
@@ -141,10 +274,10 @@ export default class DefenseTower extends BaseBuilding {
                 : sortedEnemies[0];
 
             if (!target) return;
-            
+
             this.resolveShot(target, actualDamage, hitChance);
         }
-        
+
         this.fireTimer = 0;
     }
 
@@ -234,9 +367,7 @@ export default class DefenseTower extends BaseBuilding {
         const mainScene = this.scene as IMainScene;
         mainScene.soundManager?.play('shot');
         if (this.type === 'CLASSIFIER') {
-            if (this.type === 'CLASSIFIER') {
-                mainScene.effectsManager?.setInferenceLock(this.getLockKey(), target, this.type, this.modelConfidence);
-            }
+            mainScene.effectsManager?.setInferenceLock(this.getLockKey(), target, this.type, this.modelConfidence);
             mainScene.effectsManager?.playInferenceTargeting({
                 towerType: this.type,
                 x,
@@ -261,6 +392,9 @@ export default class DefenseTower extends BaseBuilding {
 
     destroy(): void {
         this.clearLockedTarget();
+        if (this.towerTween) {
+            this.towerTween.remove();
+        }
         super.destroy();
     }
 }

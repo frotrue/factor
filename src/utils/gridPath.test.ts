@@ -18,7 +18,7 @@ describe('findGridPath', () => {
         });
 
         expect(path[0]).toEqual({ x: CONFIG.GRID_SIZE * 1.5, y: CONFIG.GRID_SIZE * 0.5 });
-        expect(path.at(-1)).toEqual({ x: CONFIG.GRID_SIZE * 2.5, y: CONFIG.GRID_SIZE * 0.5 });
+        expect(path[path.length - 1]).toEqual({ x: CONFIG.GRID_SIZE * 2.5, y: CONFIG.GRID_SIZE * 0.5 });
     });
 
     it('returns no path when blockers fully separate the target', () => {
@@ -63,6 +63,6 @@ describe('findGridPath', () => {
         });
 
         expect(path.length).toBeGreaterThan(0);
-        expect(path.at(-1)).toEqual(coreCenter);
+        expect(path[path.length - 1]).toEqual(coreCenter);
     });
 });

@@ -17,6 +17,7 @@ export default class SettingsUI {
         const btnLoad = document.getElementById('btn-load');
         const volumeInput = document.getElementById('audio-volume') as HTMLInputElement | null;
         const mutedInput = document.getElementById('audio-muted') as HTMLInputElement | null;
+        const bloomInput = document.getElementById('settings-bloom') as HTMLInputElement | null;
         const btnResetTutorial = document.getElementById('btn-reset-tutorial');
         const languageButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-language]'));
         const audioSettings = this.scene.soundManager?.getSettings?.();
@@ -29,18 +30,26 @@ export default class SettingsUI {
             btnLoad,
             volumeInput,
             mutedInput,
+            bloomInput,
             btnResetTutorial,
             ...languageButtons
         ].forEach(element => this.uiManager.guardDomPointer(element));
 
         if (volumeInput && audioSettings) volumeInput.value = String(Math.round(audioSettings.masterVolume * 100));
         if (mutedInput && audioSettings) mutedInput.checked = audioSettings.muted;
+        if (bloomInput) bloomInput.checked = this.scene.bloomEnabled;
 
         if (btnSettings && modalSettings) {
             btnSettings.onclick = event => {
                 event.preventDefault();
                 event.stopPropagation();
                 modalSettings.style.display = 'flex';
+
+                // Sync values when modal is opened
+                const currentAudio = this.scene.soundManager?.getSettings?.();
+                if (volumeInput && currentAudio) volumeInput.value = String(Math.round(currentAudio.masterVolume * 100));
+                if (mutedInput && currentAudio) mutedInput.checked = currentAudio.muted;
+                if (bloomInput) bloomInput.checked = this.scene.bloomEnabled;
             };
         }
 
@@ -98,6 +107,12 @@ export default class SettingsUI {
         };
         if (volumeInput) volumeInput.oninput = emitAudioSettings;
         if (mutedInput) mutedInput.onchange = emitAudioSettings;
+
+        if (bloomInput) {
+            bloomInput.onchange = () => {
+                this.scene.setBloomEnabled(bloomInput.checked);
+            };
+        }
 
         [1, 2, 3].forEach(speed => {
             const btn = document.getElementById(`btn-speed-${speed}`);

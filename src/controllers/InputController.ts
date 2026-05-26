@@ -291,7 +291,7 @@ export default class InputController {
         if (!bConfig) return;
 
         let range = 0;
-        let color = VISUAL_THEME.overlays.valid;
+        let color: number = VISUAL_THEME.overlays.valid;
         if (bConfig.DEFENSE?.RANGE) {
             range = bConfig.DEFENSE.RANGE + scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
             color = VISUAL_THEME.overlays.defense;

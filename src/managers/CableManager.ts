@@ -9,7 +9,7 @@ import BaseBuilding from '../buildings/BaseBuilding';
 import { getAvailableInputSpace, isAPAutoRelaySource, selectAPRelayTarget } from '../utils/apRelay';
 import { getItemColor, VISUAL_THEME } from '../visuals/visualTheme';
 
-const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
+const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT', 'SILICON']);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
 
 export default class CableManager {
@@ -285,7 +285,7 @@ export default class CableManager {
                 if (relayed >= ap.bandwidth) break;
 
                 const item = source.outputBuffer[0];
-                const target = selectAPRelayTarget(inRange, source, item);
+                const target = selectAPRelayTarget(inRange, source, item) as BaseBuilding | undefined;
                 if (!target) continue;
 
                 source.outputBuffer.shift();
@@ -294,6 +294,9 @@ export default class CableManager {
                 ap.relaysThisTick = relayed;
                 this.createPulseAnimation(`${source.x},${source.y}`, `${ap.x},${ap.y}`, item);
                 this.createPulseAnimation(`${ap.x},${ap.y}`, `${target.x},${target.y}`, item);
+
+                // Spawn expanding wireless sonar radar wave
+                this.createAPWirelessWave(ap.x + CONFIG.GRID_SIZE, ap.y + CONFIG.GRID_SIZE, item);
             }
         }
     }
@@ -340,6 +343,25 @@ export default class CableManager {
                 pulse.destroy();
             }
         });
+
+        // Multi-delayed trailing circles to simulate packet motion trail (Bloom-only)
+        if (this.scene.bloomEnabled) {
+            for (let i = 1; i <= 2; i++) {
+                const delay = i * 40;
+                const trailCircle = this.scene.add.circle(cx1, cy1, 4 - i, color, 0.5 / i);
+                trailCircle.setDepth(15);
+                this.scene.tweens.add({
+                    targets: trailCircle,
+                    x: cx2,
+                    y: cy2,
+                    duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
+                    delay: delay,
+                    ease: 'Linear',
+                    onComplete: () => trailCircle.destroy()
+                });
+            }
+        }
+
         this.scene.tweens.add({
             targets: trail,
             alpha: 0,
@@ -354,6 +376,9 @@ export default class CableManager {
 
         this.graphics.clear();
 
+        const bloomEnabled = this.scene.bloomEnabled;
+        const isFlashActive = Math.floor(this.scene.time.now / 150) % 2 === 0;
+
         for (const cable of this.cables.values()) {
             const center1 = this.getBuildingCenter(cable.fromKey);
             const center2 = this.getBuildingCenter(cable.toKey);
@@ -362,16 +387,33 @@ export default class CableManager {
             const cx2 = center2.x;
             const cy2 = center2.y;
 
-            const config = CONFIG.CABLES[cable.cableType];
             const color = cable.cableType === 'FIBER' ? VISUAL_THEME.cables.fiber : VISUAL_THEME.cables.basic;
-            const maxQueue = config ? config.MAX_QUEUE : 10;
-            const isThrottling = cable.queue.length > maxQueue * 0.5;
+            const isThrottling = this.checkIsThrottling(cable);
 
-            this.graphics.lineStyle(isThrottling ? 8 : 5, isThrottling ? VISUAL_THEME.cables.throttled : color, 0.12);
+            // Fading glitch alpha logic for throttled cables
+            let throttleAlpha = isFlashActive ? 0.95 : 0.22;
+            let standardAlpha = 0.72;
+
+            if (bloomEnabled) {
+                // Glow Outer Line (Bloom effect)
+                this.graphics.lineStyle(
+                    isThrottling ? 8 : 5,
+                    isThrottling ? VISUAL_THEME.cables.throttled : color,
+                    isThrottling ? throttleAlpha * 0.2 : 0.12
+                );
+                this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+            }
+
+            // Core Line
+            this.graphics.lineStyle(
+                isThrottling ? 3 : 2,
+                isThrottling ? VISUAL_THEME.cables.throttled : color,
+                isThrottling ? throttleAlpha : (bloomEnabled ? standardAlpha : 1.0)
+            );
             this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
-            this.graphics.lineStyle(isThrottling ? 3 : 2, isThrottling ? VISUAL_THEME.cables.throttled : color, isThrottling ? 0.9 : 0.72);
-            this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
-            this.graphics.fillStyle(color, isThrottling ? 0.75 : 0.45);
+
+            // Endpoint Nodes
+            this.graphics.fillStyle(color, isThrottling ? throttleAlpha : 0.55);
             this.graphics.fillCircle(cx1, cy1, 3);
             this.graphics.fillCircle(cx2, cy2, 3);
         }
@@ -379,13 +421,51 @@ export default class CableManager {
 
     markDirtyIfThrottlingChanged(): void {
         for (const cable of this.cables.values()) {
-            const config = CONFIG.CABLES[cable.cableType];
-            const maxQueue = config ? config.MAX_QUEUE : 10;
-            const isThrottling = cable.queue.length > maxQueue * 0.5;
+            const isThrottling = this.checkIsThrottling(cable);
             if (isThrottling) {
                 this.dirty = true;
                 return;
             }
         }
+    }
+
+    checkIsThrottling(cable: CableConnection): boolean {
+        const config = CONFIG.CABLES[cable.cableType];
+        const maxQueue = config ? config.MAX_QUEUE : 10;
+        if (cable.queue.length <= maxQueue * 0.5) return false;
+
+        const buildingA = this.scene.buildingManager.get(cable.fromKey);
+        const buildingB = this.scene.buildingManager.get(cable.toKey);
+        if (!buildingA || !buildingB) return false;
+
+        const flowDir = cable.flowDirection || 'FORWARD';
+        const dest = flowDir === 'FORWARD' ? buildingB : buildingA;
+
+        if (dest && cable.queue.length > 0) {
+            const nextItem = cable.queue[0].itemType;
+            if (!dest.canAcceptItem(nextItem)) {
+                return false; // Receiver is full, not a cable bottleneck, so don't mark throttled (red)
+            }
+        }
+
+        return true;
+    }
+
+    createAPWirelessWave(x: number, y: number, itemType: string): void {
+        if (!this.scene.bloomEnabled) return;
+        const color = getItemColor(itemType);
+        const range = CONFIG.ACCESS_POINT.RANGE || 5;
+        const ring = this.scene.add.circle(x, y, 4);
+        ring.setDepth(14);
+        ring.setStrokeStyle(2, color, 0.72);
+
+        this.scene.tweens.add({
+            targets: ring,
+            radius: CONFIG.GRID_SIZE * range,
+            alpha: 0,
+            duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS * 1.5,
+            ease: 'Quad.easeOut',
+            onComplete: () => ring.destroy()
+        });
     }
 }

@@ -48,7 +48,7 @@ export const VISUAL_THEME = {
     cables: {
         basic: 0x5aa9ff,
         fiber: 0x50f4ff,
-        throttled: 0xffd166,
+        throttled: 0xff3366,
         wireless: 0xb789ff
     },
     overlays: {

@@ -1,17 +1,19 @@
+import { t } from '../i18n';
+
 export type TutorialStepId =
     | 'RESOURCE'
     | 'POWER'
     | 'DATA_SOURCE'
-    | 'PROCESSING'
     | 'CONNECTION'
+    | 'PROCESSING'
     | 'DEFENSE'
-    | 'RESEARCH'
-    | 'WAVE';
+    | 'RESEARCH';
 
 export interface TutorialStepDefinition {
     id: TutorialStepId;
     title: string;
     detail: string;
+    allowedBuildings?: string[];
 }
 
 export interface TutorialStep extends TutorialStepDefinition {
@@ -22,42 +24,44 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
     {
         id: 'RESOURCE',
         title: t('tutorial.RESOURCE.title'),
-        detail: t('tutorial.RESOURCE.detail')
-    },
-    {
-        id: 'DATA_SOURCE',
-        title: t('tutorial.DATA_SOURCE.title'),
-        detail: t('tutorial.DATA_SOURCE.detail')
-    },
-    {
-        id: 'PROCESSING',
-        title: t('tutorial.PROCESSING.title'),
-        detail: t('tutorial.PROCESSING.detail')
-    },
-    {
-        id: 'CONNECTION',
-        title: t('tutorial.CONNECTION.title'),
-        detail: t('tutorial.CONNECTION.detail')
-    },
-    {
-        id: 'DEFENSE',
-        title: t('tutorial.DEFENSE.title'),
-        detail: t('tutorial.DEFENSE.detail')
-    },
-    {
-        id: 'WAVE',
-        title: t('tutorial.WAVE.title'),
-        detail: t('tutorial.WAVE.detail')
-    },
-    {
-        id: 'RESEARCH',
-        title: t('tutorial.RESEARCH.title'),
-        detail: t('tutorial.RESEARCH.detail')
+        detail: t('tutorial.RESOURCE.detail'),
+        allowedBuildings: []
     },
     {
         id: 'POWER',
         title: t('tutorial.POWER.title'),
-        detail: t('tutorial.POWER.detail')
+        detail: t('tutorial.POWER.detail'),
+        allowedBuildings: ['POWER_NODE']
+    },
+    {
+        id: 'DATA_SOURCE',
+        title: t('tutorial.DATA_SOURCE.title'),
+        detail: t('tutorial.DATA_SOURCE.detail'),
+        allowedBuildings: ['MINER', 'DATA_DOWNLOADER']
+    },
+    {
+        id: 'CONNECTION',
+        title: t('tutorial.CONNECTION.title'),
+        detail: t('tutorial.CONNECTION.detail'),
+        allowedBuildings: ['CONVEYOR', 'BASIC', 'REMOVE']
+    },
+    {
+        id: 'PROCESSING',
+        title: t('tutorial.PROCESSING.title'),
+        detail: t('tutorial.PROCESSING.detail'),
+        allowedBuildings: ['PROCESSOR', 'WEIGHT_TRAINER', 'MODEL_TRAINING_LAB', 'REMOVE', 'BASIC', 'CONVEYOR']
+    },
+    {
+        id: 'DEFENSE',
+        title: t('tutorial.DEFENSE.title'),
+        detail: t('tutorial.DEFENSE.detail'),
+        allowedBuildings: ['CLASSIFIER', 'REMOVE']
+    },
+    {
+        id: 'RESEARCH',
+        title: t('tutorial.RESEARCH.title'),
+        detail: t('tutorial.RESEARCH.detail'),
+        allowedBuildings: ['REMOVE', 'BASIC']
     }
 ];
 
@@ -86,4 +90,3 @@ export function applyTutorialProgress(steps: TutorialStep[], completed: boolean,
 export function completeTutorialStep(steps: TutorialStep[], id: TutorialStepId): TutorialStep[] {
     return steps.map(step => step.id === id ? { ...step, completed: true } : step);
 }
-import { t } from '../i18n';

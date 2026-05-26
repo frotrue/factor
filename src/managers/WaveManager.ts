@@ -45,7 +45,7 @@ export default class WaveManager {
         this.enemiesSpawned = 0;
         this.hpMultiplier = 1;
         this.enemyIdCounter = 0;
-        
+
         this.difficultyId = 'NORMAL';
         this.ddosSwarmSpawned = false;
         this.ddosBotsToSpawn = 0;
@@ -103,17 +103,35 @@ export default class WaveManager {
         this.enemiesSpawned = 0;
         this.spawnTimer = 0;
         this.ddosSwarmSpawned = false;
-        this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(6, 8) : 0;
-        this.ddosRewardGranted = false;
+
+        const tm = this.scene.tutorialManager;
+        const isTutorialDefense = tm && !tm.isCompleted() && tm.getSavedStep() === 5;
+
+        if (isTutorialDefense) {
+            this.ddosBotsToSpawn = 0;
+            this.enemiesToSpawn = 1;
+            this.hpMultiplier = 0.5;
+            this.ddosRewardGranted = true;
+        } else {
+            this.ddosBotsToSpawn = this.currentWave >= 8 ? Phaser.Math.Between(6, 8) : 0;
+            this.ddosRewardGranted = false;
+        }
+
         this.activeRoutes = selectActiveIntrusionRoutes(this.currentWave, this.difficultyId);
-        
+
         const plan = createWavePlan({
             wave: this.currentWave,
             difficultyId: this.difficultyId,
             ddosBots: this.ddosBotsToSpawn
         });
-        this.enemiesToSpawn = plan.enemiesToSpawn;
-        this.hpMultiplier = plan.hpMultiplier;
+
+        if (isTutorialDefense) {
+            this.enemiesToSpawn = 1;
+            this.hpMultiplier = 0.5;
+        } else {
+            this.enemiesToSpawn = plan.enemiesToSpawn;
+            this.hpMultiplier = plan.hpMultiplier;
+        }
 
         EventBus.emit('WAVE_STARTED', { wave: this.currentWave, routes: this.activeRoutes.map(route => route.id) });
     }
@@ -136,25 +154,38 @@ export default class WaveManager {
     spawnEnemy(typeOverride?: string): void {
         this.enemiesSpawned++;
         const id = `enemy_${this.enemyIdCounter++}`;
-        
+
         const routes = this.activeRoutes.length > 0 ? this.activeRoutes : selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
         const route = routes[(this.enemiesSpawned - 1) % routes.length];
         const { x, y } = getSpawnPointForRoute(route.id, 0.5 + Phaser.Math.FloatBetween(-0.08, 0.08));
 
         let type = typeOverride || 'NOISE';
-        const isBossWave = this.currentWave % 10 === 0;
-        
-        // If it's a boss wave and it's the last enemy to spawn, make it a boss
-        if (!typeOverride && isBossWave && this.enemiesSpawned === this.enemiesToSpawn) {
-            type = 'OVERFITTED_MODEL';
-            const uiManager = this.scene.uiManager;
-            if (uiManager) uiManager.logMessage('System: WARNING - Overfitted Model detected!', true);
-        } else if (!typeOverride) {
-            if (this.currentWave > 5 && Math.random() < 0.3) type = 'MALWARE';
-            if (this.currentWave > 15 && Math.random() < 0.2) type = 'ADVERSARIAL';
+
+        const tm = this.scene.tutorialManager;
+        const isTutorialMockWave = tm && !tm.isCompleted() && tm.getSavedStep() === 6;
+
+        if (isTutorialMockWave) {
+            type = 'NOISE';
+        } else {
+            const isBossWave = this.currentWave % 10 === 0;
+
+            // If it's a boss wave and it's the last enemy to spawn, make it a boss
+            if (!typeOverride && isBossWave && this.enemiesSpawned === this.enemiesToSpawn) {
+                type = 'OVERFITTED_MODEL';
+                const uiManager = this.scene.uiManager;
+                if (uiManager) uiManager.logMessage('System: WARNING - Overfitted Model detected!', true);
+            } else if (!typeOverride) {
+                if (this.currentWave > 5 && Math.random() < 0.3) type = 'MALWARE';
+                if (this.currentWave > 15 && Math.random() < 0.2) type = 'ADVERSARIAL';
+            }
         }
 
         const enemy = new BaseEnemy(this.scene, type, x, y, this.getEffectiveHpMultiplier(), id, this.buildingManager);
+
+        if (isTutorialMockWave) {
+            enemy.speed = enemy.speed * 0.3; // 30% speed
+        }
+
         this.enemies.set(id, enemy);
     }
 
@@ -169,6 +200,44 @@ export default class WaveManager {
     }
 
     update(delta: number): void {
+        const tm = this.scene.tutorialManager;
+        const isTutorialActive = tm && !tm.isCompleted();
+        const savedStep = isTutorialActive ? tm.getSavedStep() : -1;
+
+        if (isTutorialActive) {
+            if (savedStep < 5) {
+                // Steps 1 to 5: Freeze waveTimer and do not countdown or start standard waves
+                this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
+                EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+
+                // Still update existing enemies if any (unlikely in early tutorial)
+                this.applyBossAuras();
+                const coreTarget = this.getCoreTarget();
+                this.enemies.forEach(enemy => {
+                    enemy.update(delta, coreTarget.x, coreTarget.y);
+                });
+                return;
+            } else if (savedStep === 5) {
+                // Step 6 (DEFENSE): Wait until the player builds a Classifier
+                let hasClassifier = false;
+                this.buildingManager.forEach(building => {
+                    if (building.type === 'CLASSIFIER') {
+                        hasClassifier = true;
+                    }
+                });
+
+                if (!this.waveActive && hasClassifier) {
+                    // Trigger the tutorial mock wave immediately!
+                    this.startWave();
+                } else if (!this.waveActive) {
+                    // Keep the timer frozen at initial delay until the classifier is built
+                    this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
+                    EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+                    return;
+                }
+            }
+        }
+
         if (!this.waveActive) {
             this.waveTimer -= delta;
             this.emitNextWaveBriefing();

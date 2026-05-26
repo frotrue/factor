@@ -160,7 +160,7 @@ export default class MobileUIManager {
         const cost = 'COST' in data && data.COST
             ? data.COST.map(c => `${c.amount} ${getItemName(c.resource)}`).join(', ')
             : 'COST_PER_TILE' in data && data.COST_PER_TILE
-                ? t('action.costPerTile', { amount: data.COST_PER_TILE })
+                ? t('action.costPerTile', { amount: Number(data.COST_PER_TILE) })
                 : '';
         summary.innerHTML = `
             <strong>${CONFIG.BUILDINGS[type] ? getBuildingName(type) : getCableName(type)}</strong>

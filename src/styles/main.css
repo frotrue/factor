@@ -161,6 +161,11 @@ body {
     color: #ffffff;
 }
 
+.tab-btn:hover,
+.build-btn:hover {
+    box-shadow: 0 0 8px rgba(77, 216, 255, 0.25);
+}
+
 #hud-right-rail {
     position: absolute;
     top: 108px;
@@ -302,8 +307,10 @@ body {
 
 .tab-btn.active {
     border-color: var(--border-active);
-    background: rgba(77, 216, 255, 0.13);
+    background: rgba(77, 216, 255, 0.16);
     color: #ffffff;
+    box-shadow: 0 0 12px rgba(77, 216, 255, 0.45), inset 0 0 6px rgba(77, 216, 255, 0.25);
+    text-shadow: 0 0 5px rgba(77, 216, 255, 0.5);
 }
 
 #ui-overlay {
@@ -333,8 +340,10 @@ body {
 
 .build-btn.active {
     border-color: var(--border-active);
-    background: rgba(77, 216, 255, 0.14);
+    background: rgba(77, 216, 255, 0.18);
     color: #ffffff;
+    box-shadow: 0 0 14px rgba(77, 216, 255, 0.5), inset 0 0 7px rgba(77, 216, 255, 0.3);
+    text-shadow: 0 0 5px rgba(77, 216, 255, 0.5);
 }
 
 #btn-remove.active {

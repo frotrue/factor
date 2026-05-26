@@ -13,6 +13,11 @@ export default class AbstractProcessor extends BaseBuilding {
     isProcessing: boolean;
     progressBg: Phaser.GameObjects.Rectangle;
     progressBar: Phaser.GameObjects.Rectangle;
+    processorGraphics: Phaser.GameObjects.Graphics;
+    sweepY: number;
+    rotationAngle: number;
+    processorTween1: Phaser.Tweens.Tween;
+    processorTween2: Phaser.Tweens.Tween;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: string, recipeKey: string, config: BuildingOptions = {}) {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
@@ -26,6 +31,95 @@ export default class AbstractProcessor extends BaseBuilding {
         this.progressBar.setOrigin(0, 0.5);
         this.container.add([this.progressBg, this.progressBar]);
         this.updateProgressDisplay();
+
+        this.processorGraphics = scene.add.graphics();
+        this.container.add(this.processorGraphics);
+        this.sweepY = -12;
+        this.rotationAngle = 0;
+
+        this.processorTween1 = scene.tweens.add({
+            targets: this,
+            sweepY: 12,
+            duration: 2000,
+            yoyo: true,
+            repeat: -1,
+            onUpdate: () => this.drawProcessorVisuals()
+        });
+
+        this.processorTween2 = scene.tweens.add({
+            targets: this,
+            rotationAngle: Math.PI * 2,
+            duration: 6000,
+            repeat: -1,
+            onUpdate: () => this.drawProcessorVisuals()
+        });
+    }
+
+    drawProcessorVisuals(): void {
+        this.processorGraphics.clear();
+        if (this.destroyed) return;
+
+        const pulse = 0.55 + 0.25 * Math.sin(this.scene.time.now / 200);
+
+        if (this.type === 'PROCESSOR') {
+            // 1. Processor: Sweep laser scan line & 2x2 data grid
+            const color = 0xb789ff; // Neon purple
+
+            this.processorGraphics.fillStyle(0xffffff, 0.25);
+            this.processorGraphics.fillCircle(-6, -6, 2);
+            this.processorGraphics.fillCircle(6, -6, 2);
+            this.processorGraphics.fillCircle(-6, 6, 2);
+            this.processorGraphics.fillCircle(6, 6, 2);
+
+            this.processorGraphics.lineStyle(3, color, pulse * 0.25);
+            this.processorGraphics.lineBetween(-12, this.sweepY, 12, this.sweepY);
+            this.processorGraphics.lineStyle(1, 0xffffff, pulse * 0.7);
+            this.processorGraphics.lineBetween(-10, this.sweepY, 10, this.sweepY);
+
+        } else if (this.type === 'WEIGHT_TRAINER') {
+            // 2. Weight Trainer: Neural Network connections diagram with pulsing nodes
+            const color = 0xa970ff;
+            this.processorGraphics.lineStyle(1, 0xffffff, 0.25);
+
+            const inNodes = [-8, 0, 8];
+            const outNodes = [-6, 6];
+
+            for (const iy of inNodes) {
+                for (const oy of outNodes) {
+                    this.processorGraphics.lineBetween(-8, iy, 8, oy);
+                }
+            }
+
+            this.processorGraphics.fillStyle(color, 0.75);
+            for (let i = 0; i < inNodes.length; i++) {
+                const nodePulse = 0.5 + 0.4 * Math.sin(this.scene.time.now / 150 + i * Math.PI / 3);
+                this.processorGraphics.fillCircle(-8, inNodes[i], 2.5 * nodePulse);
+            }
+
+            this.processorGraphics.fillStyle(0x63ffb1, 0.75);
+            for (let i = 0; i < outNodes.length; i++) {
+                const nodePulse = 0.5 + 0.4 * Math.sin(this.scene.time.now / 150 - i * Math.PI / 3);
+                this.processorGraphics.fillCircle(8, outNodes[i], 2.5 * nodePulse);
+            }
+
+        } else if (this.type === 'NEURAL_TRAINER' || this.type === 'RECYCLER') {
+            // 3. Neural Trainer / Recycler: Rotating gear symbols representing recovery/training
+            const color = 0x7dd3fc;
+            this.processorGraphics.lineStyle(1.5, color, 0.6);
+
+            const r = 8;
+            this.processorGraphics.strokeCircle(0, 0, r);
+
+            const teeth = 8;
+            for (let i = 0; i < teeth; i++) {
+                const angle = this.rotationAngle + (i * Math.PI * 2) / teeth;
+                const sx = Math.cos(angle) * r;
+                const sy = Math.sin(angle) * r;
+                const ex = Math.cos(angle) * (r + 3);
+                const ey = Math.sin(angle) * (r + 3);
+                this.processorGraphics.lineBetween(sx, sy, ex, ey);
+            }
+        }
     }
 
     canAcceptItem(type: string): boolean {
@@ -56,7 +150,6 @@ export default class AbstractProcessor extends BaseBuilding {
     tryStartProcessing(): void {
         if (this.outputBuffer.length >= this.maxBufferSize) return;
 
-        // Check all recipe inputs are satisfied
         const available = new Map<string, number>();
         this.inputBuffer.forEach(t => available.set(t, (available.get(t) || 0) + 1));
 
@@ -64,7 +157,6 @@ export default class AbstractProcessor extends BaseBuilding {
             if ((available.get(input.type) || 0) < input.amount) return;
         }
 
-        // Consume inputs
         for (const input of this.recipe.INPUTS) {
             for (let i = 0; i < input.amount; i++) {
                 const index = this.inputBuffer.indexOf(input.type);
@@ -90,5 +182,11 @@ export default class AbstractProcessor extends BaseBuilding {
         this.progressBar.width = CONFIG.GRID_SIZE * progress;
         this.progressBg.setVisible(this.isProcessing);
         this.progressBar.setVisible(this.isProcessing);
+    }
+
+    destroy(): void {
+        if (this.processorTween1) this.processorTween1.remove();
+        if (this.processorTween2) this.processorTween2.remove();
+        super.destroy();
     }
 }

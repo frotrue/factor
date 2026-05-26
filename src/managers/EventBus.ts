@@ -24,6 +24,7 @@ export interface EventMap {
     'RESEARCH_OPENED': void;
     'TUTORIAL_RESET': void;
     'AUDIO_SETTINGS_CHANGED': { masterVolume: number; muted: boolean };
+    'BLOOM_SETTINGS_CHANGED': { enabled: boolean };
 }
 
 type EventCallback<T = any> = (data: T) => void;

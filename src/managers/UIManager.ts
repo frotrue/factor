@@ -138,7 +138,7 @@ export default class UIManager {
             this.currentWaveBriefing = briefing;
             this.renderWaveBriefing();
         }, 'UIManager');
-        
+
         EventBus.on('WAVE_UPDATE', ({ timer }: { timer: number }) => {
             this.renderWaveBriefing(timer);
         }, 'UIManager');
@@ -153,7 +153,7 @@ export default class UIManager {
             const gameOverScreen = document.getElementById('game-over-screen');
             if (gameOverScreen) gameOverScreen.style.display = 'flex';
             this.renderGameOverStats();
-            
+
             const btnRestart = document.getElementById('btn-restart');
             if (btnRestart) {
                 btnRestart.onclick = () => window.location.reload();
@@ -436,95 +436,12 @@ export default class UIManager {
     renderResearchTree(): void {
         this.researchUI.render();
     }
-
     getResearchEffectSummary(researchId: string): string {
         return this.researchUI.getEffectSummary(researchId);
     }
 
     setupSettingsUI(): void {
         this.settingsUI.setup();
-        return;
-        const btnSettings = document.getElementById('btn-settings');
-        const modalSettings = document.getElementById('settings-modal');
-        const btnClose = document.getElementById('btn-close-settings');
-        const btnSave = document.getElementById('btn-save');
-        const btnLoad = document.getElementById('btn-load');
-        const volumeInput = document.getElementById('audio-volume') as HTMLInputElement | null;
-        const mutedInput = document.getElementById('audio-muted') as HTMLInputElement | null;
-        const btnResetTutorial = document.getElementById('btn-reset-tutorial');
-        const mainScene = this.scene;
-        const audioSettings = mainScene.soundManager?.getSettings?.();
-        [
-            btnSettings,
-            modalSettings,
-            btnClose,
-            btnSave,
-            btnLoad,
-            volumeInput,
-            mutedInput,
-            btnResetTutorial
-        ].forEach(element => this.guardDomPointer(element));
-
-        if (volumeInput && audioSettings) volumeInput!.value = String(Math.round(audioSettings.masterVolume * 100));
-        if (mutedInput && audioSettings) mutedInput!.checked = audioSettings.muted;
-
-        if (btnSettings && modalSettings) {
-            btnSettings!.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                modalSettings!.style.display = 'flex';
-            };
-        }
-
-        if (btnClose && modalSettings) {
-            btnClose!.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                modalSettings!.style.display = 'none';
-            };
-        }
-
-        if (btnSave) btnSave!.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            EventBus.emit('SAVE_REQUESTED');
-        };
-        if (btnLoad) btnLoad!.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            EventBus.emit('LOAD_REQUESTED');
-        };
-        if (btnResetTutorial) {
-            btnResetTutorial!.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                EventBus.emit('TUTORIAL_RESET');
-                this.logMessage('Tutorial: 안내를 다시 시작합니다.');
-            };
-        }
-
-        const emitAudioSettings = () => {
-            const volume = volumeInput ? Number(volumeInput!.value) / 100 : audioSettings?.masterVolume ?? 0.6;
-            const muted = mutedInput ? mutedInput!.checked : audioSettings?.muted ?? false;
-            EventBus.emit('AUDIO_SETTINGS_CHANGED', { masterVolume: volume, muted });
-        };
-        if (volumeInput) volumeInput!.oninput = emitAudioSettings;
-        if (mutedInput) mutedInput!.onchange = emitAudioSettings;
-
-        [1, 2, 3].forEach(speed => {
-            const btn = document.getElementById(`btn-speed-${speed}`);
-            if (btn) {
-                this.guardDomPointer(btn);
-                btn.onclick = event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const mainScene = this.scene;
-                    if (mainScene.setGameSpeed) {
-                        mainScene.setGameSpeed(speed);
-                    }
-                };
-            }
-        });
     }
 
     createBuildingButtons(): void {
@@ -567,12 +484,14 @@ export default class UIManager {
         let index = 0;
         const mainScene = this.scene;
         const rm = mainScene.researchManager;
+        const tm = mainScene.tutorialManager;
+        const allowed = tm && !tm.isCompleted() ? tm.getAllowedBuildings() : null;
 
         const buildables: Record<string, any> = { ...CONFIG.BUILDINGS };
         if (CONFIG.CABLES) {
             Object.entries(CONFIG.CABLES).forEach(([k, v]) => {
-                buildables[k] = { 
-                    ...v, 
+                buildables[k] = {
+                    ...v,
                     CATEGORY: 'LOGISTICS',
                     COST: v.COST_PER_TILE ? [{ resource: 'SILICON', amount: v.COST_PER_TILE }] : []
                 };
@@ -597,11 +516,19 @@ export default class UIManager {
 
             this.currentTabBuildings.push(key);
 
+            const isLocked = allowed !== null && !allowed.includes(key);
+
             const btn = document.createElement('button');
             btn.id = `btn-${key.toLowerCase()}`;
             btn.className = 'build-btn';
             btn.type = 'button';
             if (key === this.selectedBuildingType) btn.classList.add('active');
+            if (isLocked) {
+                btn.classList.add('build-btn-locked');
+                btn.style.opacity = '0.22';
+                btn.style.cursor = 'not-allowed';
+                btn.disabled = true;
+            }
 
             const icon = document.createElement('div');
             icon.className = 'build-swatch icon';
@@ -643,11 +570,18 @@ export default class UIManager {
         });
 
         // Remove button is always available at index 0 (key '0')
+        const isRemoveLocked = allowed !== null && !allowed.includes('REMOVE');
         const removeBtn = document.createElement('button');
         removeBtn.id = 'btn-remove';
         removeBtn.className = 'build-btn';
         removeBtn.type = 'button';
         if (this.selectedBuildingType === 'REMOVE') removeBtn.classList.add('active');
+        if (isRemoveLocked) {
+            removeBtn.classList.add('build-btn-locked');
+            removeBtn.style.opacity = '0.22';
+            removeBtn.style.cursor = 'not-allowed';
+            removeBtn.disabled = true;
+        }
         removeBtn.innerHTML = `
             <div class="hotkey-label">0</div>
             <div class="build-swatch icon" style="background:#2b3038; border:1px solid #ff6676"></div>
