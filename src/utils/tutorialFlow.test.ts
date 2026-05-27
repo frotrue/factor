@@ -54,9 +54,9 @@ describe('tutorial flow', () => {
         expect(byId.RESOURCE.visualHints?.mode).toBe('explicit');
         expect(byId.MINER.completion).toEqual({ kind: 'produce-item', buildingType: 'MINER', itemType: 'SILICON' });
         expect(byId.DOWNLOADER.completion).toEqual({ kind: 'produce-item', buildingType: 'DATA_DOWNLOADER', itemType: 'RAW_DATA' });
-        expect(byId.CABLE.allowedBuildings).toEqual(['PROCESSOR', 'BASIC', 'REMOVE']);
+        expect(byId.CABLE.allowedBuildings).toEqual(['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'BASIC', 'REMOVE']);
         expect(byId.POWER.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('POWER');
-        expect(byId.PROCESSOR.visualHints?.mode).toBe('suggestive');
+        expect(byId.PROCESSOR.visualHints?.mode).toBe('explicit');
         expect([
             ...(byId.PROCESSOR.visualHints?.ghosts?.map(ghost => ghost.type) ?? []),
             ...(byId.TRAINER.visualHints?.ghosts?.map(ghost => ghost.type) ?? [])

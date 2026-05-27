@@ -127,7 +127,7 @@ export default class MainScene extends Phaser.Scene {
         // 시작 시 일정량의 실리콘 제공을 위한 창고 설치
         const startStorage = this.buildingManager.place(-64, 0, 'STORAGE', 0);
         if (startStorage) {
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 100; i++) {
                 startStorage.inputBuffer.push('SILICON');
             }
         }

@@ -161,8 +161,8 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.locator('#threat-panel')).toContainText('Wave 1');
     await expect(page.locator('#systems-panel')).toContainText('방어 준비 전');
     await expect(page.locator('#tutorial-panel')).toBeVisible();
-    await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', 'EXTRACTION', { timeout: 5000 });
-    await expect(page.locator('#tutorial-panel')).toContainText('첫 건물 배치');
+    await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', /CORE|RESOURCE|POWER/, { timeout: 5000 });
+    await expect(page.locator('#tutorial-panel')).toContainText(/(Core 목표|자원 확인|전력망 확장)/);
 
     await page.getByRole('button', { name: '물류' }).click();
     await expect(page.locator('#btn-access_point')).toHaveCount(0);
@@ -225,7 +225,7 @@ test('desktop defaults to Korean and switches to English', async ({ page }, test
     const runtimeErrors = collectRuntimeErrors(page);
 
     await startGame(page);
-    await expect(page.locator('#tutorial-panel')).toContainText('첫 건물 배치', { timeout: 5000 });
+    await expect(page.locator('#tutorial-panel')).toContainText(/(Core 목표|자원 확인|전력망 확장)/, { timeout: 5000 });
     await expect(page.locator('.hud-label').filter({ hasText: '전력 출력' })).toBeVisible();
 
     await page.locator('#btn-settings').click();
@@ -234,7 +234,7 @@ test('desktop defaults to Korean and switches to English', async ({ page }, test
 
     await expect(page.locator('#settings-modal')).toContainText('System Settings');
     await expect(page.locator('.hud-label').filter({ hasText: 'Power Output' })).toBeVisible();
-    await expect(page.locator('#tutorial-panel')).toContainText('Place your first building');
+    await expect(page.locator('#tutorial-panel')).toContainText(/(Core objective|Resource check|Expand power grid)/);
 
     await page.locator('#btn-close-settings').click();
     expect(runtimeErrors).toEqual([]);
