@@ -131,8 +131,8 @@ export default class MainScene extends Phaser.Scene {
         this.gridRenderer.draw(true);
 
         // Initialize UI buttons now that all managers are ready
-        this.uiManager.createBuildingButtons();
         this.tutorialManager = new TutorialManager(this);
+        this.uiManager.createBuildingButtons();
     }
 
     setupEvents(): void {

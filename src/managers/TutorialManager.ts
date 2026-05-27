@@ -15,8 +15,7 @@ import { getItemColor } from '../visuals/visualTheme';
 
 const STORAGE_COMPLETED = 'gradium_tutorial_completed';
 const STORAGE_STEP = 'gradium_tutorial_step';
-
-export default class TutorialManager {
+export default class TutorialManager {
     private scene: IMainScene;
     private panel: HTMLElement;
     private steps: TutorialStep[];
@@ -24,9 +23,11 @@ export default class TutorialManager {
     private typingInterval?: number;
     private lastRenderedStepId: string | null = null;
     private guideGraphics: Phaser.GameObjects.Graphics;
+    private languageChangeHandler = () => this.refreshLanguage();
 
     constructor(scene: IMainScene) {
         this.scene = scene;
+        this.scene.tutorialManager = this;
         this.panel = this.ensurePanel();
         this.steps = createTutorialSteps();
 
@@ -140,7 +141,7 @@ export default class TutorialManager {
         }, 'TutorialManager');
 
         EventBus.on('TUTORIAL_RESET', () => this.reset(), 'TutorialManager');
-        window.addEventListener('languagechange', () => this.refreshLanguage());
+        window.addEventListener('languagechange', this.languageChangeHandler);
     }
 
     private ensurePanel(): HTMLElement {
@@ -177,6 +178,7 @@ export default class TutorialManager {
             this.completed = true;
             this.persistProgress();
             this.scene.uiManager.logMessage(t('tutorial.completeDetail'));
+            this.scene.uiManager?.createBuildingButtons?.();
         }
         this.render();
     }
@@ -446,6 +448,7 @@ export default class TutorialManager {
 
     private cleanup(): void {
         this.scene.events.off('update', this.drawGuideHighlights, this);
+        window.removeEventListener('languagechange', this.languageChangeHandler);
         if (this.guideGraphics) {
             this.guideGraphics.destroy();
         }

@@ -126,7 +126,8 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
             mode: 'explicit',
             ghosts: [
                 { type: 'MINER', ...TUTORIAL_HINT_POSITIONS.miner, exact: true },
-                { type: 'DOWNLOAD', ...TUTORIAL_HINT_POSITIONS.downloader, exact: true }
+                { type: 'DOWNLOAD', ...TUTORIAL_HINT_POSITIONS.downloader, exact: true },
+                { type: 'PROCESSOR', ...TUTORIAL_HINT_POSITIONS.processor, exact: true }
             ],
             flows: [
                 { from: tileCenter(TUTORIAL_HINT_POSITIONS.miner.x, TUTORIAL_HINT_POSITIONS.miner.y), to: tileCenter(TUTORIAL_HINT_POSITIONS.storage.x, TUTORIAL_HINT_POSITIONS.storage.y), itemType: 'SILICON' },

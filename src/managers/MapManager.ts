@@ -23,7 +23,8 @@ export default class MapManager {
             do {
                 startX = Math.floor(Math.random() * 61) - 30;
                 startY = Math.floor(Math.random() * 61) - 30;
-                isSafeZone = Math.abs(startX) < 4 && Math.abs(startY) < 4;
+                // Exclude the tutorial zone (x: -6 to 4, y: -6 to 4) from random resource patches
+                isSafeZone = startX >= -6 && startX <= 4 && startY >= -6 && startY <= 4;
             } while (isSafeZone);
 
             const size = Math.floor(Math.random() * 4) + 2;
