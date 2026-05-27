@@ -15,6 +15,15 @@
 | `INFERENCE_UNIT` | 고급 추론 재료, 모델 훈련 시 inferenceCharge +5 | `NeuralTrainer`, `ModelTrainingLab` |
 | `Confidence Score` | 연구 비용으로 쓰는 성장 점수 | `Core.confidenceScore`, `ResearchManager` |
 
+## 튜토리얼 arena 배치
+
+- 신규 튜토리얼은 캠페인 맵을 활용하지 않고, `MapManager.generateTutorialMap()`이 만드는 작은 독립 arena에서 진행됩니다.
+- 시작 자원은 코어 좌상단 3x3 `SILICON` 패치(`-5,-3`), 코어 우하단 3x3 `ENERGY` 패치(`2,2`), 북쪽 확장용 2x2 `SILICON` 패치(`-2,-6`)입니다. 튜토리얼은 랜덤 패치가 아니라 이 고정 패치를 기준으로 안내합니다.
+- 튜토리얼 단계는 Core/자원/PowerNode/Miner/Storage/Downloader/Cable/Processor/WeightTrainer/Classifier/첫 웨이브/ModelTrainingLab 순서로 건물 역할을 하나씩 분리합니다.
+- 완료 기준은 최소 생산/상태 변화 중심입니다. Miner는 `SILICON`, Downloader는 `RAW_DATA`, Processor는 `LABELED_DATA`, WeightTrainer는 `WEIGHT_UPDATE`, PowerNode는 온라인 상태, ModelTrainingLab은 훈련 대상 선택을 확인합니다.
+- arena 외곽은 `BLOCKER` 벽으로 둘러싸고, 북쪽에는 3타일 폭 게이트를 열어 첫 방어 위치를 명확히 보여줍니다.
+- 튜토리얼 완료/스킵 시 튜토리얼 맵과 공장은 폐기되고, 새 캠페인 랜덤 맵이 시작됩니다. 튜토리얼 실행 중 일반 캠페인 저장 슬롯은 덮어쓰지 않습니다.
+
 ## 현재 생산 루프
 
 ```text

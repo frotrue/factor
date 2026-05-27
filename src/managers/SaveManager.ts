@@ -19,8 +19,9 @@ export default class SaveManager {
         this.autoSaveTimer = 0;
 
         EventBus.on('SAVE_REQUESTED', () => {
-            this.saveGame();
-            this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.saved'));
+            if (this.saveGame()) {
+                this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.saved'));
+            }
         }, 'SaveManager');
         EventBus.on('LOAD_REQUESTED', () => this.loadGame(), 'SaveManager');
     }
@@ -28,13 +29,19 @@ export default class SaveManager {
     update(delta: number): void {
         this.autoSaveTimer += delta;
         if (this.autoSaveTimer >= this.autoSaveInterval) {
-            this.saveGame();
+            const saved = this.saveGame();
             this.autoSaveTimer = 0;
-            this.scene.uiManager.logMessage('System: Auto-saved successfully.');
+            if (saved) {
+                this.scene.uiManager.logMessage('System: Auto-saved successfully.');
+            }
         }
     }
 
-    saveGame(): void {
+    saveGame(): boolean {
+        if (this.scene.mode === 'tutorial') {
+            return false;
+        }
+
         const buildings: SavedBuilding[] = [];
         this.scene.buildingManager.forEach(b => {
             if (b.type === 'CORE') return;
@@ -126,7 +133,8 @@ export default class SaveManager {
                 masterVolume: audioSettings.masterVolume,
                 muted: audioSettings.muted,
                 tutorialCompleted: this.scene.tutorialManager?.isCompleted?.() ?? false,
-                tutorialStep: this.scene.tutorialManager?.getSavedStep?.() ?? 0
+                tutorialStep: this.scene.tutorialManager?.getSavedStep?.() ?? 0,
+                mapType: this.scene.mapManager.mapType
             },
             resourceMap: resourceMapArray,
             terrainMap: terrainMapArray,
@@ -134,9 +142,12 @@ export default class SaveManager {
         };
 
         localStorage.setItem('gradium_save', JSON.stringify(saveData));
+        return true;
     }
 
     loadGame(): boolean {
+        if (this.scene.mode === 'tutorial') return false;
+
         const saveString = localStorage.getItem('gradium_save');
         if (!saveString) return false;
 
@@ -169,6 +180,7 @@ export default class SaveManager {
                     this.scene.mapManager.resourceMap.set(r.key, r.type);
                 });
             }
+            this.scene.mapManager.mapType = data.settings?.mapType ?? 'random';
             this.scene.mapManager.terrainMap.clear();
             if (data.terrainMap && data.terrainMap.length > 0) {
                 data.terrainMap.forEach(r => {

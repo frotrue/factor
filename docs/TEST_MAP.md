@@ -36,7 +36,7 @@ npm run test:e2e -- --workers=1
 | `src/buildings/BaseBuilding.test.ts` | 공통 건물 상태와 기본 동작 |
 | `src/managers/EventBus.test.ts` | owner/callback 기반 이벤트 제거 |
 | `src/managers/EffectsManager.test.ts` | 경고 마커 등 이펙트 manager 안정성 |
-| `src/managers/MapManager.test.ts` | 지형 blocker, safe zone, 생성 규칙 |
+| `src/managers/MapManager.test.ts` | 지형 blocker, safe zone, 랜덤 맵 생성, 작은 튜토리얼 arena 맵, 튜토리얼/캠페인 맵 생성 경로 분리 |
 | `src/utils/apRelay.test.ts` | AP 자동 릴레이 source/target 선택 |
 | `src/utils/buildingLifecycle.test.ts` | 수동 제거와 전투 파괴 이벤트 의미 분리 |
 | `src/utils/enemyBuildingInteraction.test.ts` | 적의 건물 공격 우선순위 |
@@ -44,8 +44,8 @@ npm run test:e2e -- --workers=1
 | `src/utils/gridPath.test.ts` | 적 A* 경로 계산, blocker no-path, 초기 blocker 지형에서 Core center 도달 |
 | `src/utils/powerPreview.test.ts` | 전력 범위 helper |
 | `src/utils/productionSimulation.test.ts` | 장기 생산 라인 시뮬레이션 |
-| `src/utils/saveMigration.test.ts` | 저장 데이터 기본값, HP/terrain/settings/buffer 보정, 적 HP 복원 clamp |
-| `src/utils/tutorialFlow.test.ts` | 튜토리얼 단계/진행, 시각 힌트 데이터, 모델 학습 최종 단계 |
+| `src/utils/saveMigration.test.ts` | 저장 데이터 기본값, HP/terrain/settings/buffer/mapType 보정, 적 HP 복원 clamp |
+| `src/utils/tutorialFlow.test.ts` | 건물 역할 튜토리얼 단계/진행, 완료 메타, 시각 힌트 데이터, FIRST_WAVE/모델 학습 최종 단계 |
 | `src/utils/waveSimulation.test.ts` | 웨이브 수량, 난이도, DDoS/boss, 경로, 브리핑 |
 | `src/utils/waveBriefingKey.test.ts` | WaveManager briefing 중복 발행 방지 key |
 | `src/utils/waveResultSummary.test.ts` | 웨이브 결과 요약 계산/문구 |
@@ -53,7 +53,7 @@ npm run test:e2e -- --workers=1
 | `src/utils/modelTrainingSummary.test.ts` | 모델 훈련 입력 효과/요약 |
 | `src/utils/runResultSummary.test.ts` | 게임오버/런 결과 요약 |
 | `tests/e2e/app-smoke.spec.ts` | 시작, 카메라, 설정/연구/언어, 배치/케이블/철거, save, 모바일 조작 |
-| `tests/e2e/tutorial-guidance.spec.ts` | 튜토리얼 힌트 좌표, 리소스 타일 정합성, 가중치 업데이트 학습소 흐름, 이벤트 기반 전체 튜토리얼 완료 |
+| `tests/e2e/tutorial-guidance.spec.ts` | 튜토리얼 힌트 좌표, 리소스 타일 정합성, 생산/케이블/전력/웨이브/모델 대상 기반 전체 튜토리얼 완료 후 새 캠페인 전환 |
 
 ## 변경 유형별 추천 테스트
 
@@ -67,7 +67,7 @@ npm run test:e2e -- --workers=1
 | 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |
 | UI 텍스트/언어 | `src/i18n.test.ts`, E2E language smoke |
 | 모바일 조작/CSS | E2E `mobile-*` projects. PC HUD shell 변경 시 모바일 터치 지점이 HUD/빌드 콘솔에 가로막히지 않는지 확인 |
-| 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, `tests/e2e/tutorial-guidance.spec.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹되며 캔버스 고스트/흐름 힌트는 `tutorialFlow.visualHints` 데이터와 `TutorialManager` 렌더러를 함께 확인 |
+| 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, `tests/e2e/tutorial-guidance.spec.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹되며 캔버스 고스트/흐름 힌트는 `tutorialFlow.visualHints`, `tutorialFlow.completion`, `TutorialManager` 완료 검사기를 함께 확인 |
 | 게임오버/결과 요약 | `runResultSummary.test.ts`, `waveResultSummary.test.ts`, E2E wave summary |
 | 캔버스 그래픽/팔레트 | `npm run build`, `npm test`, `npx playwright test --workers=1`, 데스크톱 스크린샷. `visualTheme`, `GridRenderer`, `BaseBuilding`, `BaseEnemy`, `CableManager`, `OverlayController`를 함께 확인 |
 

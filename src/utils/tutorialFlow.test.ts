@@ -12,13 +12,18 @@ import { setLanguage } from '../i18n';
 describe('tutorial flow', () => {
     it('defines a complete onboarding path for the factory loop', () => {
         expect(TUTORIAL_STEP_DEFINITIONS.map(step => step.id)).toEqual([
+            'CORE',
             'RESOURCE',
             'POWER',
-            'DATA_SOURCE',
-            'CONNECTION',
-            'PROCESSING',
+            'MINER',
+            'STORAGE',
+            'DOWNLOADER',
+            'CABLE',
+            'PROCESSOR',
+            'TRAINER',
             'DEFENSE',
-            'RESEARCH'
+            'FIRST_WAVE',
+            'MODEL_LAB'
         ]);
     });
 
@@ -32,12 +37,12 @@ describe('tutorial flow', () => {
 
     it('uses Korean by default and refreshes created steps when language changes', () => {
         setLanguage('ko');
-        expect(createTutorialSteps()[1].title).toBe('전력 유지');
-        expect(createTutorialSteps().at(-1)?.title).toBe('모델 학습 이해');
+        expect(createTutorialSteps()[3].title).toBe('Miner 역할');
+        expect(createTutorialSteps().at(-1)?.title).toBe('Model Lab 역할');
 
         setLanguage('en');
-        expect(createTutorialSteps()[1].title).toBe('Keep the grid powered');
-        expect(createTutorialSteps().at(-1)?.title).toBe('Understand model training');
+        expect(createTutorialSteps()[3].title).toBe('Miner role');
+        expect(createTutorialSteps().at(-1)?.title).toBe('Model Lab role');
 
         setLanguage('ko');
     });
@@ -45,43 +50,47 @@ describe('tutorial flow', () => {
     it('defines visual hint data for the role-learning tutorial flow', () => {
         const byId = Object.fromEntries(TUTORIAL_STEP_DEFINITIONS.map(step => [step.id, step]));
 
+        expect(byId.CORE.completion).toEqual({ kind: 'auto', delayMs: 1800 });
         expect(byId.RESOURCE.visualHints?.mode).toBe('explicit');
+        expect(byId.MINER.completion).toEqual({ kind: 'produce-item', buildingType: 'MINER', itemType: 'SILICON' });
+        expect(byId.DOWNLOADER.completion).toEqual({ kind: 'produce-item', buildingType: 'DATA_DOWNLOADER', itemType: 'RAW_DATA' });
+        expect(byId.CABLE.allowedBuildings).toEqual(['PROCESSOR', 'BASIC', 'REMOVE']);
         expect(byId.POWER.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('POWER');
-        expect(byId.DATA_SOURCE.visualHints?.flows?.map(flow => flow.itemType)).toEqual(
-            expect.arrayContaining(['SILICON', 'RAW_DATA'])
-        );
-        expect(byId.CONNECTION.visualHints?.flows?.length).toBeGreaterThanOrEqual(2);
-        expect(byId.PROCESSING.visualHints?.mode).toBe('suggestive');
-        expect(byId.PROCESSING.visualHints?.ghosts?.map(ghost => ghost.type)).toEqual(
-            expect.arrayContaining(['PROCESSOR', 'TRAINER'])
-        );
+        expect(byId.PROCESSOR.visualHints?.mode).toBe('suggestive');
+        expect([
+            ...(byId.PROCESSOR.visualHints?.ghosts?.map(ghost => ghost.type) ?? []),
+            ...(byId.TRAINER.visualHints?.ghosts?.map(ghost => ghost.type) ?? [])
+        ]).toEqual(expect.arrayContaining(['PROCESSOR', 'TRAINER']));
+        expect(byId.PROCESSOR.completion).toEqual({ kind: 'produce-item', buildingType: 'PROCESSOR', itemType: 'LABELED_DATA' });
+        expect(byId.TRAINER.completion).toEqual({ kind: 'produce-item', buildingType: 'WEIGHT_TRAINER', itemType: 'WEIGHT_UPDATE' });
         expect(byId.DEFENSE.visualHints?.areas?.some(area => area.kind === 'range')).toBe(true);
-        expect(byId.RESEARCH.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('MODEL_LAB');
-        expect(byId.RESEARCH.title).toBe('모델 학습 이해');
+        expect(byId.FIRST_WAVE.allowedBuildings).toBeNull();
+        expect(byId.MODEL_LAB.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('MODEL_LAB');
+        expect(byId.MODEL_LAB.title).toBe('Model Lab 역할');
     });
 
     it('anchors visual hints to valid spawn-area tiles and weight-update training flow', () => {
         const byId = Object.fromEntries(TUTORIAL_STEP_DEFINITIONS.map(step => [step.id, step]));
 
         expect(byId.RESOURCE.visualHints?.areas).toEqual(expect.arrayContaining([
-            expect.objectContaining({ x: -112, y: -48, kind: 'resource' }),
+            expect.objectContaining({ x: -112, y: -48, kind: 'resource', radius: 52 }),
             expect.objectContaining({ x: 112, y: 112, kind: 'resource' })
         ]));
 
-        expect(TUTORIAL_HINT_POSITIONS.downloader).toEqual({ x: -160, y: -128 });
-        expect(TUTORIAL_HINT_POSITIONS.processor).toEqual({ x: -96, y: -128 });
-        expect(TUTORIAL_HINT_POSITIONS.trainer).toEqual({ x: -32, y: -128 });
+        expect(TUTORIAL_HINT_POSITIONS.miner).toEqual({ x: -160, y: -96 });
+        expect(TUTORIAL_HINT_POSITIONS.downloader).toEqual({ x: 128, y: -32 });
+        expect(TUTORIAL_HINT_POSITIONS.powerNode).toEqual({ x: -96, y: -128 });
+        expect(TUTORIAL_HINT_POSITIONS.processor).toEqual({ x: 160, y: -32 });
+        expect(TUTORIAL_HINT_POSITIONS.trainer).toEqual({ x: 160, y: 64 });
 
-        expect(byId.DATA_SOURCE.visualHints?.ghosts).toEqual(expect.arrayContaining([
-            expect.objectContaining({ type: 'MINER', x: -128, y: -64, exact: true }),
-            expect.objectContaining({ type: 'DOWNLOAD', x: -160, y: -128, exact: true })
+        expect(byId.MINER.visualHints?.ghosts).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'MINER', x: -160, y: -96, exact: true })
         ]));
-        expect(byId.PROCESSING.visualHints?.flows).toEqual(expect.arrayContaining([
-            expect.objectContaining({ itemType: 'RAW_DATA' }),
-            expect.objectContaining({ itemType: 'LABELED_DATA' })
+        expect(byId.DOWNLOADER.visualHints?.ghosts).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'DOWNLOAD', x: 128, y: -32, exact: true })
         ]));
-        expect(byId.RESEARCH.visualHints?.flows).toEqual(expect.arrayContaining([
-            expect.objectContaining({ itemType: 'WEIGHT_UPDATE' })
+        expect(byId.PROCESSOR.visualHints?.flows).toEqual(expect.arrayContaining([
+            expect.objectContaining({ itemType: 'RAW_DATA', dotted: true })
         ]));
     });
 

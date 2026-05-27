@@ -38,50 +38,75 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
 
         return {
             resourceAreas: byId.RESOURCE.visualHints.areas,
-            dataGhosts: byId.DATA_SOURCE.visualHints.ghosts,
-            processingGhosts: byId.PROCESSING.visualHints.ghosts,
-            researchFlows: byId.RESEARCH.visualHints.flows,
+            minerGhosts: byId.MINER.visualHints.ghosts,
+            downloaderGhosts: byId.DOWNLOADER.visualHints.ghosts,
+            processorGhosts: byId.PROCESSOR.visualHints.ghosts,
+            trainerGhosts: byId.TRAINER.visualHints.ghosts,
             siliconResource: resourceAt(-128, -64),
+            oldSiliconGuideTile: resourceAt(-32, -32),
             energyResource: resourceAt(96, 96),
-            downloaderTileResource: resourceAt(-160, -128),
-            processorTileResource: resourceAt(-96, -128),
-            trainerTileResource: resourceAt(-32, -128)
+            downloaderTileResource: resourceAt(128, -32),
+            processorTileResource: resourceAt(160, -32),
+            trainerTileResource: resourceAt(160, 64)
         };
     });
 
     expect(guidance.resourceAreas).toEqual(expect.arrayContaining([
-        expect.objectContaining({ x: -112, y: -48, kind: 'resource' }),
+        expect.objectContaining({ x: -112, y: -48, kind: 'resource', radius: 52 }),
         expect.objectContaining({ x: 112, y: 112, kind: 'resource' })
     ]));
     expect(guidance.siliconResource).toBe('SILICON');
+    expect(guidance.oldSiliconGuideTile).toBeNull();
     expect(guidance.energyResource).toBe('ENERGY');
     expect(guidance.downloaderTileResource).toBeNull();
     expect(guidance.processorTileResource).toBeNull();
     expect(guidance.trainerTileResource).toBeNull();
-    expect(guidance.dataGhosts).toEqual(expect.arrayContaining([
-        expect.objectContaining({ type: 'MINER', x: -128, y: -64 }),
-        expect.objectContaining({ type: 'DOWNLOAD', x: -160, y: -128 })
+    expect(guidance.minerGhosts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'MINER', x: -160, y: -96 })
     ]));
-    expect(guidance.processingGhosts).toEqual(expect.arrayContaining([
-        expect.objectContaining({ type: 'PROCESSOR', x: -96, y: -128 }),
-        expect.objectContaining({ type: 'TRAINER', x: -32, y: -128 })
+    expect(guidance.downloaderGhosts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'DOWNLOAD', x: 128, y: -32 })
     ]));
-    expect(guidance.researchFlows).toEqual(expect.arrayContaining([
-        expect.objectContaining({ itemType: 'WEIGHT_UPDATE' })
+    expect(guidance.processorGhosts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'PROCESSOR', x: 160, y: -32 })
+    ]));
+    expect(guidance.trainerGhosts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ type: 'TRAINER', x: 160, y: 64 })
     ]));
 
     const completion = await page.evaluate(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.tutorialManager.loadState(false, 1);
+        const tutorialManager = scene.tutorialManager as any;
+        tutorialManager.loadState(false, 2);
 
-        scene.buildingManager.place(-96, -32, 'POWER_NODE', 0, { skipCost: true });
-        scene.buildingManager.place(-128, -64, 'MINER', 0, { skipCost: true });
-        scene.buildingManager.place(-160, -128, 'DATA_DOWNLOADER', 0, { skipCost: true });
-        scene.buildingManager.place(-128, -32, 'CONVEYOR', 0, { skipCost: true });
-        scene.buildingManager.place(-96, -128, 'PROCESSOR', 0, { skipCost: true });
-        scene.buildingManager.place(-32, -160, 'CLASSIFIER', 0, { skipCost: true });
+        scene.buildingManager.place(-96, -128, 'POWER_NODE', 0, { skipCost: true });
+        tutorialManager.checkActiveStepCompletion();
+
+        const miner = scene.buildingManager.place(-160, -96, 'MINER', 0, { skipCost: true });
+        miner.outputBuffer.push('SILICON');
+        tutorialManager.checkActiveStepCompletion();
+
+        scene.buildingManager.place(-192, 0, 'STORAGE', 0, { skipCost: true });
+
+        const downloader = scene.buildingManager.place(128, -32, 'DATA_DOWNLOADER', 0, { skipCost: true });
+        downloader.outputBuffer.push('RAW_DATA');
+        tutorialManager.checkActiveStepCompletion();
+
+        const processor = scene.buildingManager.place(160, -32, 'PROCESSOR', 0, { skipCost: true });
+        scene.cableManager.connect('128,-32', '160,-32', 'BASIC');
+        tutorialManager.checkActiveStepCompletion();
+
+        processor.outputBuffer.push('LABELED_DATA');
+        tutorialManager.checkActiveStepCompletion();
+
+        const trainer = scene.buildingManager.place(160, 64, 'WEIGHT_TRAINER', 0, { skipCost: true });
+        trainer.outputBuffer.push('WEIGHT_UPDATE');
+        tutorialManager.checkActiveStepCompletion();
+
+        scene.buildingManager.place(-32, -224, 'CLASSIFIER', 0, { skipCost: true });
         scene.waveManager.startWave();
-        const lab = scene.buildingManager.place(32, -128, 'MODEL_TRAINING_LAB', 0, { skipCost: true });
+        scene.waveManager.endWave();
+        const lab = scene.buildingManager.place(160, 128, 'MODEL_TRAINING_LAB', 0, { skipCost: true });
         lab.setTarget('CLASSIFIER');
 
         return {
@@ -93,7 +118,31 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
 
     expect(completion).toEqual({
         completed: true,
-        step: 7,
+        step: 12,
         labAcceptsWeightUpdate: true
+    });
+
+    await page.waitForFunction(() => {
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
+        return scene?.mode === 'campaign' && scene?.mapManager?.mapType === 'random' && !scene?.tutorialManager;
+    });
+
+    const campaignStart = await page.evaluate(() => {
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
+        return {
+            mode: scene.mode,
+            mapType: scene.mapManager.mapType,
+            hasTutorialFactory: Boolean(scene.buildingManager.get('-32,-32')),
+            campaignSaveExists: Boolean(localStorage.getItem('gradium_save')),
+            tutorialCompleted: localStorage.getItem('gradium_tutorial_completed')
+        };
+    });
+
+    expect(campaignStart).toEqual({
+        mode: 'campaign',
+        mapType: 'random',
+        hasTutorialFactory: false,
+        campaignSaveExists: false,
+        tutorialCompleted: 'true'
     });
 });

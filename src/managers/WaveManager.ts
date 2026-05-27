@@ -12,7 +12,10 @@ import {
 } from '../utils/waveSimulation';
 import { getWaveBriefingKey } from '../utils/waveBriefingKey';
 import { getFootprintCenter, type Point } from '../utils/geometry';
+import { TUTORIAL_STEP_DEFINITIONS } from '../utils/tutorialFlow';
 import type { IntrusionRoute } from '../utils/waveSimulation';
+
+const TUTORIAL_FIRST_WAVE_INDEX = TUTORIAL_STEP_DEFINITIONS.findIndex(step => step.id === 'FIRST_WAVE');
 
 export default class WaveManager {
     scene: IMainScene;
@@ -105,9 +108,9 @@ export default class WaveManager {
         this.ddosSwarmSpawned = false;
 
         const tm = this.scene.tutorialManager;
-        const isTutorialDefense = tm && !tm.isCompleted() && tm.getSavedStep() === 5;
+        const isTutorialFirstWave = tm && !tm.isCompleted() && tm.getSavedStep() === TUTORIAL_FIRST_WAVE_INDEX;
 
-        if (isTutorialDefense) {
+        if (isTutorialFirstWave) {
             this.ddosBotsToSpawn = 0;
             this.enemiesToSpawn = 1;
             this.hpMultiplier = 0.5;
@@ -125,7 +128,7 @@ export default class WaveManager {
             ddosBots: this.ddosBotsToSpawn
         });
 
-        if (isTutorialDefense) {
+        if (isTutorialFirstWave) {
             this.enemiesToSpawn = 1;
             this.hpMultiplier = 0.5;
         } else {
@@ -157,12 +160,13 @@ export default class WaveManager {
 
         const routes = this.activeRoutes.length > 0 ? this.activeRoutes : selectActiveIntrusionRoutes(this.currentWave || 1, this.difficultyId);
         const route = routes[(this.enemiesSpawned - 1) % routes.length];
-        const { x, y } = getSpawnPointForRoute(route.id, 0.5 + Phaser.Math.FloatBetween(-0.08, 0.08));
+        const tm = this.scene.tutorialManager;
+        const isTutorialMockWave = tm && !tm.isCompleted() && tm.getSavedStep() === TUTORIAL_FIRST_WAVE_INDEX;
+        const spawnPoint = isTutorialMockWave
+            ? { x: 0, y: -9 * CONFIG.GRID_SIZE }
+            : getSpawnPointForRoute(route.id, 0.5 + Phaser.Math.FloatBetween(-0.08, 0.08));
 
         let type = typeOverride || 'NOISE';
-
-        const tm = this.scene.tutorialManager;
-        const isTutorialMockWave = tm && !tm.isCompleted() && tm.getSavedStep() === 6;
 
         if (isTutorialMockWave) {
             type = 'NOISE';
@@ -180,7 +184,7 @@ export default class WaveManager {
             }
         }
 
-        const enemy = new BaseEnemy(this.scene, type, x, y, this.getEffectiveHpMultiplier(), id, this.buildingManager);
+        const enemy = new BaseEnemy(this.scene, type, spawnPoint.x, spawnPoint.y, this.getEffectiveHpMultiplier(), id, this.buildingManager);
 
         if (isTutorialMockWave) {
             enemy.speed = enemy.speed * 0.3; // 30% speed
@@ -205,8 +209,8 @@ export default class WaveManager {
         const savedStep = isTutorialActive ? tm.getSavedStep() : -1;
 
         if (isTutorialActive) {
-            if (savedStep < 5) {
-                // Steps 1 to 5: Freeze waveTimer and do not countdown or start standard waves
+            if (savedStep < TUTORIAL_FIRST_WAVE_INDEX) {
+                // Tutorial setup steps: freeze waveTimer until defense placement opens the first wave.
                 this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
                 EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
 
@@ -217,24 +221,28 @@ export default class WaveManager {
                     enemy.update(delta, coreTarget.x, coreTarget.y);
                 });
                 return;
-            } else if (savedStep === 5) {
-                // Step 6 (DEFENSE): Wait until the player builds a Classifier
-                let hasClassifier = false;
+            } else if (savedStep === TUTORIAL_FIRST_WAVE_INDEX) {
+                // FIRST_WAVE: trigger the tutorial mock wave after any defense is online.
+                let hasDefense = false;
                 this.buildingManager.forEach(building => {
-                    if (building.type === 'CLASSIFIER') {
-                        hasClassifier = true;
+                    if (building.type === 'CLASSIFIER' || building.type === 'FIREWALL' || building.type === 'FILTER') {
+                        hasDefense = true;
                     }
                 });
 
-                if (!this.waveActive && hasClassifier) {
+                if (!this.waveActive && hasDefense) {
                     // Trigger the tutorial mock wave immediately!
                     this.startWave();
                 } else if (!this.waveActive) {
-                    // Keep the timer frozen at initial delay until the classifier is built
+                    // Keep the timer frozen at initial delay until the defense is built.
                     this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
                     EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
                     return;
                 }
+            } else if (savedStep > TUTORIAL_FIRST_WAVE_INDEX) {
+                this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
+                EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+                return;
             }
         }
 

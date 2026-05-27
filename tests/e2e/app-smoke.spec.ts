@@ -161,8 +161,8 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.locator('#threat-panel')).toContainText('Wave 1');
     await expect(page.locator('#systems-panel')).toContainText('방어 준비 전');
     await expect(page.locator('#tutorial-panel')).toBeVisible();
-    await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', 'POWER');
-    await expect(page.locator('#tutorial-panel')).toContainText('전력 유지');
+    await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', 'EXTRACTION', { timeout: 5000 });
+    await expect(page.locator('#tutorial-panel')).toContainText('첫 건물 배치');
 
     await page.getByRole('button', { name: '물류' }).click();
     await expect(page.locator('#btn-access_point')).toHaveCount(0);
@@ -225,7 +225,7 @@ test('desktop defaults to Korean and switches to English', async ({ page }, test
     const runtimeErrors = collectRuntimeErrors(page);
 
     await startGame(page);
-    await expect(page.locator('#tutorial-panel')).toContainText('전력 유지');
+    await expect(page.locator('#tutorial-panel')).toContainText('첫 건물 배치', { timeout: 5000 });
     await expect(page.locator('.hud-label').filter({ hasText: '전력 출력' })).toBeVisible();
 
     await page.locator('#btn-settings').click();
@@ -234,7 +234,7 @@ test('desktop defaults to Korean and switches to English', async ({ page }, test
 
     await expect(page.locator('#settings-modal')).toContainText('System Settings');
     await expect(page.locator('.hud-label').filter({ hasText: 'Power Output' })).toBeVisible();
-    await expect(page.locator('#tutorial-panel')).toContainText('Keep the grid powered');
+    await expect(page.locator('#tutorial-panel')).toContainText('Place your first building');
 
     await page.locator('#btn-close-settings').click();
     expect(runtimeErrors).toEqual([]);
@@ -263,12 +263,12 @@ test('mobile action buttons update gameplay state', async ({ page }, testInfo) =
     test.skip(!testInfo.project.name.startsWith('mobile-'), 'mobile-only action smoke');
     const runtimeErrors = collectRuntimeErrors(page);
 
+    await page.addInitScript(() => {
+        localStorage.setItem('gradium_tutorial_completed', 'true');
+        localStorage.setItem('gradium_tutorial_step', '8');
+    });
     await startGame(page);
     await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
-    await page.evaluate(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.tutorialManager.completeAll();
-    });
 
     await page.locator('#mobile-action-rotate').click();
     await expect.poll(async () => (await getMainSceneState(page)).currentRotation).toBe(1);
@@ -304,12 +304,12 @@ test('mobile taps place buildings and connect a cable', async ({ page }, testInf
     test.skip(!testInfo.project.name.startsWith('mobile-'), 'mobile-only cable flow');
     const runtimeErrors = collectRuntimeErrors(page);
 
+    await page.addInitScript(() => {
+        localStorage.setItem('gradium_tutorial_completed', 'true');
+        localStorage.setItem('gradium_tutorial_step', '8');
+    });
     await startGame(page);
     await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
-    await page.evaluate(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.tutorialManager.completeAll();
-    });
 
     const { sourcePoint, targetPoint } = await getMobileBuildPoints(page);
 
@@ -342,11 +342,11 @@ test('desktop places buildings, connects cable, and removes cable', async ({ pag
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only canvas interaction smoke');
     const runtimeErrors = collectRuntimeErrors(page);
 
-    await startGame(page);
-    await page.evaluate(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.tutorialManager.completeAll();
+    await page.addInitScript(() => {
+        localStorage.setItem('gradium_tutorial_completed', 'true');
+        localStorage.setItem('gradium_tutorial_step', '8');
     });
+    await startGame(page);
 
     const sourcePoint = await getScreenPointForTile(page, -160, -96);
     const targetPoint = await getScreenPointForTile(page, -96, -96);
@@ -378,11 +378,11 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only broad interaction smoke');
     const runtimeErrors = collectRuntimeErrors(page);
 
-    await startGame(page);
-    await page.evaluate(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.tutorialManager.completeAll();
+    await page.addInitScript(() => {
+        localStorage.setItem('gradium_tutorial_completed', 'true');
+        localStorage.setItem('gradium_tutorial_step', '8');
     });
+    await startGame(page);
 
     await page.keyboard.press('R');
     await expect.poll(async () => (await getMainSceneState(page)).currentRotation).toBe(1);

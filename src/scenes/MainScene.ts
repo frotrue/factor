@@ -19,7 +19,7 @@ import EffectsManager from '../managers/EffectsManager';
 import SoundManager from '../managers/SoundManager';
 import TutorialManager from '../managers/TutorialManager';
 import EventBus from '../managers/EventBus';
-import { DefenseModelState } from '../types';
+import { DefenseModelState, GameMode } from '../types';
 import DefenseTower from '../buildings/DefenseTower';
 import Core from '../buildings/Core';
 import OverlayController from '../controllers/OverlayController';
@@ -43,7 +43,8 @@ export default class MainScene extends Phaser.Scene {
     cableManager!: CableManager;
     effectsManager!: EffectsManager;
     soundManager!: SoundManager;
-    tutorialManager!: TutorialManager;
+    tutorialManager?: TutorialManager;
+    mode: GameMode = 'campaign';
     overlayController!: OverlayController;
     inputController!: InputController;
     defenseModelStates: Record<string, DefenseModelState> = {};
@@ -84,8 +85,9 @@ export default class MainScene extends Phaser.Scene {
         super('MainScene');
     }
 
-    init(data: { difficulty?: string } = {}): void {
+    init(data: { difficulty?: string; mode?: GameMode } = {}): void {
         this.difficultyId = CONFIG.DIFFICULTY[data.difficulty || 'NORMAL'] ? data.difficulty! : 'NORMAL';
+        this.mode = data.mode === 'tutorial' ? 'tutorial' : 'campaign';
     }
 
     create(): void {
@@ -112,8 +114,13 @@ export default class MainScene extends Phaser.Scene {
         this.effectsManager = new EffectsManager(this);
         this.overlayController = new OverlayController(this);
         this.inputController = new InputController(this);
+        this.tutorialManager = undefined;
 
-        this.mapManager.generateResourcePatches();
+        if (this.mode === 'tutorial') {
+            this.mapManager.generateTutorialMap();
+        } else {
+            this.mapManager.generateResourcePatches();
+        }
         this.buildingManager.place(0, 0, 'CORE', 0);
         this.cameraController.centerOnCore();
 
@@ -131,7 +138,9 @@ export default class MainScene extends Phaser.Scene {
         this.gridRenderer.draw(true);
 
         // Initialize UI buttons now that all managers are ready
-        this.tutorialManager = new TutorialManager(this);
+        if (this.mode === 'tutorial') {
+            this.tutorialManager = new TutorialManager(this);
+        }
         this.uiManager.createBuildingButtons();
     }
 

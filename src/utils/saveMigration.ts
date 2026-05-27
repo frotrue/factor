@@ -46,7 +46,8 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         masterVolume: data.settings?.masterVolume ?? 0.6,
         muted: data.settings?.muted ?? false,
         tutorialCompleted: data.settings?.tutorialCompleted ?? false,
-        tutorialStep: data.settings?.tutorialStep ?? 0
+        tutorialStep: data.settings?.tutorialStep ?? 0,
+        mapType: data.settings?.mapType === 'tutorial' ? 'tutorial' : 'random'
     };
     data.resourceMap = data.resourceMap || [];
     data.terrainMap = data.terrainMap || [];

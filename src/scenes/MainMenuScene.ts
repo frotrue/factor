@@ -125,7 +125,11 @@ export default class MainMenuScene extends Phaser.Scene {
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('MainScene', { difficulty: this.selectedDifficulty });
+                const tutorialCompleted = localStorage.getItem('gradium_tutorial_completed') === 'true';
+                this.scene.start('MainScene', {
+                    difficulty: this.selectedDifficulty,
+                    mode: tutorialCompleted ? 'campaign' : 'tutorial'
+                });
             });
         });
     }

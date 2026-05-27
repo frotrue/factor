@@ -76,8 +76,13 @@ export default class SettingsUI {
             btnResetTutorial.onclick = event => {
                 event.preventDefault();
                 event.stopPropagation();
-                EventBus.emit('TUTORIAL_RESET');
+                localStorage.setItem('gradium_tutorial_completed', 'false');
+                localStorage.setItem('gradium_tutorial_step', '0');
                 this.uiManager.logMessage(t('log.tutorialRestarted'));
+                this.scene.scene.start('MainScene', {
+                    mode: 'tutorial',
+                    difficulty: this.scene.difficultyId
+                });
             };
         }
 

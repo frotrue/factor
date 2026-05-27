@@ -23,4 +23,38 @@ describe('MapManager terrain blockers', () => {
         expect(mapManager.isTerrainBlocked(-5 * CONFIG.GRID_SIZE, -3 * CONFIG.GRID_SIZE)).toBe(false);
         expect(mapManager.getTerrainMap().size).toBeGreaterThan(0);
     });
+
+    it('generates a compact standalone tutorial arena with expected resource patches and walls', () => {
+        const mapManager = new MapManager();
+
+        mapManager.generateTutorialMap();
+
+        expect(mapManager.mapType).toBe('tutorial');
+        expect(mapManager.getResourceAt(-5 * CONFIG.GRID_SIZE, -3 * CONFIG.GRID_SIZE)).toBe('SILICON');
+        expect(mapManager.getResourceAt(-1 * CONFIG.GRID_SIZE, -1 * CONFIG.GRID_SIZE)).toBeNull();
+        expect(mapManager.getResourceAt(-2 * CONFIG.GRID_SIZE, -6 * CONFIG.GRID_SIZE)).toBe('SILICON');
+        expect(mapManager.getResourceAt(2 * CONFIG.GRID_SIZE, 2 * CONFIG.GRID_SIZE)).toBe('ENERGY');
+        expect(mapManager.isTerrainBlocked(-9 * CONFIG.GRID_SIZE, 0)).toBe(true);
+        expect(mapManager.isTerrainBlocked(8 * CONFIG.GRID_SIZE, 0)).toBe(true);
+        expect(mapManager.isTerrainBlocked(-8 * CONFIG.GRID_SIZE, -9 * CONFIG.GRID_SIZE)).toBe(true);
+        expect(mapManager.isTerrainBlocked(0, -9 * CONFIG.GRID_SIZE)).toBe(false);
+        expect(mapManager.getTerrainMap().size).toBeLessThan(80);
+    });
+
+    it('keeps tutorial and random campaign maps as separate generation paths', () => {
+        const mapManager = new MapManager();
+
+        mapManager.generateTutorialMap();
+        const tutorialResources = new Map(mapManager.getResourceMap());
+        const tutorialTerrain = new Map(mapManager.getTerrainMap());
+
+        mapManager.generateResourcePatches();
+
+        expect(mapManager.mapType).toBe('random');
+        expect(mapManager.getResourceMap()).not.toEqual(tutorialResources);
+        expect(mapManager.getTerrainMap()).not.toEqual(tutorialTerrain);
+        expect(mapManager.getResourceAt(-2 * CONFIG.GRID_SIZE, -6 * CONFIG.GRID_SIZE)).toBeNull();
+        expect(mapManager.getResourceAt(-5 * CONFIG.GRID_SIZE, -3 * CONFIG.GRID_SIZE)).toBe('SILICON');
+        expect(mapManager.getResourceAt(2 * CONFIG.GRID_SIZE, 2 * CONFIG.GRID_SIZE)).toBe('ENERGY');
+    });
 });

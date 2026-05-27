@@ -16,6 +16,8 @@ import type UIManager from './managers/UIManager';
 import type WaveManager from './managers/WaveManager';
 import type { Language } from './i18n';
 
+export type GameMode = 'tutorial' | 'campaign';
+
 // ── 방향 (Direction) ──
 export interface Direction {
     x: number;
@@ -288,8 +290,9 @@ export interface IMainScene extends Phaser.Scene {
     inventoryManager: InventoryManager;
     saveManager: SaveManager;
     soundManager: SoundManager;
-    tutorialManager: TutorialManager;
+    tutorialManager?: TutorialManager;
     defenseModelStates: Record<string, DefenseModelState>;
+    mode: GameMode;
     gameSpeed: number;
     difficultyId: string;
     isMobileLayout: boolean;
@@ -378,6 +381,7 @@ export interface SaveData {
         muted?: boolean;
         tutorialCompleted?: boolean;
         tutorialStep?: number;
+        mapType?: 'tutorial' | 'random';
     };
     resourceMap: { key: string; type: string }[];
     terrainMap: { key: string; type: string }[];

@@ -4,14 +4,23 @@ export default class MapManager {
     resourceMap: Map<string, string>;
     terrainMap: Map<string, string>;
     gridSize: number;
+    mapType: 'tutorial' | 'random';
+    tutorialBounds = {
+        minTileX: -9,
+        maxTileX: 8,
+        minTileY: -9,
+        maxTileY: 8
+    };
 
     constructor() {
         this.resourceMap = new Map();
         this.terrainMap = new Map();
         this.gridSize = CONFIG.GRID_SIZE;
+        this.mapType = 'random';
     }
 
     generateResourcePatches(): void {
+        this.mapType = 'random';
         this.resourceMap.clear();
         this.terrainMap.clear();
         const types = ['SILICON', 'ENERGY'];
@@ -70,6 +79,41 @@ export default class MapManager {
         for (let x = -8; x <= 8; x++) {
             if (Math.abs(x) <= 2) continue;
             this.addTerrainBlocker(x, -18);
+        }
+    }
+
+    /** Small standalone training arena for learning core building roles. */
+    generateTutorialMap(): void {
+        this.mapType = 'tutorial';
+        this.resourceMap.clear();
+        this.terrainMap.clear();
+
+        // Fixed Silicon patch: top-left of core, aligned with the Miner lesson.
+        this.addPatch(-5, -3, 3, 'SILICON');
+
+        // Energy patch: bottom-right of core, visible but outside the first building tile.
+        this.addPatch(2, 2, 3, 'ENERGY');
+
+        // Small north patch for showing that resources can exist beyond the first station.
+        this.addPatch(-2, -6, 2, 'SILICON');
+
+        this.addTutorialArenaWalls();
+    }
+
+    /** Compact arena boundary with a small north gate for the tutorial wave. */
+    private addTutorialArenaWalls(): void {
+        const { minTileX, maxTileX, minTileY, maxTileY } = this.tutorialBounds;
+
+        for (let x = minTileX; x <= maxTileX; x++) {
+            if (Math.abs(x) > 1) {
+                this.addTerrainBlocker(x, minTileY);
+            }
+            this.addTerrainBlocker(x, maxTileY);
+        }
+
+        for (let y = minTileY; y <= maxTileY; y++) {
+            this.addTerrainBlocker(minTileX, y);
+            this.addTerrainBlocker(maxTileX, y);
         }
     }
 

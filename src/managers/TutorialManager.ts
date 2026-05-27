@@ -22,6 +22,10 @@ const STORAGE_STEP = 'gradium_tutorial_step';
     private completed = false;
     private typingInterval?: number;
     private lastRenderedStepId: string | null = null;
+    private activeStepStartedAt = 0;
+    private cableConnectedForStep = false;
+    private waveEndedForStep = false;
+    private modelTargetSetForStep = false;
     private guideGraphics: Phaser.GameObjects.Graphics;
     private languageChangeHandler = () => this.refreshLanguage();
 
@@ -39,9 +43,9 @@ const STORAGE_STEP = 'gradium_tutorial_step';
         this.guideGraphics.setDepth(5);
 
         this.bindEvents();
-        this.checkResourceStep();
         this.render();
 
+        this.scene.events.on('update', this.checkActiveStepCompletion, this);
         this.scene.events.on('update', this.drawGuideHighlights, this);
         this.scene.events.on('shutdown', this.cleanup, this);
         this.scene.events.on('destroy', this.cleanup, this);
@@ -64,20 +68,27 @@ const STORAGE_STEP = 'gradium_tutorial_step';
     reset(): void {
         this.completed = false;
         this.lastRenderedStepId = null;
+        this.activeStepStartedAt = 0;
+        this.cableConnectedForStep = false;
+        this.waveEndedForStep = false;
+        this.modelTargetSetForStep = false;
         if (this.typingInterval) clearInterval(this.typingInterval);
         this.steps = createTutorialSteps();
         localStorage.setItem(STORAGE_COMPLETED, 'false');
         localStorage.setItem(STORAGE_STEP, '0');
-        this.checkResourceStep();
         this.render();
     }
 
-    completeAll(): void {
+    completeAll(options: { transitionToCampaign?: boolean } = {}): void {
+        const wasCompleted = this.completed;
         this.completed = true;
         if (this.typingInterval) clearInterval(this.typingInterval);
         this.steps = applyTutorialProgress(this.steps, true, this.steps.length);
         localStorage.setItem(STORAGE_COMPLETED, 'true');
         localStorage.setItem(STORAGE_STEP, String(this.steps.length));
+        if (!wasCompleted && options.transitionToCampaign) {
+            this.transitionToCampaign();
+        }
 
         // Sync HUD buttons when tutorial is skipped/completed
         this.scene.uiManager?.createBuildingButtons?.();
@@ -96,47 +107,33 @@ const STORAGE_STEP = 'gradium_tutorial_step';
     private bindEvents(): void {
         EventBus.on('BUILDING_PLACED', ({ type }: { key: string; building: any; type: string }) => {
             if (this.completed) return;
-
-            const activeStep = this.steps.find(step => !step.completed);
-            if (!activeStep) return;
-
-            if (activeStep.id === 'POWER' && type === 'POWER_NODE') {
-                this.completeStep('POWER');
-            } else if (activeStep.id === 'DATA_SOURCE' && (type === 'MINER' || type === 'DATA_DOWNLOADER')) {
-                let hasMiner = false;
-                let hasDownloader = false;
-                this.scene.buildingManager.forEach(building => {
-                    if (building.type === 'MINER') hasMiner = true;
-                    if (building.type === 'DATA_DOWNLOADER') hasDownloader = true;
-                });
-                if (hasMiner && hasDownloader) {
-                    this.completeStep('DATA_SOURCE');
-                }
-            } else if (activeStep.id === 'CONNECTION' && type === 'CONVEYOR') {
-                this.completeStep('CONNECTION');
-            } else if (activeStep.id === 'PROCESSING' && (type === 'PROCESSOR' || type === 'WEIGHT_TRAINER' || type === 'MODEL_TRAINING_LAB')) {
-                this.completeStep('PROCESSING');
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'place-building' && activeStep.completion.buildingType === type) {
+                this.completeStep(activeStep.id);
             }
         }, 'TutorialManager');
 
         EventBus.on('CABLE_CONNECTED', () => {
-            const activeStep = this.steps.find(step => !step.completed);
-            if (activeStep?.id === 'CONNECTION') {
-                this.completeStep('CONNECTION');
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'connect-cable') {
+                this.cableConnectedForStep = true;
+                this.completeStep(activeStep.id);
             }
         }, 'TutorialManager');
 
-        EventBus.on('WAVE_STARTED', () => {
-            const activeStep = this.steps.find(step => !step.completed);
-            if (activeStep?.id === 'DEFENSE') {
-                this.completeStep('DEFENSE');
+        EventBus.on('WAVE_ENDED', () => {
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'wave-ended') {
+                this.waveEndedForStep = true;
+                this.completeStep(activeStep.id);
             }
         }, 'TutorialManager');
 
         EventBus.on('MODEL_TRAINING_TARGET_SET', ({ targetType }) => {
-            const activeStep = this.steps.find(step => !step.completed);
-            if (activeStep?.id === 'RESEARCH' && targetType) {
-                this.completeStep('RESEARCH');
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'model-target-set' && targetType) {
+                this.modelTargetSetForStep = true;
+                this.completeStep(activeStep.id);
             }
         }, 'TutorialManager');
 
@@ -160,10 +157,54 @@ const STORAGE_STEP = 'gradium_tutorial_step';
         return panel;
     }
 
-    private checkResourceStep(): void {
-        const hasResource = Array.from(this.scene.mapManager.getResourceMap().values())
-            .some(type => type === 'SILICON' || type === 'ENERGY');
-        if (hasResource) this.completeStep('RESOURCE');
+    private getActiveStep(): TutorialStep | undefined {
+        if (this.completed) return undefined;
+        return this.steps.find(step => !step.completed);
+    }
+
+    private checkActiveStepCompletion(): void {
+        const activeStep = this.getActiveStep();
+        if (!activeStep) return;
+
+        const completion = activeStep.completion;
+        if (completion.kind === 'auto') {
+            if (this.scene.time.now - this.activeStepStartedAt >= completion.delayMs) {
+                this.completeStep(activeStep.id);
+            }
+        } else if (completion.kind === 'produce-item') {
+            if (this.hasBuildingItem(completion.buildingType, completion.itemType)) {
+                this.completeStep(activeStep.id);
+            }
+        } else if (completion.kind === 'power-online') {
+            if (this.hasPoweredBuilding(completion.buildingType)) {
+                this.completeStep(activeStep.id);
+            }
+        } else if (completion.kind === 'connect-cable' && this.cableConnectedForStep) {
+            this.completeStep(activeStep.id);
+        } else if (completion.kind === 'wave-ended' && this.waveEndedForStep) {
+            this.completeStep(activeStep.id);
+        } else if (completion.kind === 'model-target-set' && this.modelTargetSetForStep) {
+            this.completeStep(activeStep.id);
+        }
+    }
+
+    private hasBuildingItem(buildingType: string, itemType: string): boolean {
+        let found = false;
+        this.scene.buildingManager.forEach(building => {
+            if (found || building.type !== buildingType) return;
+            found = building.inputBuffer.includes(itemType) || building.outputBuffer.includes(itemType);
+        });
+        return found;
+    }
+
+    private hasPoweredBuilding(buildingType: string): boolean {
+        let found = false;
+        this.scene.powerManager?.updatePowerGrid?.();
+        this.scene.buildingManager.forEach(building => {
+            if (found || building.type !== buildingType) return;
+            found = building.hasPower === true;
+        });
+        return found;
     }
 
     private completeStep(id: TutorialStepId): void {
@@ -173,14 +214,25 @@ const STORAGE_STEP = 'gradium_tutorial_step';
 
         this.steps = completeTutorialStep(this.steps, id);
         this.persistProgress();
+        this.scene.uiManager.logMessage(t('tutorial.stepComplete' as any, { title: step.title }));
 
         if (this.steps.every(item => item.completed)) {
             this.completed = true;
             this.persistProgress();
             this.scene.uiManager.logMessage(t('tutorial.completeDetail'));
             this.scene.uiManager?.createBuildingButtons?.();
+            this.transitionToCampaign();
         }
         this.render();
+    }
+
+    private transitionToCampaign(): void {
+        window.setTimeout(() => {
+            this.scene.scene.start('MainScene', {
+                mode: 'campaign',
+                difficulty: this.scene.difficultyId
+            });
+        }, 500);
     }
 
     private refreshLanguage(): void {
@@ -236,6 +288,10 @@ const STORAGE_STEP = 'gradium_tutorial_step';
 
         if (this.lastRenderedStepId !== activeStep.id) {
             this.lastRenderedStepId = activeStep.id;
+            this.activeStepStartedAt = this.scene.time.now;
+            this.cableConnectedForStep = false;
+            this.waveEndedForStep = false;
+            this.modelTargetSetForStep = false;
 
             this.panel.innerHTML = `
                 <div class="tutorial-header">
@@ -274,7 +330,7 @@ const STORAGE_STEP = 'gradium_tutorial_step';
         }
 
         const skip = document.getElementById('btn-skip-tutorial');
-        if (skip) skip.onclick = () => this.completeAll();
+        if (skip) skip.onclick = () => this.completeAll({ transitionToCampaign: true });
     }
 
     private drawGuideHighlights(): void {
@@ -447,6 +503,7 @@ const STORAGE_STEP = 'gradium_tutorial_step';
     }
 
     private cleanup(): void {
+        this.scene.events.off('update', this.checkActiveStepCompletion, this);
         this.scene.events.off('update', this.drawGuideHighlights, this);
         window.removeEventListener('languagechange', this.languageChangeHandler);
         if (this.guideGraphics) {

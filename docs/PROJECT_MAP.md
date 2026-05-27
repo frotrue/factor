@@ -6,7 +6,7 @@
 
 Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다.
 
-핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update -> Confidence Score` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, 연구와 방어 모델 훈련으로 공장을 성장시키는 흐름입니다. 현재 빌드는 난이도 선택, 튜토리얼, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 케이블/AP 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
+핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update -> Confidence Score` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, 연구와 방어 모델 훈련으로 공장을 성장시키는 흐름입니다. 현재 빌드는 난이도 선택, 건물 역할 중심 튜토리얼, 일반 캠페인과 분리된 작은 건물 학습용 튜토리얼 arena 맵, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 케이블/AP 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
 
 ## 주요 기술 스택
 
@@ -38,11 +38,13 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
 
 1. `src/main.ts`가 `MainMenuScene`, `MainScene`을 Phaser 게임에 등록합니다.
 2. `MainMenuScene`이 난이도 선택 후 `MainScene`을 시작합니다.
-3. `MainScene.create()`가 매니저를 생성하고, 맵 자원/지형 생성, Core와 시작 Storage 배치, UI/입력/이벤트를 초기화합니다.
+3. `MainScene.create()`가 매니저를 생성하고, Scene 시작 데이터의 `mode`에 따라 작은 튜토리얼 arena 맵 또는 캠페인 랜덤 맵을 생성한 뒤 Core와 시작 Storage 배치, UI/입력/이벤트를 초기화합니다.
 4. 매 프레임 `MainScene.update()`가 커서, 그리드, 틱, 웨이브, 저장, UI, 카메라, 케이블, 이펙트, 오버레이를 갱신합니다.
 5. `TickSystem`은 고정 틱으로 전력망, AP/케이블 데이터 전송, 건물 `onTick()` 생산/가공을 처리합니다.
 6. `WaveManager`는 프레임 delta 기반으로 웨이브 카운트다운, 적 스폰, 적 업데이트, 웨이브 종료를 처리합니다.
 7. DOM UI는 `index.html`의 `#game-hud-shell` 아래에서 상단 상태바, 우측 정보 레일, 하단 빌드 콘솔로 나뉘며 `UIManager`와 하위 `SettingsUI`, `ResearchUI`, `TrainingLabUI`, `MobileUIManager`가 관리합니다.
+
+튜토리얼 흐름은 `CORE -> RESOURCE -> POWER -> MINER -> STORAGE -> DOWNLOADER -> CABLE -> PROCESSOR -> TRAINER -> DEFENSE -> FIRST_WAVE -> MODEL_LAB`입니다. 고정 튜토리얼 맵의 실제 Silicon 패치를 먼저 보여주고, PowerNode로 그 패치에 전력을 연결한 뒤 Miner 생산을 확인합니다. 각 단계는 배치만이 아니라 Silicon/RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 생산, 전력 온라인, 웨이브 종료, 모델 대상 선택 같은 상태 변화로 완료됩니다. 완료 또는 스킵 시 튜토리얼 진행 상태만 완료로 저장하고, 튜토리얼 공장을 이어받지 않는 새 캠페인 랜덤 맵으로 전환합니다. 튜토리얼 실행 중에는 일반 캠페인 저장 슬롯을 자동 저장하지 않습니다.
 
 ## 주요 엔트리포인트
 
