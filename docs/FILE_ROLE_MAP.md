@@ -19,12 +19,12 @@
 | `src/buildings/Miner.ts` | 자원 타일에서 Silicon/Energy 생산 | 자원 추출, 컨베이어 물류 | 자원 타일 위에 있어야 실제 생산 | 추정: `productionSimulation`은 Downloader 중심 |
 | `src/buildings/DataDownloader.ts` | 전력 기반 RAW_DATA 생산 | 초반 데이터 라인 시작 | `MINING_RATE_MULTIPLIER` 효과를 함께 받음 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/Processor.ts` | RAW_DATA -> LABELED_DATA | 핵심 데이터 라인 | `CONFIG.RECIPES.LABELLING` 의존 | `src/utils/productionSimulation.test.ts` |
-| `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | Confidence 성장 재료 | Core 점수와 모델 훈련 둘 다에 연결 | `src/utils/productionSimulation.test.ts` |
+| `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | 고가치 Lab 작업 재료 | Neural Operations Lab 작업 진행도 +5 입력 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/NeuralTrainer.ts` | MODEL_TRAINING / INFERENCE_UNIT_PRODUCTION 레시피 전환 | 후반 생산, 고급 연구 | 클릭 시 레시피 전환하며 버퍼 초기화 | E2E는 간접 |
-| `src/buildings/ModelTrainingLab.ts` | 타입별 방어 모델 학습 데이터 누적, 학습 시간 진행, GPU 인접 가속 계산, 학습 대상 선택 이벤트 발행 | 방어 모델 정확도/공격력 성장, 튜토리얼 최종 모델 학습 단계 | `targetType`, `autoTrain`은 저장 customState 대상. 실제 모델 진행 상태는 `MainScene.defenseModelStates`에 저장. `setTarget()` 이벤트는 튜토리얼 완료와 UI 갱신에 영향 | `src/utils/modelTrainingSummary.test.ts`, `src/utils/modelTrainingProgress.test.ts` |
-| `src/buildings/GpuCluster.ts` | 모델 훈련 연구소 인접 고전력 가속기 | 정확도 100 이후 학습 시간 단축 | Research 해금이 아니라 모델 정확도 기반 UI gating을 사용. 전력이 없으면 가속에 기여하지 않음 | `src/utils/modelTrainingProgress.test.ts` 간접 |
+| `src/buildings/ModelTrainingLab.ts` | Neural Operations Lab 작업 슬롯. 데이터 아이템을 소비해 방어 모델 또는 시스템 프로토콜 진행도를 올리고, 방어 모델 학습 시간/GPU 가속을 처리 | 방어 모델 성장, 시스템 프로토콜 해금, 튜토리얼 최종 Lab 단계 | `targetType`, `activeJobId`, `autoTrain`은 저장 customState 대상. 방어 모델 진행 상태는 `MainScene.defenseModelStates`, 시스템 프로토콜 진행도는 `ResearchManager.jobProgress`에 저장 | `src/utils/modelTrainingSummary.test.ts`, `src/utils/modelTrainingProgress.test.ts` |
+| `src/buildings/GpuCluster.ts` | Neural Operations Lab 인접 고전력 가속기 | 정확도 100 이후 학습 시간 단축 | Research 해금이 아니라 모델 정확도 기반 UI gating을 사용. 전력이 없으면 가속에 기여하지 않음 | `src/utils/modelTrainingProgress.test.ts` 간접 |
 | `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 정확도/공격력 상태 적용 및 실시간 타겟 추적/배리어/방화벽 요동 등 커스텀 벡터 비주얼 탑재 | 방어 전투, 적 제거 | Classifier(락온 타겟 실시간 포신 추적 및 지점 네온 크로스헤어), Filter(2중 원호 배리어), Firewall(요동치는 삼각 화염) 드로잉 및 누수 없는 트윈 클린업 구현 | E2E 방어 배치 smoke |
-| `src/buildings/Core.ts` | Core HP와 Confidence Score 수신 | 연구 비용, 게임오버, 점수 | WEIGHT_UPDATE는 +10, LABELED_DATA는 +2, 기타 +0.1 | E2E, save smoke |
+| `src/buildings/Core.ts` | Core HP와 수신 데이터 총량 집계 | 게임오버, 런 통계 | 데이터 수신 시 `totalDataReceived`만 증가하며 연구 화폐는 만들지 않음 | E2E, save smoke |
 | `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push 및 스크롤 갈매기(Chevron) 벡터 렌더링 | 자원 라인 | 3중 네온 쉐브론 흐름선 스크롤링 및 레일 외곽선 효과, 누수 없는 트윈 적용 (FastLink 공통) | E2E placement smoke |
 | `src/buildings/Storage.ts` | 단일 타입 저장, inputBuffer를 출력으로도 사용 및 실시간 잔여량 게이지 렌더링 | 인벤토리, 케이블/컨베이어 버퍼 | 저장 용량 비율(inputBuffer.length / maxBufferSize)에 연동되어 갱신되는 2중 원형 네온 아크(Arc) 게이지 탑재 | E2E storage placement |
 | `src/buildings/DataCache.ts` | 데이터 아이템 전용 Storage | 케이블/AP 데이터 버퍼 | RAW/Labeled/Weight/Trained/Inference 허용 및 용량 맞춤형 원형 네온 아크 게이지 연계 | AP relay 테스트 간접 |
@@ -41,11 +41,11 @@
 | `src/managers/GridRenderer.ts` | 배경, 섹터 그리드, 자원 패치, BLOCKER 지형 렌더 | 카메라 이동/줌 중 월드 시각화 | camera dirty 기반 렌더이므로 무거운 per-tile 효과 주의 | build, E2E startup |
 | `src/managers/SaveManager.ts` | localStorage 저장/로드, 런타임 재구성 | 자동 저장, 설정, 연구, 케이블/적/건물/맵 복원 | 포맷 변경 시 migration과 SaveData 갱신. 튜토리얼 모드에서는 일반 캠페인 저장 슬롯을 쓰지 않고, 캠페인에서는 `settings.mapType`과 resource/terrain map 데이터를 복원 | `src/utils/saveMigration.test.ts`, `src/utils/enemyRestore.ts`, E2E save |
 | `src/utils/saveMigration.ts` | 구버전 저장 데이터 기본값 보정 | 로드 안정성 | 새 필드는 기본값과 버전 처리 필요 | `src/utils/saveMigration.test.ts` |
-| `src/managers/ResearchManager.ts` | 연구 해금 조건/비용/효과 누적 | 연구 UI, 건물 해금, 밸런스 보정 | multiplier 효과는 곱하고 bonus는 더함 | config/research 간접 |
+| `src/managers/ResearchManager.ts` | 시스템 프로토콜 작업 진행도, 완료 상태, 효과 누적 | Neural Operations Lab, 건물 해금, 밸런스 보정 | Lab에서 데이터 아이템 가치만큼 진행도를 올리며 multiplier 효과는 곱하고 bonus는 더함 | config/research 간접 |
 | `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔/선택 도구 요약, 툴팁, 모달 위임 | 모든 DOM UI | DOM id/text는 E2E와 연결. 빌드 버튼 id는 유지해야 hotkey/E2E 회귀가 적음 | E2E 전반 |
 | `src/managers/SettingsUI.ts` | 설정 모달, 저장/로드/언어/속도 버튼 | 설정 UI | 닫기 후 canvas focus 복원 기대 | E2E focus/language/save |
-| `src/managers/ResearchUI.ts` | 연구 모달 렌더링/해금 버튼 | 연구 진행 | 첫 방어 전 연구 버튼 gating과 연결 | E2E research smoke |
-| `src/managers/TrainingLabUI.ts` | 모델 훈련 연구소 DOM UI | 방어 모델 타겟 선택, 정확도/공격력/데이터/학습/GPU 상태 표시 | `ModelTrainingLab` summary와 `DefenseModelState` 상태를 함께 렌더링 | E2E 간접 |
+| `src/managers/ResearchUI.ts` | 레거시 연구 모달 비활성 no-op | 이전 DOM 호환 | 설정 옆 연구 버튼/모달은 더 이상 플레이어에게 노출하지 않음 | E2E smoke |
+| `src/managers/TrainingLabUI.ts` | Neural Operations Lab DOM UI | 방어 모델/시스템 프로토콜 작업 선택, 진행도, 학습/GPU 상태 표시 | `ModelTrainingLab`, `DefenseModelState`, `ResearchManager.jobProgress` 상태를 함께 렌더링 | E2E 간접 |
 | `src/managers/MobileUIManager.ts` | 모바일 액션바/케이블 메뉴/빌드 요약 | 모바일 조작 | touch gesture와 DOM guard 영향 | E2E mobile |
 | `src/managers/TutorialManager.ts` | 튜토리얼 패널, 단계별 건물 잠금, 데이터 기반 월드 고스트/흐름/범위 힌트 렌더링, 튜토리얼 완료 조건 검사, 튜토리얼 웨이브/모델 학습 이벤트 처리 | 건물 역할 온보딩, 빌드 버튼 갱신, WaveManager mock wave 연동, 튜토리얼 완료 시 새 캠페인 전환 | 완료 조건은 `tutorialFlow.completion` 메타를 따름. 자동 진행, 특정 건물 생산, 케이블 연결, 전력 온라인, `WAVE_ENDED`, `MODEL_TRAINING_TARGET_SET`을 모두 처리. 힌트 렌더는 `tutorialFlow.ts`가 단일 원천 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | `src/controllers/InputController.ts` | 캔버스 입력, 배치/케이블/철거/툴팁/모바일 탭 | 실 조작의 중심 | DOM UI guard 셀렉터, 좌표 snap, unlock 체크 주의 | E2E interaction |
@@ -53,7 +53,7 @@
 | `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |
 | `src/utils/waveSimulation.ts` | 웨이브 수량/HP/경로/브리핑 순수 계산 | WaveManager, UI threat panel, tests | 난이도/경로 정책의 기준 파일 | `src/utils/waveSimulation.test.ts` |
 | `src/utils/gridPath.ts` | 적 경로 A* 순수 계산 | BaseEnemy 이동/pathfinding | no-path는 빈 배열로 유지해 런타임이 blocked fallback을 결정. 마지막 점은 정확한 target world 좌표를 보존 | `src/utils/gridPath.test.ts` |
-| `src/utils/geometry.ts` | 멀티타일 건물 footprint center와 중심 기반 범위 tile 계산 | WaveManager target, EffectsManager route guide, PowerManager coverage | grid size와 건물 WIDTH/HEIGHT 변경 시 중심 좌표 기대값 확인 | `src/utils/geometry.test.ts` |
+| `src/utils/geometry.ts` | 멀티타일 건물 footprint center와 테두리 기반 범위 tile 계산 | WaveManager target, EffectsManager route guide, PowerManager coverage | grid size와 건물 WIDTH/HEIGHT 변경 시 중심/테두리 좌표 기대값 확인 | `src/utils/geometry.test.ts` |
 | `src/utils/buildingLifecycle.ts` | 건물 수동 제거/전투 파괴 이벤트 매핑 | BuildingManager lifecycle events | 이벤트 의미가 웨이브 통계와 피드백에 연결됨 | `src/utils/buildingLifecycle.test.ts` |
 | `src/utils/enemyRestore.ts` | 저장된 적 HP/maxHP 복원 계산 | SaveManager active wave load | difficulty multiplier 누락 방지 | `src/utils/saveMigration.test.ts` |
 | `src/utils/waveBriefingKey.ts` | next-wave briefing 중복 발행 방지 key | WaveManager -> UIManager briefing | countdown-only 변경은 `WAVE_UPDATE`로 처리 | `src/utils/waveBriefingKey.test.ts` |

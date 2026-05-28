@@ -58,6 +58,12 @@ describe('modelTrainingProgress', () => {
         expect(getTrainingDurationTicks(4)).toBe(Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * 0.2));
     });
 
+    test('scales training duration by consumed data amount', () => {
+        expect(getTrainingDurationTicks(0, CONFIG.MODEL_TRAINING.INITIAL_DATA_REQUIREMENT)).toBe(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS);
+        expect(getTrainingDurationTicks(0, 130)).toBe(Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * 1.3));
+        expect(getTrainingDurationTicks(1, 130)).toBe(Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * 1.3 * 0.8));
+    });
+
     test('unlocks GPU when any model reaches 100 accuracy', () => {
         const classifier = createDefaultDefenseModelState();
         const filter = createDefaultDefenseModelState();

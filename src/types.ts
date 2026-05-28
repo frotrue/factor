@@ -179,7 +179,7 @@ export interface ResearchEffects {
 export interface ResearchNode {
     ID: string;
     NAME: string;
-    COST: number; // Confidence score
+    COST: number; // Lab progress required
     DESCRIPTION: string;
     UNLOCKS: {
         BUILDINGS?: string[];
@@ -188,6 +188,13 @@ export interface ResearchNode {
     };
     REQUIREMENTS?: string[]; // IDs of required research nodes
     EFFECTS?: ResearchEffects;
+}
+
+export type LabJobCategory = 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL';
+
+export interface LabJobProgress {
+    progress: number;
+    completed: boolean;
 }
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
@@ -388,10 +395,10 @@ export interface SaveData {
     core: {
         hp: number;
         totalDataReceived: number;
-        confidenceScore: number;
     };
     buildings: SavedBuilding[];
     defenseModelStates?: Record<string, DefenseModelState>;
+    labJobProgress?: Record<string, LabJobProgress>;
     items: SavedItem[];
     cables?: SavedCable[];
     settings: {

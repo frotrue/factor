@@ -155,7 +155,7 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.locator('#selected-tool-panel')).toBeVisible();
     await expect(page.locator('#ui-overlay')).toBeVisible();
     await expect(page.locator('#btn-settings')).toBeVisible();
-    await expect(page.locator('#btn-research')).toBeHidden();
+    await expect(page.locator('#btn-research')).toHaveCount(0);
     await expect(page.locator('#selected-tool-name')).toContainText('패킷 수집기');
     await expect(page.locator('#mission-panel')).toContainText('데이터 수집 시작');
     await expect(page.locator('#threat-panel')).toContainText('Wave 1');
@@ -191,7 +191,7 @@ test('desktop can show wave result summary', async ({ page }, testInfo) => {
             enemiesDestroyed: 5,
             coreDamage: 0,
             coreHpPercent: 100,
-            confidenceGained: 12,
+            dataProcessed: 12,
             buildingsDamaged: 0,
             buildingsDestroyed: 0,
             lines: []
@@ -200,7 +200,7 @@ test('desktop can show wave result summary', async ({ page }, testInfo) => {
 
     await expect(page.locator('.wave-result-card')).toBeVisible();
     await expect(page.locator('.wave-result-card')).toContainText('웨이브 결과');
-    await expect(page.locator('.wave-result-card')).toContainText('공장 성장');
+    await expect(page.locator('.wave-result-card')).toContainText('Core 수신 데이터');
 
     expect(runtimeErrors).toEqual([]);
 });
@@ -428,12 +428,8 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     await expect(page.locator('#settings-modal')).toBeHidden();
 
     await unlockFirstDefenseProgress(page);
-    await expect(page.locator('#btn-research')).toBeVisible();
-    await page.locator('#btn-research').click();
-    await expect(page.locator('#research-modal')).toBeVisible();
-    await expect(page.locator('#research-tree-container')).toContainText('연구');
-    await page.locator('#btn-close-research').click();
-    await expect(page.locator('#research-modal')).toBeHidden();
+    await expect(page.locator('#btn-research')).toHaveCount(0);
+    await expect(page.locator('#research-modal')).toHaveCount(0);
 
     expect(runtimeErrors).toEqual([]);
 });

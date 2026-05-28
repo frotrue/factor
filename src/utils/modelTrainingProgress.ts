@@ -52,8 +52,16 @@ export function getGpuTrainingSpeedMultiplier(activeGpuCount: number): number {
     return Math.max(0.05, 1 - clamped * CONFIG.MODEL_TRAINING.GPU_SPEED_BONUS);
 }
 
-export function getTrainingDurationTicks(activeGpuCount: number): number {
-    return Math.max(1, Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * getGpuTrainingSpeedMultiplier(activeGpuCount)));
+export function getTrainingDurationTicks(
+    activeGpuCount: number,
+    consumedTrainingData: number = CONFIG.MODEL_TRAINING.INITIAL_DATA_REQUIREMENT
+): number {
+    const dataMultiplier = Math.max(1, consumedTrainingData) / CONFIG.MODEL_TRAINING.INITIAL_DATA_REQUIREMENT;
+    return Math.max(1, Math.ceil(
+        CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS
+        * dataMultiplier
+        * getGpuTrainingSpeedMultiplier(activeGpuCount)
+    ));
 }
 
 export function getNextTrainingRewardKind(state: DefenseModelState): TrainingRewardKind {

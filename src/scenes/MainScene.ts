@@ -84,7 +84,7 @@ export default class MainScene extends Phaser.Scene {
         wave: number;
         enemiesDestroyed: number;
         coreHpBefore: number;
-        confidenceBefore: number;
+        dataBefore: number;
         buildingsDamaged: Set<string>;
         buildingsDestroyed: Set<string>;
     } | null = null;
@@ -189,7 +189,7 @@ export default class MainScene extends Phaser.Scene {
                 wave,
                 enemiesDestroyed: 0,
                 coreHpBefore: core?.hp ?? 0,
-                confidenceBefore: core?.confidenceScore ?? 0,
+                dataBefore: core?.totalDataReceived ?? 0,
                 buildingsDamaged: new Set<string>(),
                 buildingsDestroyed: new Set<string>()
             };
@@ -210,8 +210,8 @@ export default class MainScene extends Phaser.Scene {
                 coreHpBefore: this.currentWaveStats.coreHpBefore,
                 coreHpAfter: core?.hp ?? 0,
                 coreMaxHp: core?.maxHp ?? 1,
-                confidenceBefore: this.currentWaveStats.confidenceBefore,
-                confidenceAfter: core?.confidenceScore ?? this.currentWaveStats.confidenceBefore,
+                dataBefore: this.currentWaveStats.dataBefore,
+                dataAfter: core?.totalDataReceived ?? this.currentWaveStats.dataBefore,
                 buildingsDamaged: this.currentWaveStats.buildingsDamaged.size,
                 buildingsDestroyed: this.currentWaveStats.buildingsDestroyed.size
             });

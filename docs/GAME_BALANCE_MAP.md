@@ -9,11 +9,11 @@
 | `SILICON` | 건설 비용, 물리 물류, 일부 고급 레시피 입력 | `CONFIG.ITEMS`, `Miner`, `Conveyor`, `Storage`, `InventoryManager` |
 | `ENERGY` | Energy patch에서 생산 가능한 아이템, 일부 레시피 입력 | `CONFIG.ITEMS`, `Miner`, `NeuralTrainer` 레시피 |
 | `RAW_DATA` / Signal Packet | 데이터 라인 시작 재료 | `DataDownloader`, `CableManager.DATA_ITEMS` |
-| `LABELED_DATA` | Processor 산출물, Core 점수 +2 | `Processor`, `Core.acceptItem()` |
-| `WEIGHT_UPDATE` | WeightTrainer 산출물, Core 점수 +10, 모델 훈련 데이터 +5 | `WeightTrainer`, `Core`, `ModelTrainingLab` |
+| `LABELED_DATA` | Processor 산출물, Neural Operations Lab 작업 진행도 +3 | `Processor`, `ModelTrainingLab` |
+| `WEIGHT_UPDATE` | WeightTrainer 산출물, Neural Operations Lab 작업 진행도 +5 | `WeightTrainer`, `ModelTrainingLab` |
 | `TRAINED_MODEL` | 고급 훈련 산출물. 현재 모델 훈련소 입력에서는 제외 | `NeuralTrainer` |
 | `INFERENCE_UNIT` | 고급 추론 재료. 현재 모델 훈련소 입력에서는 제외 | `NeuralTrainer` |
-| `Confidence Score` | 연구 비용으로 쓰는 성장 점수 | `Core.confidenceScore`, `ResearchManager` |
+| Lab 작업 진행도 | RAW_DATA +1, LABELED_DATA +3, WEIGHT_UPDATE +5 | `ModelTrainingLab`, `ResearchManager` |
 
 ## 튜토리얼 arena 배치
 
@@ -30,9 +30,9 @@
 DataDownloader -> RAW_DATA
 Processor: RAW_DATA -> LABELED_DATA
 WeightTrainer: 2 LABELED_DATA -> WEIGHT_UPDATE
-Core: WEIGHT_UPDATE 수신 -> Confidence +10
-ResearchManager: Confidence 소비 -> 연구 해금/효과
-ModelTrainingLab: RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 누적 -> 학습 시간 -> 방어 모델 정확도/공격력 성장
+Core: 데이터 수신량 집계
+ModelTrainingLab: RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 소비 -> 방어 모델 또는 시스템 프로토콜 작업 진행
+ResearchManager: Lab 작업 진행도 누적 -> 프로토콜 완료/효과 적용
 ```
 
 물리 자원 루프는 `Miner -> Conveyor/FastLink -> Storage` 중심이며, 현재 컨베이어는 `SILICON`만 운반합니다. 데이터 아이템은 케이블 또는 AP 릴레이를 통해 이동합니다.
@@ -48,9 +48,9 @@ ModelTrainingLab: RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 누적 -> 학습 시간 ->
 | AP 릴레이 | `RANGE`, `BANDWIDTH`, `AP_RANGE_BONUS` | `CONFIG.ACCESS_POINT`, `AccessPoint`, `CableManager`, `apRelay` |
 | 전력망 | `POWER.PRODUCTION`, `CONSUMPTION`, `RANGE` | `PowerManager` |
 | 방어 타워 | `DEFENSE.DAMAGE`, `RANGE`, `FIRE_RATE`, HP | `DefenseTower`, `CONFIG.BUILDINGS` |
-| 방어 모델 | 시작 정확도 40, 학습 완료 시 정확도 +10 또는 공격력 +5 | `MainScene`, `ModelTrainingLab`, `DefenseTower` |
-| GPU 가속 | 모델 정확도 100 달성 후 해금, 인접/전력 필요, 최대 4개 x 학습시간 -20% | `GPU_CLUSTER`, `ModelTrainingLab` |
-| 연구 | 비용, 선행조건, 효과 | `CONFIG.RESEARCH`, `ResearchManager` |
+| 방어 모델 | 시작 정확도 40, 학습 완료 시 정확도 +10 또는 공격력 +5. 학습 시간은 이번 학습에 소모한 데이터량 / `INITIAL_DATA_REQUIREMENT` 비율만큼 증가 | `MainScene`, `ModelTrainingLab`, `DefenseTower`, `modelTrainingProgress` |
+| GPU 가속 | 모델 정확도 100 달성 후 해금, 인접/전력 필요, 최대 4개 x 학습시간 -20% | `GPU_CLUSTER`, `ModelTrainingLab`, `modelTrainingProgress` |
+| 시스템 프로토콜 | 필요 진행도, 선행조건, 효과 | `CONFIG.RESEARCH`, `ResearchManager`, `ModelTrainingLab` |
 | 난이도 | 적 HP/스폰/보상/쿨다운 배율 | `CONFIG.DIFFICULTY`, `WaveManager`, `waveSimulation` |
 
 ## 타워/방어 요소
@@ -97,18 +97,18 @@ ModelTrainingLab: RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 누적 -> 학습 시간 ->
 | AP 편의성 | `CONFIG.ACCESS_POINT`, `TECH_DISTRIBUTED_AP`, `CableManager.transferWirelessData()` | `apRelay.test.ts` |
 | 방어 DPS | `CONFIG.BUILDINGS.*.DEFENSE`, `DefenseTower`, 연구 효과 | `waveSimulation`, E2E defense smoke |
 | 적 압박 | `CONFIG.ENEMIES`, `CONFIG.DIFFICULTY`, `waveSimulation.ts`, `WaveManager.ts` | `waveSimulation.test.ts` |
-| 연구 pacing | `CONFIG.RESEARCH`, `Core.acceptItem()` 점수 | `ResearchManager`, UI research |
+| 프로토콜 pacing | `CONFIG.RESEARCH`, 데이터 아이템 진행도 가치 | `ResearchManager`, `TrainingLabUI` |
 | 저장 호환 | balance state 추가 시 `types.ts`, `SaveManager`, `saveMigration` | `saveMigration.test.ts` |
 
 ## 밸런스 변경의 파급
 
-- DataDownloader/Processor/WeightTrainer 수치를 바꾸면 Confidence 획득과 연구 개방 속도가 같이 변합니다.
-- WEIGHT_UPDATE 가치는 Core 점수와 모델 훈련 데이터 +5라는 두 역할을 동시에 갖습니다.
+- DataDownloader/Processor/WeightTrainer 수치를 바꾸면 Lab 작업 진행도 공급 속도가 같이 변합니다.
+- WEIGHT_UPDATE 가치는 Lab 작업 진행도 +5로 가장 높은 기본 데이터 입력입니다.
 - 방어 타워 기본 피해를 올리면 모델 훈련, 연구 피해 배율, hit chance 보정까지 곱해져 후반 스케일이 커질 수 있습니다.
 - FIREWALL HP/피해 조정은 적 pathfinding과 건물 파괴/수리 부재에 큰 영향을 줍니다.
 - 전력 소비를 높이면 `hasPower=false`가 생산, 케이블, AP, 방어를 모두 멈추게 합니다.
-- 케이블 대역폭과 queue를 키우면 생산 병목이 줄어 Core 점수와 연구가 빨라집니다.
-- 난이도 reward multiplier는 적 보상 Silicon에만 직접 적용되고, 데이터 생산 기반 Confidence에는 직접 적용되지 않습니다.
+- 케이블 대역폭과 queue를 키우면 생산 병목이 줄어 Neural Operations Lab 작업이 빨라집니다.
+- 난이도 reward multiplier는 적 보상 Silicon에만 직접 적용되고, 데이터 기반 Lab 진행도에는 직접 적용되지 않습니다.
 
 ## 현재 밸런스상 어색하거나 개선 여지가 있는 부분
 
@@ -119,11 +119,11 @@ ModelTrainingLab: RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 누적 -> 학습 시간 ->
 - 추정: 적 pathfinding은 탐색 범위/방문 수 제한이 있어 대형 벽이나 복잡한 미로에서 예상과 다르게 빈 path가 나올 수 있습니다.
 - 추정: 방어 모델은 타입별 공유라 성장 체감은 좋지만, 타입별 투자 선택이 UI에서 충분히 드러나야 합니다.
 - 추정: DDoS bot 보상은 개별 0이고 swarm 완료 보너스 5라, 위험 대비 보상 체감이 낮을 수 있습니다.
-- 추정: 연구 비용과 Confidence 생산량의 관계는 장시간 플레이 실측 없이 코드 기준으로만 판단했습니다.
+- 추정: 프로토콜 필요 진행도와 데이터 생산량의 관계는 장시간 플레이 실측 없이 코드 기준으로만 판단했습니다.
 
 ## 향후 밸런스 조정 제안
 
-1. `productionSimulation`에 연구 효과/케이블 queue/AP 시나리오를 추가해 5분/10분 기준 Confidence 획득량을 고정하세요.
+1. `productionSimulation`에 연구 효과/케이블 queue/AP 시나리오를 추가해 5분/10분 기준 Lab 진행도 획득량을 고정하세요.
 2. Wave 1~10 목표를 “첫 방어 성공 -> 연구 열림 -> 두 번째 방어 노드”로 두고, Normal 기준 권장 타워 수와 실제 생존률을 Playwright 또는 headless simulation으로 검증하세요.
 3. `MINING_RATE_MULTIPLIER`가 DataDownloader에도 적용되는 설계가 의도인지 결정하고, 의도라면 이름/문구를 생산 속도 쪽으로 바꾸세요.
 4. Energy 아이템의 역할을 확정하세요. 전력 건물 placement 조건용인지, 후반 recipe 재료인지, 물류 대상인지 명확히 하는 편이 좋습니다.

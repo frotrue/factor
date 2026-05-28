@@ -4,7 +4,7 @@ export interface RunResultSummaryInput {
     wave: number;
     coreHp: number;
     coreMaxHp: number;
-    totalConfidenceEarned: number;
+    totalDataReceived: number;
     unlockedResearchCount: number;
     modelStates: Record<string, DefenseModelState>;
     getModelName: (type: string) => string;
@@ -13,7 +13,7 @@ export interface RunResultSummaryInput {
 export interface RunResultSummary {
     wave: number;
     coreHpPercent: number;
-    totalConfidenceEarned: number;
+    totalDataReceived: number;
     unlockedResearchCount: number;
     bestModelName: string;
     bestModelAccuracy: number;
@@ -45,7 +45,7 @@ export function createRunResultSummary(input: RunResultSummaryInput): RunResultS
     return {
         wave: input.wave,
         coreHpPercent,
-        totalConfidenceEarned: input.totalConfidenceEarned,
+        totalDataReceived: input.totalDataReceived,
         unlockedResearchCount: input.unlockedResearchCount,
         bestModelName,
         bestModelAccuracy: Math.round(bestState.modelAccuracy),
@@ -54,8 +54,8 @@ export function createRunResultSummary(input: RunResultSummaryInput): RunResultS
         lines: [
             `Reached Wave ${input.wave}`,
             `Core integrity ${coreHpPercent}%`,
-            `Total Confidence earned ${input.totalConfidenceEarned.toFixed(2)}`,
-            `Research unlocked ${input.unlockedResearchCount}`,
+            `Data delivered ${input.totalDataReceived}`,
+            `Protocols completed ${input.unlockedResearchCount}`,
             `Best model ${bestModelName} ${Math.round(bestState.modelAccuracy)}% accuracy / +${Math.round(bestState.damageBonus)}% damage`
         ]
     };

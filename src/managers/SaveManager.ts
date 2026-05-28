@@ -117,11 +117,11 @@ export default class SaveManager {
             },
             core: {
                 hp: coreBuilding ? coreBuilding.hp : 1000,
-                totalDataReceived: coreBuilding ? coreBuilding.totalDataReceived : 0,
-                confidenceScore: coreBuilding ? coreBuilding.confidenceScore : 0
+                totalDataReceived: coreBuilding ? coreBuilding.totalDataReceived : 0
             },
             buildings,
             defenseModelStates: this.scene.defenseModelStates,
+            labJobProgress: this.scene.researchManager.getSavedJobProgress(),
             items,
             cables,
             settings: {
@@ -197,11 +197,10 @@ export default class SaveManager {
             if (core) {
                 core.hp = data.core.hp;
                 core.totalDataReceived = data.core.totalDataReceived;
-                core.confidenceScore = data.core.confidenceScore;
                 core.drawHpBar();
                 EventBus.emit('CORE_DATA_RECEIVED', {
                     type: 'LOAD',
-                    score: core.confidenceScore,
+                    score: core.totalDataReceived,
                     total: core.totalDataReceived
                 });
             }
@@ -212,6 +211,7 @@ export default class SaveManager {
             } else {
                 this.scene.researchManager.loadUnlockedResearch([]);
             }
+            this.scene.researchManager.loadJobProgress(data.labJobProgress || {});
 
             this.scene.initializeDefenseModelStates();
             if (data.defenseModelStates) {

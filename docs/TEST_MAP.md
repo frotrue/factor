@@ -37,6 +37,7 @@ npm run test:e2e -- --workers=1
 | `src/managers/EventBus.test.ts` | owner/callback 기반 이벤트 제거 |
 | `src/managers/EffectsManager.test.ts` | 경고 마커 등 이펙트 manager 안정성 |
 | `src/managers/MapManager.test.ts` | 지형 blocker, safe zone, 랜덤 맵 생성, 작은 튜토리얼 arena 맵, 튜토리얼/캠페인 맵 생성 경로 분리 |
+| `src/managers/ResearchManager.test.ts` | Lab 기반 시스템 프로토콜 진행도, 완료, 선행조건, 저장 복원 |
 | `src/utils/apRelay.test.ts` | AP 자동 릴레이 source/target 선택 |
 | `src/utils/buildingLifecycle.test.ts` | 수동 제거와 전투 파괴 이벤트 의미 분리 |
 | `src/utils/enemyBuildingInteraction.test.ts` | 적의 건물 공격 우선순위 |
@@ -51,9 +52,9 @@ npm run test:e2e -- --workers=1
 | `src/utils/waveResultSummary.test.ts` | 웨이브 결과 요약 계산/문구 |
 | `src/utils/progressionGates.test.ts` | 초반 목표 순서, 고급 시스템 gating |
 | `src/utils/modelTrainingSummary.test.ts` | 모델 훈련 정확도/공격력/데이터/진행 요약 |
-| `src/utils/modelTrainingProgress.test.ts` | 학습 데이터 가치, 요구량 1.3배 스케일, 정확도/공격력 보상, GPU 가속 계산 |
+| `src/utils/modelTrainingProgress.test.ts` | 학습 데이터 가치, 요구량 1.3배 스케일, 소모 데이터량 기반 학습 시간, 정확도/공격력 보상, GPU 가속 계산 |
 | `src/utils/runResultSummary.test.ts` | 게임오버/런 결과 요약 |
-| `tests/e2e/app-smoke.spec.ts` | 시작, 카메라, 설정/연구/언어, 배치/케이블/철거, save, 모바일 조작 |
+| `tests/e2e/app-smoke.spec.ts` | 시작, 카메라, 설정/언어, 레거시 연구 UI 제거, 배치/케이블/철거, save, 모바일 조작 |
 | `tests/e2e/tutorial-guidance.spec.ts` | 튜토리얼 힌트 좌표, 리소스 타일 정합성, 생산/케이블/전력/웨이브/모델 대상 기반 전체 튜토리얼 완료 후 새 캠페인 전환 |
 
 ## 변경 유형별 추천 테스트

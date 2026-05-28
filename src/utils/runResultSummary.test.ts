@@ -7,7 +7,7 @@ describe('createRunResultSummary', () => {
             wave: 9,
             coreHp: 240,
             coreMaxHp: 1000,
-            totalConfidenceEarned: 180.5,
+            totalDataReceived: 180,
             unlockedResearchCount: 3,
             modelStates: {
                 CLASSIFIER: { modelAccuracy: 55, damageBonus: 0, modelVersion: 2, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
@@ -24,8 +24,8 @@ describe('createRunResultSummary', () => {
         expect(summary.lines).toEqual([
             'Reached Wave 9',
             'Core integrity 24%',
-            'Total Confidence earned 180.50',
-            'Research unlocked 3',
+            'Data delivered 180',
+            'Protocols completed 3',
             'Best model FIREWALL 100% accuracy / +15% damage'
         ]);
     });

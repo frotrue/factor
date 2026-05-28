@@ -1,17 +1,18 @@
 import { CONFIG } from '../config';
 import EventBus from './EventBus';
 import type MainScene from '../scenes/MainScene';
-import Core from '../buildings/Core';
-import { ResearchEffects } from '../types';
+import { LabJobProgress, ResearchEffects } from '../types';
 import { textForKey, t } from '../i18n';
 
 export default class ResearchManager {
     scene: MainScene;
     unlockedResearch: Set<string>;
+    jobProgress: Record<string, LabJobProgress>;
 
     constructor(scene: MainScene) {
         this.scene = scene;
         this.unlockedResearch = new Set<string>();
+        this.jobProgress = {};
     }
 
     isUnlocked(researchId: string): boolean {
@@ -31,31 +32,53 @@ export default class ResearchManager {
             }
         }
 
-        // Check cost
-        const core = this.scene.buildingManager.get('0,0') as Core;
-        if (!core) return false;
-
-        return core.confidenceScore >= research.COST;
+        return this.getJobProgress(researchId).progress >= research.COST;
     }
 
     unlock(researchId: string): boolean {
         if (!this.canUnlock(researchId)) return false;
 
         const research = CONFIG.RESEARCH[researchId];
-        const core = this.scene.buildingManager.get('0,0') as Core;
-        
-        core.confidenceScore -= research.COST;
-        EventBus.emit('CORE_DATA_RECEIVED', { 
-            type: 'SPEND', 
-            score: core.confidenceScore, 
-            total: core.totalDataReceived 
-        });
 
         this.unlockedResearch.add(researchId);
+        this.jobProgress[researchId] = {
+            progress: Math.max(this.getJobProgress(researchId).progress, research.COST),
+            completed: true
+        };
         EventBus.emit('RESEARCH_UNLOCKED', { id: researchId });
         
         this.scene.uiManager.logMessage(t('log.researchComplete', { name: textForKey(`research.${researchId}.name`) }));
         return true;
+    }
+
+    isJobAvailable(researchId: string): boolean {
+        const research = CONFIG.RESEARCH[researchId];
+        if (!research || this.isUnlocked(researchId)) return false;
+        return (research.REQUIREMENTS || []).every(req => this.isUnlocked(req));
+    }
+
+    getJobProgress(researchId: string): LabJobProgress {
+        const existing = this.jobProgress[researchId];
+        if (existing) return existing;
+        return { progress: 0, completed: this.isUnlocked(researchId) };
+    }
+
+    addJobProgress(researchId: string, amount: number): LabJobProgress {
+        const research = CONFIG.RESEARCH[researchId];
+        const current = this.getJobProgress(researchId);
+        if (!research || current.completed || !this.isJobAvailable(researchId)) return current;
+
+        const next: LabJobProgress = {
+            progress: Math.min(research.COST, current.progress + Math.max(0, amount)),
+            completed: false
+        };
+        this.jobProgress[researchId] = next;
+        if (next.progress >= research.COST) {
+            this.unlock(researchId);
+            return this.getJobProgress(researchId);
+        }
+        EventBus.emit('LAB_JOB_PROGRESS', { id: researchId, progress: next.progress, required: research.COST });
+        return next;
     }
 
     getUnlockedResearch(): string[] {
@@ -80,5 +103,30 @@ export default class ResearchManager {
     loadUnlockedResearch(researchIds: string[]): void {
         this.unlockedResearch.clear();
         researchIds.forEach(id => this.unlockedResearch.add(id));
+        researchIds.forEach(id => {
+            const required = CONFIG.RESEARCH[id]?.COST ?? 1;
+            this.jobProgress[id] = { progress: required, completed: true };
+        });
+    }
+
+    getSavedJobProgress(): Record<string, LabJobProgress> {
+        return { ...this.jobProgress };
+    }
+
+    loadJobProgress(progress: Record<string, LabJobProgress> = {}): void {
+        this.jobProgress = {};
+        Object.entries(progress).forEach(([id, value]) => {
+            this.jobProgress[id] = {
+                progress: Math.max(0, value.progress ?? 0),
+                completed: Boolean(value.completed || this.unlockedResearch.has(id))
+            };
+        });
+        this.unlockedResearch.forEach(id => {
+            if (this.jobProgress[id]) return;
+            this.jobProgress[id] = {
+                progress: CONFIG.RESEARCH[id]?.COST ?? 1,
+                completed: true
+            };
+        });
     }
 }

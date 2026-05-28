@@ -18,7 +18,7 @@ The project should stay a hybrid of:
 - Factory automation: build and connect data/resource production.
 - Tower defense: place defenses against known intrusion routes.
 - Resource management: keep power, buffers, and production stable.
-- Strategy: decide when to expand, defend, research, and train models.
+- Strategy: decide when to expand, defend, and feed Lab jobs.
 
 It should not become a pure idle game, pure tower defense game, or pure factory
 sandbox. The core identity is the link between production decisions and defense
@@ -37,7 +37,7 @@ In play, this means:
 2. Build a small resource/data pipeline.
 3. Place basic defense on the expected intrusion route.
 4. Survive the wave through placement and coverage.
-5. Unlock research after the first successful defense.
+5. Open Neural Operations Lab jobs after the first successful defense.
 6. Expand power, logistics, production, and defense.
 7. Use processed data and model training to improve defensive capability.
 8. Read wave result summaries to understand how factory growth affected the
@@ -68,7 +68,7 @@ player's attention before the threat is understood.
 - `BaseBuilding`: common HP, damage, destruction, infection state.
 - `CableManager`: data transfer, Fiber/AP logistics, cleanup after destruction.
 - `PowerManager`: power network calculation, blackout state, placement preview.
-- `ResearchManager`: unlocks and upgrade effects.
+- `ResearchManager`: tracks system protocol job progress, completions, and upgrade effects.
 - `TutorialManager`: first-loop checklist and saved progress.
 - `UIManager`: tactical panels, build bar, wave/status feedback, tooltips.
 - `waveResultSummary`, `progressionGates`, `modelTrainingSummary`, and

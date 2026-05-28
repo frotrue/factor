@@ -15,6 +15,8 @@ const TRAINING_ITEMS = new Set(Object.keys(CONFIG.MODEL_TRAINING.DATA_VALUES));
 
 export interface ModelTrainingLabSummary {
     targetType: string | null;
+    activeJobId: string | null;
+    activeJobCategory: 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL' | null;
     selectedState: DefenseModelState | null;
     activeGpuCount: number;
     adjacentGpuCount: number;
@@ -24,6 +26,7 @@ export interface ModelTrainingLabSummary {
 
 export default class ModelTrainingLab extends BaseBuilding {
     targetType: string | null;
+    activeJobId: string | null;
     autoTrain: boolean;
     statusText: Phaser.GameObjects.Text;
 
@@ -31,6 +34,7 @@ export default class ModelTrainingLab extends BaseBuilding {
         super(scene, x, y, 'MODEL_TRAINING_LAB', { ...config, color: CONFIG.BUILDINGS.MODEL_TRAINING_LAB.COLOR });
         const savedTarget = config.customState?.targetType;
         this.targetType = savedTarget && CONFIG.BUILDINGS[savedTarget]?.DEFENSE ? savedTarget : null;
+        this.activeJobId = config.customState?.activeJobId ?? (this.targetType ? this.getDefenseJobId(this.targetType) : null);
         this.autoTrain = config.customState?.autoTrain ?? true;
 
         this.statusText = scene.add.text(0, CONFIG.GRID_SIZE * 0.35, 'NO TARGET', {
@@ -51,8 +55,8 @@ export default class ModelTrainingLab extends BaseBuilding {
         super.onTick(tickCount);
         if (this.isInfected(tickCount) && tickCount % 2 !== 0) return;
 
-        this.drainInputBufferToTrainingData();
-        if (this.autoTrain) {
+        this.drainInputBufferToActiveJob();
+        if (this.autoTrain && this.getActiveJobCategory() === 'DEFENSE_MODEL') {
             this.advanceTraining();
         }
         this.refreshStatusText();
@@ -61,14 +65,32 @@ export default class ModelTrainingLab extends BaseBuilding {
     getCustomState(): object {
         return {
             targetType: this.targetType,
+            activeJobId: this.activeJobId,
             autoTrain: this.autoTrain
         };
     }
 
     setTarget(type: string | null): void {
         this.targetType = type;
+        this.activeJobId = type ? this.getDefenseJobId(type) : null;
         this.refreshStatusText();
         EventBus.emit('MODEL_TRAINING_TARGET_SET', { targetType: type });
+    }
+
+    setSystemJob(researchId: string | null): void {
+        this.targetType = null;
+        this.activeJobId = researchId;
+        this.refreshStatusText();
+        EventBus.emit('MODEL_TRAINING_TARGET_SET', { targetType: null });
+    }
+
+    getDefenseJobId(type: string): string {
+        return `DEFENSE_${type}`;
+    }
+
+    getActiveJobCategory(): 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL' | null {
+        if (!this.activeJobId) return null;
+        return this.activeJobId.startsWith('DEFENSE_') ? 'DEFENSE_MODEL' : 'SYSTEM_PROTOCOL';
     }
 
     getTargetState(): DefenseModelState | null {
@@ -80,32 +102,43 @@ export default class ModelTrainingLab extends BaseBuilding {
         const adjacentGpuCount = this.countAdjacentGpuClusters(false);
         const activeGpuCount = this.countAdjacentGpuClusters(true);
         const speedMultiplier = getGpuTrainingSpeedMultiplier(activeGpuCount);
+        const selectedState = this.getTargetState();
         return {
             targetType: this.targetType,
-            selectedState: this.getTargetState(),
+            activeJobId: this.activeJobId,
+            activeJobCategory: this.getActiveJobCategory(),
+            selectedState,
             activeGpuCount,
             adjacentGpuCount,
             speedMultiplier,
-            trainingDurationTicks: getTrainingDurationTicks(activeGpuCount)
+            trainingDurationTicks: getTrainingDurationTicks(activeGpuCount, selectedState?.currentRequirement)
         };
     }
 
     trainOnce(): boolean {
-        this.drainInputBufferToTrainingData();
+        this.drainInputBufferToActiveJob();
         return this.advanceTraining();
     }
 
-    drainInputBufferToTrainingData(): void {
-        if (!this.targetType || this.inputBuffer.length === 0) return;
+    drainInputBufferToActiveJob(): void {
+        if (!this.activeJobId || this.inputBuffer.length === 0) return;
         const scene = this.scene as IMainScene;
         let accepted = 0;
         this.inputBuffer = this.inputBuffer.filter(item => {
-            const value = scene.addTrainingData(this.targetType!, item);
-            if (value > 0) {
-                accepted += value;
-                return false;
+            const value = getTrainingDataValue(item);
+            if (value <= 0) return true;
+
+            if (this.getActiveJobCategory() === 'DEFENSE_MODEL') {
+                if (!this.targetType) return true;
+                scene.addTrainingData(this.targetType, item);
+            } else {
+                const progress = scene.researchManager.getJobProgress(this.activeJobId!);
+                if (progress.completed || !scene.researchManager.isJobAvailable(this.activeJobId!)) return true;
+                scene.researchManager.addJobProgress(this.activeJobId!, value);
             }
-            return true;
+
+            accepted += value;
+            return false;
         });
         if (accepted > 0) {
             scene.uiManager?.renderTrainingLab();
@@ -120,7 +153,7 @@ export default class ModelTrainingLab extends BaseBuilding {
         const activeGpuCount = this.countAdjacentGpuClusters(true);
 
         if (!state.isTraining) {
-            const started = scene.startTrainingIfReady(this.targetType, getTrainingDurationTicks(activeGpuCount));
+            const started = scene.startTrainingIfReady(this.targetType, getTrainingDurationTicks(activeGpuCount, state.currentRequirement));
             if (!started) return false;
         }
 
@@ -143,7 +176,7 @@ export default class ModelTrainingLab extends BaseBuilding {
             }
         });
 
-        scene.startTrainingIfReady(this.targetType, getTrainingDurationTicks(this.countAdjacentGpuClusters(true)));
+        scene.startTrainingIfReady(this.targetType, getTrainingDurationTicks(this.countAdjacentGpuClusters(true), updated.currentRequirement));
         scene.uiManager?.renderTrainingLab();
         return true;
     }
@@ -181,6 +214,25 @@ export default class ModelTrainingLab extends BaseBuilding {
     }
 
     refreshStatusText(): void {
+        if (!this.activeJobId) {
+            this.statusText.setText('NO JOB');
+            this.statusText.setColor('#fca5a5');
+            return;
+        }
+
+        if (this.getActiveJobCategory() === 'SYSTEM_PROTOCOL') {
+            const research = CONFIG.RESEARCH[this.activeJobId];
+            const progress = (this.scene as IMainScene).researchManager.getJobProgress(this.activeJobId);
+            if (!research) {
+                this.statusText.setText('BAD JOB');
+                this.statusText.setColor('#fca5a5');
+                return;
+            }
+            this.statusText.setText(`${research.NAME}\n${Math.floor(progress.progress)}/${research.COST}\nSYSTEM`);
+            this.statusText.setColor(progress.completed ? '#a5b4fc' : '#99f6e4');
+            return;
+        }
+
         const state = this.getTargetState();
         if (!this.targetType || !state) {
             this.statusText.setText('NO TARGET');

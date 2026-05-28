@@ -25,8 +25,7 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
     };
     data.core = {
         hp: data.core?.hp ?? CONFIG.BUILDINGS.CORE.HP ?? 1000,
-        totalDataReceived: data.core?.totalDataReceived ?? 0,
-        confidenceScore: data.core?.confidenceScore ?? 0
+        totalDataReceived: data.core?.totalDataReceived ?? 0
     };
     data.buildings = (data.buildings || []).map((building: any) => ({
         ...building,
@@ -41,6 +40,7 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
             normalizeDefenseModelState(state as any)
         ])
     );
+    data.labJobProgress = data.labJobProgress || {};
     data.items = data.items || [];
     data.cables = data.cables || [];
     data.settings = {

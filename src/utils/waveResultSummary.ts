@@ -4,8 +4,8 @@ export interface WaveResultSummaryInput {
     coreHpBefore: number;
     coreHpAfter: number;
     coreMaxHp: number;
-    confidenceBefore: number;
-    confidenceAfter: number;
+    dataBefore: number;
+    dataAfter: number;
     buildingsDamaged: number;
     buildingsDestroyed: number;
 }
@@ -16,7 +16,7 @@ export interface WaveResultSummary {
     enemiesDestroyed: number;
     coreDamage: number;
     coreHpPercent: number;
-    confidenceGained: number;
+    dataProcessed: number;
     buildingsDamaged: number;
     buildingsDestroyed: number;
     lines: string[];
@@ -24,7 +24,7 @@ export interface WaveResultSummary {
 
 export function createWaveResultSummary(input: WaveResultSummaryInput): WaveResultSummary {
     const coreDamage = Math.max(0, input.coreHpBefore - input.coreHpAfter);
-    const confidenceGained = Math.max(0, input.confidenceAfter - input.confidenceBefore);
+    const dataProcessed = Math.max(0, input.dataAfter - input.dataBefore);
     const coreHpPercent = input.coreMaxHp > 0
         ? Math.max(0, Math.min(100, Math.round((input.coreHpAfter / input.coreMaxHp) * 100)))
         : 0;
@@ -38,13 +38,13 @@ export function createWaveResultSummary(input: WaveResultSummaryInput): WaveResu
         enemiesDestroyed: input.enemiesDestroyed,
         coreDamage,
         coreHpPercent,
-        confidenceGained,
+        dataProcessed,
         buildingsDamaged: input.buildingsDamaged,
         buildingsDestroyed: input.buildingsDestroyed,
         lines: [
             `Wave ${input.wave} ${outcome}`,
             `Defense removed ${input.enemiesDestroyed} intrusions`,
-            `+${confidenceGained.toFixed(2)} Confidence from factory growth`,
+            `+${dataProcessed} data delivered to Core`,
             `Core integrity ${coreHpPercent}% (-${coreDamage} HP)`,
             `${lostText}, ${damagedText}`
         ]

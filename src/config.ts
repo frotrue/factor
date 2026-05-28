@@ -132,7 +132,7 @@ export const CONFIG: GameConfig = {
             DESCRIPTION: '대량의 물리 자원 또는 데이터를 보관합니다. (2x2)',
             WIDTH: 2,
             HEIGHT: 2,
-            MAX_BUFFER: 50,
+            MAX_BUFFER: 500,
             POWER: { CONSUMPTION: 2, PRODUCTION: 0 },
             CATEGORY: 'LOGISTICS'
         },
@@ -250,10 +250,10 @@ export const CONFIG: GameConfig = {
         },
         MODEL_TRAINING_LAB: {
             ID: 'MODEL_TRAINING_LAB',
-            NAME: 'Model Training Lab',
+            NAME: 'Neural Operations Lab',
             COLOR: 0x64ffcf,
             HP: 280,
-            DESCRIPTION: 'Accumulates training data, then runs long model-training jobs for a selected defense model.',
+            DESCRIPTION: 'Consumes data items to run defense model and system protocol jobs.',
             WIDTH: 2,
             HEIGHT: 2,
             MAX_BUFFER: 12,
@@ -266,7 +266,7 @@ export const CONFIG: GameConfig = {
             NAME: 'GPU Cluster',
             COLOR: 0x7cf7ff,
             HP: 180,
-            DESCRIPTION: 'High-power accelerator. Place next to a Model Training Lab to reduce training time.',
+            DESCRIPTION: 'High-power accelerator. Place next to a Neural Operations Lab to reduce training time.',
             POWER: { CONSUMPTION: 35, PRODUCTION: 0 },
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 80 }]

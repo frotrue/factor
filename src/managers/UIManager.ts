@@ -110,9 +110,9 @@ export default class UIManager {
 
     setupEvents(): void {
         EventBus.on('CORE_DATA_RECEIVED', (data: CoreDataEvent) => {
-            if (this.scoreEl && this.lastScore !== data.score) {
-                this.lastScore = data.score;
-                this.scoreEl.innerText = data.score.toFixed(2);
+            if (this.scoreEl && this.lastScore !== data.total) {
+                this.lastScore = data.total;
+                this.scoreEl.innerText = String(data.total);
             }
         }, 'UIManager');
 
@@ -146,7 +146,7 @@ export default class UIManager {
         EventBus.on('WAVE_ENDED', () => {
             this.createBuildingButtons();
             this.renderTacticalPanels();
-            this.logMessage(textForKey('log.researchAvailable'));
+            this.logMessage(textForKey('log.labAvailable'));
         }, 'UIManager');
 
         EventBus.on('GAME_OVER', () => {
@@ -248,7 +248,7 @@ export default class UIManager {
         if (!container) {
             this.logMessage(t('waveSummary.log', {
                 wave: summary.wave,
-                confidence: summary.confidenceGained.toFixed(2),
+                data: summary.dataProcessed,
                 integrity: summary.coreHpPercent
             }));
             return;
@@ -261,7 +261,7 @@ export default class UIManager {
             <div class="wave-result-title">${t('waveSummary.title', { wave: summary.wave })}</div>
             <div class="wave-result-grid">
                 <span>${t('waveSummary.destroyed', { count: summary.enemiesDestroyed })}</span>
-                <span>${t('waveSummary.confidence', { amount: summary.confidenceGained.toFixed(2) })}</span>
+                <span>${t('waveSummary.data', { amount: summary.dataProcessed })}</span>
                 <span>${t('waveSummary.integrity', { percent: summary.coreHpPercent, damage: summary.coreDamage })}</span>
                 <span>${t('waveSummary.buildings', { destroyed: summary.buildingsDestroyed, damaged: summary.buildingsDamaged })}</span>
             </div>
@@ -269,7 +269,7 @@ export default class UIManager {
         container.appendChild(card);
         this.logMessage(t('waveSummary.log', {
             wave: summary.wave,
-            confidence: summary.confidenceGained.toFixed(2),
+            data: summary.dataProcessed,
             integrity: summary.coreHpPercent
         }));
 
@@ -287,7 +287,7 @@ export default class UIManager {
             wave: this.scene.waveManager.currentWave,
             coreHp: coreBuilding?.hp ?? 0,
             coreMaxHp: coreBuilding?.maxHp ?? 1,
-            totalConfidenceEarned: coreBuilding?.confidenceScore ?? 0,
+            totalDataReceived: coreBuilding?.totalDataReceived ?? 0,
             unlockedResearchCount: this.scene.researchManager?.getUnlockedResearch().length ?? 0,
             modelStates: this.scene.defenseModelStates,
             getModelName: getBuildingName
@@ -296,7 +296,7 @@ export default class UIManager {
         statsEl.innerHTML = `
             <div>${textForKey('gameOver.stat.wave', { wave: summary.wave })}</div>
             <div>${textForKey('gameOver.stat.core', { percent: summary.coreHpPercent })}</div>
-            <div>${textForKey('gameOver.stat.confidence', { amount: summary.totalConfidenceEarned.toFixed(2) })}</div>
+            <div>${textForKey('gameOver.stat.data', { amount: summary.totalDataReceived })}</div>
             <div>${textForKey('gameOver.stat.research', { count: summary.unlockedResearchCount })}</div>
             <div>${textForKey('gameOver.stat.model', {
                 name: summary.bestModelName,

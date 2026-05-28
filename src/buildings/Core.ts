@@ -6,7 +6,6 @@ import { BuildingOptions } from '../types';
 
 export default class Core extends BaseBuilding {
     totalDataReceived: number;
-    confidenceScore: number;
     hp: number;
     maxHp: number;
     hpBar: Phaser.GameObjects.Graphics;
@@ -17,7 +16,6 @@ export default class Core extends BaseBuilding {
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'CORE', { ...config, color: CONFIG.BUILDINGS.CORE.COLOR });
         this.totalDataReceived = 0;
-        this.confidenceScore = 0;
 
         this.maxHp = CONFIG.BUILDINGS.CORE.HP || 1000;
         this.hp = this.maxHp;
@@ -152,17 +150,9 @@ export default class Core extends BaseBuilding {
     acceptItem(itemType: string): boolean {
         this.totalDataReceived++;
 
-        if (itemType === 'WEIGHT_UPDATE') {
-            this.confidenceScore += 10;
-        } else if (itemType === 'LABELED_DATA') {
-            this.confidenceScore += 2;
-        } else {
-            this.confidenceScore += 0.1;
-        }
-
         EventBus.emit('CORE_DATA_RECEIVED', {
             type: itemType,
-            score: this.confidenceScore,
+            score: this.totalDataReceived,
             total: this.totalDataReceived
         });
         return true;

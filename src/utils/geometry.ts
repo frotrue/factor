@@ -19,14 +19,13 @@ export function getCenteredCoverageTiles(
     gridSize: number
 ): Set<string> {
     const tiles = new Set<string>();
-    const center = getFootprintCenter(x, y, widthTiles, heightTiles, gridSize);
-    const cx = Math.floor(center.x / gridSize);
-    const cy = Math.floor(center.y / gridSize);
+    const startTx = Math.floor(x / gridSize);
+    const startTy = Math.floor(y / gridSize);
     const effectiveRange = Math.max(0, Math.floor(range));
 
-    for (let dx = -effectiveRange; dx <= effectiveRange; dx++) {
-        for (let dy = -effectiveRange; dy <= effectiveRange; dy++) {
-            tiles.add(`${(cx + dx) * gridSize},${(cy + dy) * gridSize}`);
+    for (let tx = startTx - effectiveRange; tx < startTx + widthTiles + effectiveRange; tx++) {
+        for (let ty = startTy - effectiveRange; ty < startTy + heightTiles + effectiveRange; ty++) {
+            tiles.add(`${tx * gridSize},${ty * gridSize}`);
         }
     }
 

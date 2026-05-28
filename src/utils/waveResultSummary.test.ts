@@ -9,20 +9,20 @@ describe('createWaveResultSummary', () => {
             coreHpBefore: 900,
             coreHpAfter: 820,
             coreMaxHp: 1000,
-            confidenceBefore: 30,
-            confidenceAfter: 54,
+            dataBefore: 30,
+            dataAfter: 54,
             buildingsDamaged: 3,
             buildingsDestroyed: 1
         });
 
         expect(summary.coreDamage).toBe(80);
-        expect(summary.confidenceGained).toBe(24);
+        expect(summary.dataProcessed).toBe(24);
         expect(summary.coreHpPercent).toBe(82);
         expect(summary.outcome).toBe('survived');
         expect(summary.lines).toEqual([
             'Wave 4 survived',
             'Defense removed 12 intrusions',
-            '+24.00 Confidence from factory growth',
+            '+24 data delivered to Core',
             'Core integrity 82% (-80 HP)',
             '1 building lost, 3 damaged'
         ]);
@@ -35,14 +35,14 @@ describe('createWaveResultSummary', () => {
             coreHpBefore: 700,
             coreHpAfter: 720,
             coreMaxHp: 1000,
-            confidenceBefore: 12,
-            confidenceAfter: 10,
+            dataBefore: 12,
+            dataAfter: 10,
             buildingsDamaged: 0,
             buildingsDestroyed: 0
         });
 
         expect(summary.coreDamage).toBe(0);
-        expect(summary.confidenceGained).toBe(0);
-        expect(summary.lines).toContain('+0.00 Confidence from factory growth');
+        expect(summary.dataProcessed).toBe(0);
+        expect(summary.lines).toContain('+0 data delivered to Core');
     });
 });

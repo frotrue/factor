@@ -7,6 +7,7 @@ import { getNextTrainingRewardKind, getTrainingDurationTicks } from '../utils/mo
 
 export default class TrainingLabUI {
     private activeTrainingLab: ModelTrainingLab | null = null;
+    private activeTab: 'DEFENSE' | 'SYSTEM' = 'DEFENSE';
 
     constructor(
         private scene: MainScene,
@@ -83,9 +84,47 @@ export default class TrainingLabUI {
         list.className = 'training-target-list';
         modal.appendChild(list);
 
+        const tabs = document.createElement('div');
+        tabs.className = 'training-target-list';
+        tabs.style.gridTemplateColumns = '1fr 1fr';
+        [
+            { id: 'DEFENSE' as const, label: textForKey('trainingLab.tab.defense') },
+            { id: 'SYSTEM' as const, label: textForKey('trainingLab.tab.system') }
+        ].forEach(tab => {
+            const tabBtn = document.createElement('button');
+            tabBtn.className = `training-target-row ${this.activeTab === tab.id ? 'active' : ''}`;
+            tabBtn.type = 'button';
+            tabBtn.textContent = tab.label;
+            this.uiManager.guardDomPointer(tabBtn);
+            tabBtn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.activeTab = tab.id;
+                this.render();
+            };
+            tabs.appendChild(tabBtn);
+        });
+        modal.insertBefore(tabs, list);
+
+        if (this.activeTab === 'DEFENSE') {
+            this.renderDefenseJobs(list, lab);
+        } else {
+            this.renderSystemJobs(list, lab);
+        }
+
+        const footer = document.createElement('div');
+        footer.className = 'training-lab-buffer';
+        footer.textContent = textForKey('trainingLab.duration', {
+            base: CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS,
+            current: getTrainingDurationTicks(summary.activeGpuCount, summary.selectedState?.currentRequirement)
+        });
+        modal.appendChild(footer);
+    }
+
+    private renderDefenseJobs(list: HTMLElement, lab: ModelTrainingLab): void {
         CONFIG.MODEL_TRAINING.TARGET_TYPES.forEach(type => {
             const state = this.scene.getDefenseModelState(type);
-            const selected = lab.targetType === type;
+            const selected = lab.activeJobId === lab.getDefenseJobId(type);
             const trainingPercent = state.isTraining
                 ? Math.min(100, Math.round((state.trainingProgressTicks / state.trainingDurationTicks) * 100))
                 : 0;
@@ -115,13 +154,35 @@ export default class TrainingLabUI {
             };
             list.appendChild(row);
         });
+    }
 
-        const footer = document.createElement('div');
-        footer.className = 'training-lab-buffer';
-        footer.textContent = textForKey('trainingLab.duration', {
-            base: CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS,
-            current: getTrainingDurationTicks(summary.activeGpuCount)
+    private renderSystemJobs(list: HTMLElement, lab: ModelTrainingLab): void {
+        Object.values(CONFIG.RESEARCH).forEach(node => {
+            const progress = this.scene.researchManager.getJobProgress(node.ID);
+            const available = this.scene.researchManager.isJobAvailable(node.ID);
+            const selected = lab.activeJobId === node.ID;
+            const percent = Math.min(100, Math.round((progress.progress / node.COST) * 100));
+            const row = document.createElement('button');
+            row.className = `training-target-row ${selected ? 'active' : ''}`;
+            row.type = 'button';
+            row.disabled = !available && !progress.completed;
+            row.innerHTML = `
+                <span class="training-target-name">${textForKey(`research.${node.ID}.name`)}</span>
+                <span class="training-target-stat">${progress.completed ? textForKey('trainingLab.completed') : textForKey('trainingLab.systemProgress', { current: Math.floor(progress.progress), required: node.COST })}</span>
+                <span class="training-target-effect">${textForKey(`research.${node.ID}.description`)}</span>
+                <span class="training-progress-track"><span style="width:${percent}%"></span></span>
+                <span class="training-target-effect">${available ? textForKey('trainingLab.waiting') : textForKey('research.action.locked')}</span>
+            `;
+            this.uiManager.guardDomPointer(row);
+            row.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (!available && !progress.completed) return;
+                lab.setSystemJob(node.ID);
+                this.uiManager.logMessage(textForKey('trainingLab.jobSet', { name: textForKey(`research.${node.ID}.name`) }));
+                this.render();
+            };
+            list.appendChild(row);
         });
-        modal.appendChild(footer);
     }
 }

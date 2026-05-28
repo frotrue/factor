@@ -15,8 +15,8 @@
         <div id="hud-top-bar" class="hud-panel">
             <div id="top-hud" style="display: none;">
                 <div class="hud-stat hud-stat-primary">
-                    <div class="hud-label" data-i18n="hud.confidence">신뢰도</div>
-                    <div class="hud-value" id="hud-score">0.00</div>
+                    <div class="hud-label" data-i18n="hud.dataReceived">수신 데이터</div>
+                    <div class="hud-value" id="hud-score">0</div>
                 </div>
                 <div class="hud-stat">
                     <div class="hud-label" data-i18n="hud.power">전력 출력</div>
@@ -41,7 +41,6 @@
             </div>
 
             <div id="top-actions">
-                <button id="btn-research" class="icon-action-btn" style="display: none;" data-i18n="top.research">연구</button>
                 <button id="btn-settings" class="icon-action-btn" data-i18n="top.settings">설정</button>
             </div>
         </div>
@@ -144,19 +143,6 @@
         </div>
 
         <button id="btn-close-settings" class="modal-action-btn wide" data-i18n="settings.close">닫기</button>
-    </div>
-
-    <div id="research-modal" class="glass-panel modal-panel modal-panel-wide" style="display: none;">
-        <h2 data-i18n="research.title">연구 트리</h2>
-
-        <div class="modal-score-row">
-            <span data-i18n="research.availableScore">사용 가능한 신뢰도</span>
-            <span id="research-score">0.00</span>
-        </div>
-
-        <div id="research-tree-container"></div>
-
-        <button id="btn-close-research" class="modal-action-btn wide" data-i18n="settings.close">닫기</button>
     </div>
 
     <div id="game-over-screen" class="glass-panel modal-panel game-over-panel" style="display: none;">
