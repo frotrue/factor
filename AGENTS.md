@@ -22,6 +22,12 @@ Get-Content src\config.ts -Encoding UTF8
 - In `cmd.exe`, run `chcp 65001` before printing Korean text.
 - If terminal output shows mojibake but the editor displays text correctly, treat it as a shell encoding issue before changing file contents.
 
+## Project Analysis
+
+- Use CodeGraph first for project/file analysis that depends on structure, symbols, call relationships, data flow, or change impact.
+- Prefer `codegraph_context` for focused area analysis, `codegraph_explore` for related source groups, `codegraph_trace` for flow tracing, and `codegraph_impact` for blast-radius checks.
+- Use `rg`/native file reads for literal text searches, exact strings, config values, or after CodeGraph has identified the specific files to inspect.
+
 ## Documentation Maintenance
 
 - When working on this project, keep the relevant `docs/` map documents up to date with the actual code changes.
