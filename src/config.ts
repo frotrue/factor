@@ -253,13 +253,23 @@ export const CONFIG: GameConfig = {
             NAME: 'Model Training Lab',
             COLOR: 0x64ffcf,
             HP: 280,
-            DESCRIPTION: 'Consumes Weight Updates and trained AI artifacts to improve a selected defense model.',
+            DESCRIPTION: 'Accumulates training data, then runs long model-training jobs for a selected defense model.',
             WIDTH: 2,
             HEIGHT: 2,
             MAX_BUFFER: 12,
             POWER: { CONSUMPTION: 18, PRODUCTION: 0 },
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 24 }]
+        },
+        GPU_CLUSTER: {
+            ID: 'GPU_CLUSTER',
+            NAME: 'GPU Cluster',
+            COLOR: 0x7cf7ff,
+            HP: 180,
+            DESCRIPTION: 'High-power accelerator. Place next to a Model Training Lab to reduce training time.',
+            POWER: { CONSUMPTION: 35, PRODUCTION: 0 },
+            CATEGORY: 'PRODUCTION',
+            COST: [{ resource: 'SILICON', amount: 80 }]
         },
         ACCESS_POINT: {
             ID: 'ACCESS_POINT',
@@ -396,6 +406,24 @@ export const CONFIG: GameConfig = {
             BLOCKS_BUILDING: true,
             BLOCKS_ENEMY: true
         }
+    },
+
+    MODEL_TRAINING: {
+        TARGET_TYPES: ['CLASSIFIER', 'FILTER', 'FIREWALL'],
+        BASE_ACCURACY: 40,
+        ACCURACY_GAIN: 10,
+        DAMAGE_GAIN: 5,
+        INITIAL_DATA_REQUIREMENT: 100,
+        REQUIREMENT_MULTIPLIER: 1.3,
+        BASE_TRAINING_TICKS: 120,
+        DATA_VALUES: {
+            RAW_DATA: 1,
+            LABELED_DATA: 3,
+            WEIGHT_UPDATE: 5
+        },
+        GPU_UNLOCK_ACCURACY: 100,
+        GPU_MAX_ACTIVE: 4,
+        GPU_SPEED_BONUS: 0.2
     },
 
     ENEMIES: {

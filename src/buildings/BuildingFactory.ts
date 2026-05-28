@@ -17,6 +17,7 @@ import DataDownloader from './DataDownloader';
 import Recycler from './Recycler';
 import DataCache from './DataCache';
 import ModelTrainingLab from './ModelTrainingLab';
+import GpuCluster from './GpuCluster';
 import { BuildingOptions } from '../types';
 
 type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
@@ -37,6 +38,7 @@ const REGISTRY: Record<string, BuildingClass> = {
     NEURAL_TRAINER: NeuralTrainer,
     WEIGHT_TRAINER: WeightTrainer,
     MODEL_TRAINING_LAB: ModelTrainingLab,
+    GPU_CLUSTER: GpuCluster,
     RECYCLER: Recycler,
     ACCESS_POINT: AccessPoint,
     CONVEYOR: Conveyor,

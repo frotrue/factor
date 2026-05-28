@@ -7,6 +7,7 @@ import { getLanguage, setLanguage } from '../i18n';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
 import { getRestoredEnemyHp } from '../utils/enemyRestore';
+import { normalizeDefenseModelState } from '../utils/modelTrainingProgress';
 
 export default class SaveManager {
     scene: MainScene;
@@ -215,20 +216,12 @@ export default class SaveManager {
             this.scene.initializeDefenseModelStates();
             if (data.defenseModelStates) {
                 Object.entries(data.defenseModelStates).forEach(([type, state]) => {
-                    this.scene.defenseModelStates[type] = {
-                        modelConfidence: Math.max(0, Math.min(100, state.modelConfidence ?? 35)),
-                        modelVersion: Math.max(1, state.modelVersion ?? 1),
-                        inferenceCharge: Math.max(0, state.inferenceCharge ?? 0)
-                    };
+                    this.scene.defenseModelStates[type] = normalizeDefenseModelState(state as any);
                 });
             } else {
                 data.buildings.forEach(b => {
                     if (!CONFIG.BUILDINGS[b.type]?.DEFENSE || !b.customState) return;
-                    this.scene.defenseModelStates[b.type] = {
-                        modelConfidence: Math.max(0, Math.min(100, b.customState.modelConfidence ?? 35)),
-                        modelVersion: Math.max(1, b.customState.modelVersion ?? 1),
-                        inferenceCharge: Math.max(0, b.customState.inferenceCharge ?? 0)
-                    };
+                    this.scene.defenseModelStates[b.type] = normalizeDefenseModelState(b.customState);
                 });
             }
 

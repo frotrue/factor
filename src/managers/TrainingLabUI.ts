@@ -1,7 +1,9 @@
 import ModelTrainingLab from '../buildings/ModelTrainingLab';
 import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
-import { getBuildingName, getItemName, textForKey } from '../i18n';
+import { CONFIG } from '../config';
+import { getBuildingName, textForKey } from '../i18n';
+import { getNextTrainingRewardKind, getTrainingDurationTicks } from '../utils/modelTrainingProgress';
 
 export default class TrainingLabUI {
     private activeTrainingLab: ModelTrainingLab | null = null;
@@ -17,31 +19,10 @@ export default class TrainingLabUI {
             modal = document.createElement('div');
             modal.id = 'training-lab-modal';
             modal.className = 'glass-panel';
-            modal.innerHTML = `
-                <div class="training-lab-header">
-                    <div>
-                        <div class="training-lab-kicker" data-i18n="trainingLab.kicker">${textForKey('trainingLab.kicker')}</div>
-                        <h2 data-i18n="trainingLab.title">${textForKey('trainingLab.title')}</h2>
-                    </div>
-                    <button id="btn-close-training-lab" class="training-lab-close" type="button" data-i18n="trainingLab.close">${textForKey('trainingLab.close')}</button>
-                </div>
-                <div id="training-lab-buffer" class="training-lab-buffer"></div>
-                <div id="training-target-list" class="training-target-list"></div>
-            `;
             document.body.appendChild(modal);
         }
 
         this.uiManager.guardDomPointer(modal);
-        const closeBtn = document.getElementById('btn-close-training-lab');
-        this.uiManager.guardDomPointer(closeBtn);
-        if (closeBtn) {
-            closeBtn.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                modal!.style.display = 'none';
-                this.uiManager.restoreCanvasFocus();
-            };
-        }
     }
 
     open(lab: ModelTrainingLab): void {
@@ -54,78 +35,93 @@ export default class TrainingLabUI {
 
     render(): void {
         const lab = this.activeTrainingLab;
-        const buffer = document.getElementById('training-lab-buffer');
-        const list = document.getElementById('training-target-list');
-        if (!lab || !buffer || !list) return;
+        const modal = document.getElementById('training-lab-modal');
+        if (!lab || !modal) return;
 
-        const counts = lab.inputBuffer.reduce<Record<string, number>>((acc, item) => {
-            acc[item] = (acc[item] || 0) + 1;
-            return acc;
-        }, {});
-        const bufferText = ['WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']
-            .map(type => `${getItemName(type)}: ${counts[type] || 0}`)
-            .join(' | ');
-        buffer.textContent = `${textForKey('trainingLab.inputStatus')}: ${bufferText}`;
+        const summary = lab.getSummary();
+        const gpuUnlocked = this.scene.isGpuUnlocked();
+        modal.innerHTML = '';
 
-        list.innerHTML = '';
-        const targetTypes = ['CLASSIFIER', 'FILTER', 'FIREWALL'];
-        targetTypes.forEach(type => {
-            const displayName = getBuildingName(type);
+        const header = document.createElement('div');
+        header.className = 'training-lab-header';
+        header.innerHTML = `
+            <div>
+                <div class="training-lab-kicker">${textForKey('trainingLab.kicker')}</div>
+                <h2>${textForKey('trainingLab.title')}</h2>
+            </div>
+        `;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.id = 'btn-close-training-lab';
+        closeBtn.className = 'training-lab-close';
+        closeBtn.type = 'button';
+        closeBtn.textContent = textForKey('trainingLab.close');
+        this.uiManager.guardDomPointer(closeBtn);
+        closeBtn.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            modal.style.display = 'none';
+            this.uiManager.restoreCanvasFocus();
+        };
+        header.appendChild(closeBtn);
+        modal.appendChild(header);
+
+        const overview = document.createElement('div');
+        overview.className = 'training-lab-buffer';
+        const speedPercent = Math.round((1 - summary.speedMultiplier) * 100);
+        overview.textContent = gpuUnlocked
+            ? textForKey('trainingLab.gpuStatus', {
+                active: summary.activeGpuCount,
+                adjacent: summary.adjacentGpuCount,
+                reduction: speedPercent
+            })
+            : textForKey('trainingLab.gpuLocked');
+        modal.appendChild(overview);
+
+        const list = document.createElement('div');
+        list.id = 'training-target-list';
+        list.className = 'training-target-list';
+        modal.appendChild(list);
+
+        CONFIG.MODEL_TRAINING.TARGET_TYPES.forEach(type => {
             const state = this.scene.getDefenseModelState(type);
-            let onlineCount = 0;
-            this.scene.buildingManager.forEach(building => {
-                if (building.type === type) onlineCount++;
-            });
             const selected = lab.targetType === type;
+            const trainingPercent = state.isTraining
+                ? Math.min(100, Math.round((state.trainingProgressTicks / state.trainingDurationTicks) * 100))
+                : 0;
+            const dataPercent = Math.min(100, Math.round((state.accumulatedTrainingData / state.currentRequirement) * 100));
+            const nextReward = getNextTrainingRewardKind(state) === 'accuracy'
+                ? textForKey('trainingLab.nextAccuracy', { amount: CONFIG.MODEL_TRAINING.ACCURACY_GAIN })
+                : textForKey('trainingLab.nextDamage', { amount: CONFIG.MODEL_TRAINING.DAMAGE_GAIN });
             const row = document.createElement('button');
             row.className = `training-target-row ${selected ? 'active' : ''}`;
             row.type = 'button';
             row.innerHTML = `
-                <span class="training-target-title">${displayName}</span>
-                <span class="training-target-stat">${textForKey('trainingLab.confidence')} ${Math.round(state.modelConfidence)}% | v${state.modelVersion} | ${onlineCount} ${textForKey('trainingLab.online')}</span>
-                <span class="training-target-effect">${textForKey('trainingLab.permanentEffect')}</span>
+                <span class="training-target-name">${getBuildingName(type)}</span>
+                <span class="training-target-stat">${textForKey('trainingLab.accuracy')}: ${Math.round(state.modelAccuracy)}% | ${textForKey('trainingLab.damage')}: +${Math.round(state.damageBonus)}%</span>
+                <span class="training-target-effect">${nextReward}</span>
+                <span class="training-target-effect">${textForKey('trainingLab.dataProgress', { current: Math.floor(state.accumulatedTrainingData), required: state.currentRequirement })}</span>
+                <span class="training-progress-track"><span style="width:${dataPercent}%"></span></span>
+                <span class="training-target-effect">${state.isTraining ? textForKey('trainingLab.trainingProgress', { progress: trainingPercent }) : textForKey('trainingLab.waiting')}</span>
+                <span class="training-progress-track training-progress-work"><span style="width:${trainingPercent}%"></span></span>
             `;
             this.uiManager.guardDomPointer(row);
             row.onclick = event => {
                 event.preventDefault();
                 event.stopPropagation();
                 lab.setTarget(type);
-                this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: displayName }));
+                this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
                 this.render();
             };
             list.appendChild(row);
         });
 
-        const actions = document.createElement('div');
-        actions.className = 'training-actions';
-        const trainBtn = document.createElement('button');
-        trainBtn.className = 'training-action-btn';
-        trainBtn.type = 'button';
-        trainBtn.textContent = textForKey('trainingLab.trainOnce');
-        this.uiManager.guardDomPointer(trainBtn);
-        trainBtn.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            if (!lab.trainOnce()) {
-                this.uiManager.logMessage(textForKey('trainingLab.noInput'), true);
-            }
-            this.render();
-        };
-
-        const autoBtn = document.createElement('button');
-        autoBtn.className = `training-action-btn ${lab.autoTrain ? 'active' : ''}`;
-        autoBtn.type = 'button';
-        autoBtn.textContent = lab.autoTrain ? textForKey('trainingLab.autoOn') : textForKey('trainingLab.autoOff');
-        this.uiManager.guardDomPointer(autoBtn);
-        autoBtn.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            lab.autoTrain = !lab.autoTrain;
-            this.render();
-        };
-
-        actions.appendChild(trainBtn);
-        actions.appendChild(autoBtn);
-        list.appendChild(actions);
+        const footer = document.createElement('div');
+        footer.className = 'training-lab-buffer';
+        footer.textContent = textForKey('trainingLab.duration', {
+            base: CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS,
+            current: getTrainingDurationTicks(summary.activeGpuCount)
+        });
+        modal.appendChild(footer);
     }
 }

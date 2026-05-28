@@ -135,9 +135,24 @@ export interface GameConfig {
     ITEMS: Record<string, ItemConfig>;
     RESOURCE_PATCHES: Record<string, number>;
     TERRAIN: Record<string, TerrainConfig>;
+    MODEL_TRAINING: ModelTrainingConfig;
     ENEMIES: Record<string, EnemyConfig>;
     RESEARCH: Record<string, ResearchNode>;
     DIFFICULTY: Record<string, DifficultyConfig>;
+}
+
+export interface ModelTrainingConfig {
+    TARGET_TYPES: string[];
+    BASE_ACCURACY: number;
+    ACCURACY_GAIN: number;
+    DAMAGE_GAIN: number;
+    INITIAL_DATA_REQUIREMENT: number;
+    REQUIREMENT_MULTIPLIER: number;
+    BASE_TRAINING_TICKS: number;
+    DATA_VALUES: Record<string, number>;
+    GPU_UNLOCK_ACCURACY: number;
+    GPU_MAX_ACTIVE: number;
+    GPU_SPEED_BONUS: number;
 }
 
 export interface DifficultyConfig {
@@ -181,7 +196,7 @@ export type BuildingType =
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
-    | 'MODEL_TRAINING_LAB'
+    | 'MODEL_TRAINING_LAB' | 'GPU_CLUSTER'
     | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE';
 
 // ── 케이블 연결 ──
@@ -270,9 +285,15 @@ export interface DefenseTowerConfig {
 }
 
 export interface DefenseModelState {
-    modelConfidence: number;
+    modelAccuracy: number;
+    damageBonus: number;
     modelVersion: number;
     inferenceCharge: number;
+    accumulatedTrainingData: number;
+    currentRequirement: number;
+    isTraining: boolean;
+    trainingProgressTicks: number;
+    trainingDurationTicks: number;
 }
 
 export interface IMainScene extends Phaser.Scene {
@@ -297,7 +318,10 @@ export interface IMainScene extends Phaser.Scene {
     difficultyId: string;
     isMobileLayout: boolean;
     getDefenseModelState(type: string): DefenseModelState;
-    trainDefenseModelType(type: string, itemType: string): boolean;
+    addTrainingData(type: string, itemType: string): number;
+    startTrainingIfReady(type: string, durationTicks?: number): boolean;
+    completeTraining(type: string): 'accuracy' | 'damage';
+    isGpuUnlocked(): boolean;
     syncDefenseModelType(type: string): void;
     setGameSpeed(speed: number): void;
     bloomEnabled: boolean;

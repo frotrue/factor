@@ -21,8 +21,9 @@
 | `src/buildings/Processor.ts` | RAW_DATA -> LABELED_DATA | 핵심 데이터 라인 | `CONFIG.RECIPES.LABELLING` 의존 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | Confidence 성장 재료 | Core 점수와 모델 훈련 둘 다에 연결 | `src/utils/productionSimulation.test.ts` |
 | `src/buildings/NeuralTrainer.ts` | MODEL_TRAINING / INFERENCE_UNIT_PRODUCTION 레시피 전환 | 후반 생산, 고급 연구 | 클릭 시 레시피 전환하며 버퍼 초기화 | E2E는 간접 |
-| `src/buildings/ModelTrainingLab.ts` | 방어 모델 공유 상태 훈련, 학습 대상 선택 이벤트 발행 | 방어 모델 신뢰도/버전 성장, 튜토리얼 최종 모델 학습 단계 | `targetType`, `autoTrain`은 저장 customState 대상. `setTarget()` 이벤트는 튜토리얼 완료와 UI 갱신에 영향 | `src/utils/modelTrainingSummary.test.ts` 보조 |
-| `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 상태 적용 및 실시간 타겟 추적/배리어/방화벽 요동 등 커스텀 벡터 비주얼 탑재 | 방어 전투, 적 제거 | Classifier(락온 타겟 실시간 포신 추적 및 지점 네온 크로스헤어), Filter(2중 원호 배리어), Firewall(요동치는 삼각 화염) 드로잉 및 누수 없는 트윈 클린업 구현 | E2E 방어 배치 smoke |
+| `src/buildings/ModelTrainingLab.ts` | 타입별 방어 모델 학습 데이터 누적, 학습 시간 진행, GPU 인접 가속 계산, 학습 대상 선택 이벤트 발행 | 방어 모델 정확도/공격력 성장, 튜토리얼 최종 모델 학습 단계 | `targetType`, `autoTrain`은 저장 customState 대상. 실제 모델 진행 상태는 `MainScene.defenseModelStates`에 저장. `setTarget()` 이벤트는 튜토리얼 완료와 UI 갱신에 영향 | `src/utils/modelTrainingSummary.test.ts`, `src/utils/modelTrainingProgress.test.ts` |
+| `src/buildings/GpuCluster.ts` | 모델 훈련 연구소 인접 고전력 가속기 | 정확도 100 이후 학습 시간 단축 | Research 해금이 아니라 모델 정확도 기반 UI gating을 사용. 전력이 없으면 가속에 기여하지 않음 | `src/utils/modelTrainingProgress.test.ts` 간접 |
+| `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 정확도/공격력 상태 적용 및 실시간 타겟 추적/배리어/방화벽 요동 등 커스텀 벡터 비주얼 탑재 | 방어 전투, 적 제거 | Classifier(락온 타겟 실시간 포신 추적 및 지점 네온 크로스헤어), Filter(2중 원호 배리어), Firewall(요동치는 삼각 화염) 드로잉 및 누수 없는 트윈 클린업 구현 | E2E 방어 배치 smoke |
 | `src/buildings/Core.ts` | Core HP와 Confidence Score 수신 | 연구 비용, 게임오버, 점수 | WEIGHT_UPDATE는 +10, LABELED_DATA는 +2, 기타 +0.1 | E2E, save smoke |
 | `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push 및 스크롤 갈매기(Chevron) 벡터 렌더링 | 자원 라인 | 3중 네온 쉐브론 흐름선 스크롤링 및 레일 외곽선 효과, 누수 없는 트윈 적용 (FastLink 공통) | E2E placement smoke |
 | `src/buildings/Storage.ts` | 단일 타입 저장, inputBuffer를 출력으로도 사용 및 실시간 잔여량 게이지 렌더링 | 인벤토리, 케이블/컨베이어 버퍼 | 저장 용량 비율(inputBuffer.length / maxBufferSize)에 연동되어 갱신되는 2중 원형 네온 아크(Arc) 게이지 탑재 | E2E storage placement |
@@ -44,7 +45,7 @@
 | `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔/선택 도구 요약, 툴팁, 모달 위임 | 모든 DOM UI | DOM id/text는 E2E와 연결. 빌드 버튼 id는 유지해야 hotkey/E2E 회귀가 적음 | E2E 전반 |
 | `src/managers/SettingsUI.ts` | 설정 모달, 저장/로드/언어/속도 버튼 | 설정 UI | 닫기 후 canvas focus 복원 기대 | E2E focus/language/save |
 | `src/managers/ResearchUI.ts` | 연구 모달 렌더링/해금 버튼 | 연구 진행 | 첫 방어 전 연구 버튼 gating과 연결 | E2E research smoke |
-| `src/managers/TrainingLabUI.ts` | 모델 훈련 연구소 DOM UI | 방어 모델 타겟 선택/훈련 | `ModelTrainingLab` 상태와 동기화 | E2E 간접 |
+| `src/managers/TrainingLabUI.ts` | 모델 훈련 연구소 DOM UI | 방어 모델 타겟 선택, 정확도/공격력/데이터/학습/GPU 상태 표시 | `ModelTrainingLab` summary와 `DefenseModelState` 상태를 함께 렌더링 | E2E 간접 |
 | `src/managers/MobileUIManager.ts` | 모바일 액션바/케이블 메뉴/빌드 요약 | 모바일 조작 | touch gesture와 DOM guard 영향 | E2E mobile |
 | `src/managers/TutorialManager.ts` | 튜토리얼 패널, 단계별 건물 잠금, 데이터 기반 월드 고스트/흐름/범위 힌트 렌더링, 튜토리얼 완료 조건 검사, 튜토리얼 웨이브/모델 학습 이벤트 처리 | 건물 역할 온보딩, 빌드 버튼 갱신, WaveManager mock wave 연동, 튜토리얼 완료 시 새 캠페인 전환 | 완료 조건은 `tutorialFlow.completion` 메타를 따름. 자동 진행, 특정 건물 생산, 케이블 연결, 전력 온라인, `WAVE_ENDED`, `MODEL_TRAINING_TARGET_SET`을 모두 처리. 힌트 렌더는 `tutorialFlow.ts`가 단일 원천 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | `src/controllers/InputController.ts` | 캔버스 입력, 배치/케이블/철거/툴팁/모바일 탭 | 실 조작의 중심 | DOM UI guard 셀렉터, 좌표 snap, unlock 체크 주의 | E2E interaction |

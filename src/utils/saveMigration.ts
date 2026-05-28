@@ -1,14 +1,15 @@
 import { CONFIG } from '../config';
 import { DEFAULT_LANGUAGE, isLanguage } from '../i18n';
 import { SaveData } from '../types';
+import { normalizeDefenseModelState } from './modelTrainingProgress';
 
-export const CURRENT_SAVE_VERSION = '1.1.0';
+export const CURRENT_SAVE_VERSION = '1.2.0';
 
 export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = 'NORMAL'): SaveData {
     const data = (rawData && typeof rawData === 'object') ? rawData as Record<string, any> : {};
     const version = data.version || '1.0.0';
 
-    if (version === '1.0.0') {
+    if (version === '1.0.0' || version === '1.1.0') {
         data.version = CURRENT_SAVE_VERSION;
     }
 
@@ -34,7 +35,12 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         outputBuffer: building.outputBuffer || [],
         hp: typeof building.hp === 'number' ? building.hp : undefined
     }));
-    data.defenseModelStates = data.defenseModelStates || {};
+    data.defenseModelStates = Object.fromEntries(
+        Object.entries(data.defenseModelStates || {}).map(([type, state]) => [
+            type,
+            normalizeDefenseModelState(state as any)
+        ])
+    );
     data.items = data.items || [];
     data.cables = data.cables || [];
     data.settings = {

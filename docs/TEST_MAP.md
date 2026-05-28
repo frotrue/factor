@@ -50,7 +50,8 @@ npm run test:e2e -- --workers=1
 | `src/utils/waveBriefingKey.test.ts` | WaveManager briefing 중복 발행 방지 key |
 | `src/utils/waveResultSummary.test.ts` | 웨이브 결과 요약 계산/문구 |
 | `src/utils/progressionGates.test.ts` | 초반 목표 순서, 고급 시스템 gating |
-| `src/utils/modelTrainingSummary.test.ts` | 모델 훈련 입력 효과/요약 |
+| `src/utils/modelTrainingSummary.test.ts` | 모델 훈련 정확도/공격력/데이터/진행 요약 |
+| `src/utils/modelTrainingProgress.test.ts` | 학습 데이터 가치, 요구량 1.3배 스케일, 정확도/공격력 보상, GPU 가속 계산 |
 | `src/utils/runResultSummary.test.ts` | 게임오버/런 결과 요약 |
 | `tests/e2e/app-smoke.spec.ts` | 시작, 카메라, 설정/연구/언어, 배치/케이블/철거, save, 모바일 조작 |
 | `tests/e2e/tutorial-guidance.spec.ts` | 튜토리얼 힌트 좌표, 리소스 타일 정합성, 생산/케이블/전력/웨이브/모델 대상 기반 전체 튜토리얼 완료 후 새 캠페인 전환 |
@@ -67,6 +68,7 @@ npm run test:e2e -- --workers=1
 | 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |
 | UI 텍스트/언어 | `src/i18n.test.ts`, E2E language smoke |
 | 모바일 조작/CSS | E2E `mobile-*` projects. PC HUD shell 변경 시 모바일 터치 지점이 HUD/빌드 콘솔에 가로막히지 않는지 확인 |
+| 모델 훈련/GPU | `src/utils/modelTrainingProgress.test.ts`, `src/utils/modelTrainingSummary.test.ts`, `src/utils/saveMigration.test.ts`, 필요 시 E2E build menu/modal smoke |
 | 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, `tests/e2e/tutorial-guidance.spec.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹되며 캔버스 고스트/흐름 힌트는 `tutorialFlow.visualHints`, `tutorialFlow.completion`, `TutorialManager` 완료 검사기를 함께 확인 |
 | 게임오버/결과 요약 | `runResultSummary.test.ts`, `waveResultSummary.test.ts`, E2E wave summary |
 | 캔버스 그래픽/팔레트 | `npm run build`, `npm test`, `npx playwright test --workers=1`, 데스크톱 스크린샷. `visualTheme`, `GridRenderer`, `BaseBuilding`, `BaseEnemy`, `CableManager`, `OverlayController`를 함께 확인 |

@@ -63,9 +63,11 @@ describe('i18n', () => {
             'trainingLab.kicker',
             'trainingLab.title',
             'trainingLab.close',
-            'trainingLab.trainOnce',
-            'trainingLab.autoOn',
-            'trainingLab.autoOff',
+            'trainingLab.accuracy',
+            'trainingLab.damage',
+            'trainingLab.nextAccuracy',
+            'trainingLab.nextDamage',
+            'trainingLab.gpuStatus',
             'building.SOLAR_PANEL.description'
         ];
 

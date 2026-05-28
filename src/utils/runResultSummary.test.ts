@@ -10,22 +10,23 @@ describe('createRunResultSummary', () => {
             totalConfidenceEarned: 180.5,
             unlockedResearchCount: 3,
             modelStates: {
-                CLASSIFIER: { modelConfidence: 55, modelVersion: 2, inferenceCharge: 0 },
-                FILTER: { modelConfidence: 72, modelVersion: 3, inferenceCharge: 0 },
-                FIREWALL: { modelConfidence: 40, modelVersion: 1, inferenceCharge: 0 }
+                CLASSIFIER: { modelAccuracy: 55, damageBonus: 0, modelVersion: 2, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
+                FILTER: { modelAccuracy: 72, damageBonus: 0, modelVersion: 3, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
+                FIREWALL: { modelAccuracy: 100, damageBonus: 15, modelVersion: 8, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 }
             },
             getModelName: type => type
         });
 
         expect(summary.coreHpPercent).toBe(24);
-        expect(summary.bestModelName).toBe('FILTER');
-        expect(summary.bestModelConfidence).toBe(72);
+        expect(summary.bestModelName).toBe('FIREWALL');
+        expect(summary.bestModelAccuracy).toBe(100);
+        expect(summary.bestModelDamageBonus).toBe(15);
         expect(summary.lines).toEqual([
             'Reached Wave 9',
             'Core integrity 24%',
             'Total Confidence earned 180.50',
             'Research unlocked 3',
-            'Best model FILTER 72% v3'
+            'Best model FIREWALL 100% accuracy / +15% damage'
         ]);
     });
 });

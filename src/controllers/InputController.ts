@@ -231,7 +231,8 @@ export default class InputController {
                 const targetName = targetType ? getBuildingName(targetType) : textForKey('tooltip.none');
                 content += `\n${textForKey('tooltip.trainingTarget')}: ${targetName}`;
                 if (targetState) {
-                    content += `\n${textForKey('tooltip.sharedConfidence')}: ${Math.round(targetState.modelConfidence)}%`;
+                    content += `\n${textForKey('tooltip.modelAccuracy')}: ${Math.round(targetState.modelAccuracy)}%`;
+                    content += `\n${textForKey('tooltip.damageBonus')}: +${Math.round(targetState.damageBonus)}%`;
                     content += `\n${textForKey('tooltip.sharedVersion')}: v${targetState.modelVersion}`;
                 }
                 content += `\n${textForKey('tooltip.autoTrain')}: ${existingBuilding.autoTrain ? textForKey('tooltip.on') : textForKey('tooltip.off')}`;
@@ -257,15 +258,18 @@ export default class InputController {
                 const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
                 const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
                 const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
-                const modelConfidence = tower?.modelConfidence ?? 35;
+                const modelConfidence = tower?.modelConfidence ?? CONFIG.MODEL_TRAINING.BASE_ACCURACY;
+                const damageBonus = tower?.damageBonus ?? 0;
                 const confidenceFactor = 0.6 + modelConfidence / 125;
-                content += `\n${textForKey('tooltip.modelConfidence')}: ${Math.round(modelConfidence)}%`;
+                const modelDamageMultiplier = 1 + damageBonus / 100;
+                content += `\n${textForKey('tooltip.modelAccuracy')}: ${Math.round(modelConfidence)}%`;
+                content += `\n${textForKey('tooltip.damageBonus')}: +${Math.round(damageBonus)}%`;
                 content += `\n${textForKey('tooltip.modelVersion')}: v${tower?.modelVersion ?? 1}`;
                 content += `\n${textForKey('tooltip.inferenceCharge')}: ${tower?.inferenceCharge ?? 0}`;
-                content += `\n${textForKey('tooltip.damage')}: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
+                content += `\n${textForKey('tooltip.damage')}: ${(effectiveDamage * confidenceFactor * modelDamageMultiplier).toFixed(1)}`;
                 content += `\n${textForKey('tooltip.range')}: ${effectiveRange} tiles`;
                 content += `\n${textForKey('tooltip.fireRate')}: ${effectiveFireRate} ticks`;
-                content += `\n${textForKey('tooltip.attackInput')}: ${textForKey('tooltip.modelConfidence')}`;
+                content += `\n${textForKey('tooltip.attackInput')}: ${textForKey('tooltip.modelAccuracy')}`;
             }
 
             scene.uiManager.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);

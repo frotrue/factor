@@ -300,7 +300,8 @@ export default class UIManager {
             <div>${textForKey('gameOver.stat.research', { count: summary.unlockedResearchCount })}</div>
             <div>${textForKey('gameOver.stat.model', {
                 name: summary.bestModelName,
-                confidence: summary.bestModelConfidence,
+                confidence: summary.bestModelAccuracy,
+                damage: summary.bestModelDamageBonus,
                 version: summary.bestModelVersion
             })}</div>
         `;
@@ -367,13 +368,13 @@ export default class UIManager {
         this.defenseTitleEl.innerText = textForKey('defenseStatus.ready.title', { count: total });
         const lines = counts
             .filter(entry => entry.count > 0)
-            .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelConfidence)}%`);
+            .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelAccuracy)}% | DMG +${Math.round(entry.state.damageBonus)}%`);
         const activeLab = this.findActiveModelTrainingLab();
         if (activeLab?.targetType) {
             const state = this.scene.getDefenseModelState(activeLab.targetType);
             lines.push(textForKey('defenseStatus.training', {
                 name: getBuildingName(activeLab.targetType),
-                confidence: Math.round(state.modelConfidence),
+                confidence: Math.round(state.modelAccuracy),
                 version: state.modelVersion
             }));
         }
@@ -501,6 +502,9 @@ export default class UIManager {
         Object.entries(buildables).forEach(([key, data]) => {
             this.buildableData[key] = data;
             if (shouldHideEarlyAdvancedSystem(key, this.hasFirstDefenseSuccess())) {
+                return;
+            }
+            if (key === 'GPU_CLUSTER' && !this.scene.isGpuUnlocked()) {
                 return;
             }
 

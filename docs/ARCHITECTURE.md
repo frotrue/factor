@@ -82,7 +82,7 @@ flowchart TD
 | 웨이브/적 | `WaveManager.currentWave`, `enemies`, timer/counter |
 | Core 점수/HP | `Core.totalDataReceived`, `confidenceScore`, `hp` |
 | 연구 | `ResearchManager.unlockedResearch` |
-| 방어 모델 | `MainScene.defenseModelStates` |
+| 방어 모델 | `MainScene.defenseModelStates` (`modelAccuracy`, `damageBonus`, 누적 학습 데이터, 학습 진행 상태) |
 | UI 선택/모달 | `UIManager`와 하위 UI 매니저 |
 | 튜토리얼 진행/실행 모드/맵 타입 | `TutorialManager`, `MainScene.mode`, `localStorage.gradium_tutorial_*`, `MapManager.mapType` |
 | 저장 데이터 | `localStorage.gradium_save` |
@@ -106,7 +106,7 @@ flowchart TD
 - wave 상태와 적 목록
 - Core HP/점수
 - 건물 위치/회전/버퍼/HP/customState
-- 방어 모델 공유 상태
+- 방어 모델 공유 상태와 모델 학습 진행 상태
 - 필드 아이템
 - 케이블과 큐
 - 설정: 속도, 오버레이, 난이도, 언어, 사운드, 튜토리얼, 맵 타입
@@ -134,7 +134,8 @@ flowchart TD
 - `ResearchManager` -> `CONFIG.RESEARCH`, Core confidence
 - `SaveManager` -> 거의 모든 manager + `saveMigration`, `enemyRestore`
 - `tutorialFlow` -> 건물 역할 튜토리얼 단계/허용 건물/완료 메타/월드 시각 힌트 데이터, `TutorialManager`가 이를 렌더링하고 생산/전력/케이블/웨이브/모델 대상 조건을 확인한 뒤 완료/스킵 시 새 캠페인 랜덤 맵으로 전환
-- `ModelTrainingLab` -> `MODEL_TRAINING_TARGET_SET` 이벤트로 튜토리얼 최종 모델 학습 단계와 연결
+- `ModelTrainingLab` -> RAW/LABELED/WEIGHT 데이터를 타입별 방어 모델 학습 데이터로 누적하고, 학습 시간 완료 시 정확도 또는 공격력 보너스를 올리며, `MODEL_TRAINING_TARGET_SET` 이벤트로 튜토리얼 최종 모델 학습 단계와 연결
+- `GPU_CLUSTER` -> Research와 무관하게 아무 방어 모델 하나가 정확도 100%에 도달하면 빌드 UI에 노출되며, powered adjacent GPU가 `ModelTrainingLab` 학습 시간을 줄임
 
 ## 신규 기능 추가 위치와 일반 절차
 

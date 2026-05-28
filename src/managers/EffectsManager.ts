@@ -451,14 +451,33 @@ export default class EffectsManager {
     }
 
     playModelTrainingPulse(building: BaseBuilding, itemType: string): void {
-        const color = itemType === 'WEIGHT_UPDATE' ? getItemColor('WEIGHT_UPDATE') : itemType === 'TRAINED_MODEL' ? getItemColor('TRAINED_MODEL') : itemType === 'INFERENCE_UNIT' ? getItemColor('INFERENCE_UNIT') : 0x14b8a6;
+        const color = itemType === 'accuracy'
+            ? 0x5eead4
+            : itemType === 'damage'
+                ? 0xf472b6
+                : itemType === 'WEIGHT_UPDATE'
+                    ? getItemColor('WEIGHT_UPDATE')
+                    : itemType === 'TRAINED_MODEL'
+                        ? getItemColor('TRAINED_MODEL')
+                        : itemType === 'INFERENCE_UNIT'
+                            ? getItemColor('INFERENCE_UNIT')
+                            : 0x14b8a6;
         const x = building.x + CONFIG.GRID_SIZE / 2;
         const y = building.y + CONFIG.GRID_SIZE / 2;
         const ring = this.scene.add.circle(x, y, 6, color, 0);
         ring.setDepth(44);
         ring.setStrokeStyle(2, color, 0.9);
 
-        const label = this.scene.add.text(x, y - 22, itemType === 'WEIGHT_UPDATE' ? 'MODEL +2%' : itemType === 'TRAINED_MODEL' ? 'MODEL +10%' : 'CHARGE +5', {
+        const labelText = itemType === 'accuracy'
+            ? 'ACC +10%'
+            : itemType === 'damage'
+                ? 'DMG +5%'
+                : itemType === 'WEIGHT_UPDATE'
+                    ? 'DATA +5'
+                    : itemType === 'TRAINED_MODEL'
+                        ? 'MODEL'
+                        : 'DATA';
+        const label = this.scene.add.text(x, y - 22, labelText, {
             fontFamily: 'Share Tech Mono, monospace',
             fontSize: '9px',
             color: '#ffffff',

@@ -127,6 +127,14 @@ export default class BaseBuilding {
                 this.graphics.lineBetween(cx - 12, cy, cx + 12, cy);
                 this.graphics.lineBetween(cx, cy - 12, cx, cy + 12);
                 break;
+            case 'GPU_CLUSTER':
+                this.graphics.strokeRoundedRect(cx - 10, cy - 10, 20, 20, 4);
+                this.graphics.lineStyle(1, accent, 0.55);
+                for (let i = -1; i <= 1; i++) {
+                    this.graphics.lineBetween(cx - 7, cy + i * 5, cx + 7, cy + i * 5);
+                    this.graphics.lineBetween(cx + i * 5, cy - 7, cx + i * 5, cy + 7);
+                }
+                break;
             default:
                 // 다른 모든 업그레이드된 건물은 각자의 생성자에서 고품질 동적 벡터 비주얼을 렌더링하므로,
                 // 기존의 단순 정적 아이콘 그리기는 생략하여 새로운 프리미엄 디자인이 가려지지 않도록 합니다.

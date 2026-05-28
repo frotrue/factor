@@ -837,6 +837,35 @@ body {
     line-height: 1.3;
 }
 
+.training-target-name {
+    color: #c8f7d7;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.training-progress-track {
+    display: block;
+    width: 100%;
+    height: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(8, 13, 24, 0.85);
+}
+
+.training-progress-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #5eead4, #93c5fd);
+}
+
+.training-progress-work span {
+    background: linear-gradient(90deg, #f472b6, #facc15);
+}
+
 .training-actions {
     display: flex;
     gap: 8px;

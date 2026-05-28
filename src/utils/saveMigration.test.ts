@@ -76,4 +76,26 @@ describe('migrateSaveData', () => {
         expect(restored.maxHp).toBe(CONFIG.ENEMIES.NOISE.BASE_HP * 1.5);
         expect(restored.hp).toBe(restored.maxHp);
     });
+
+    it('migrates legacy modelConfidence into modelAccuracy state', () => {
+        const migrated = migrateSaveData({
+            defenseModelStates: {
+                CLASSIFIER: {
+                    modelConfidence: 65,
+                    modelVersion: 4,
+                    inferenceCharge: 2
+                }
+            }
+        });
+
+        expect(migrated.defenseModelStates?.CLASSIFIER).toMatchObject({
+            modelAccuracy: 65,
+            damageBonus: 0,
+            modelVersion: 4,
+            inferenceCharge: 2,
+            accumulatedTrainingData: 0,
+            currentRequirement: CONFIG.MODEL_TRAINING.INITIAL_DATA_REQUIREMENT,
+            isTraining: false
+        });
+    });
 });

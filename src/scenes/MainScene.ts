@@ -26,6 +26,14 @@ import OverlayController from '../controllers/OverlayController';
 import InputController from '../controllers/InputController';
 import { createWaveResultSummary } from '../utils/waveResultSummary';
 import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
+import {
+    applyCompletedTraining,
+    createDefaultDefenseModelState,
+    getNextTrainingRequirement,
+    getTrainingDataValue,
+    isGpuUnlocked,
+    normalizeDefenseModelState
+} from '../utils/modelTrainingProgress';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -232,41 +240,56 @@ export default class MainScene extends Phaser.Scene {
     }
 
     initializeDefenseModelStates(): void {
-        ['CLASSIFIER', 'FILTER', 'FIREWALL'].forEach(type => {
-            this.defenseModelStates[type] = {
-                modelConfidence: 35,
-                modelVersion: 1,
-                inferenceCharge: 0
-            };
+        CONFIG.MODEL_TRAINING.TARGET_TYPES.forEach(type => {
+            this.defenseModelStates[type] = createDefaultDefenseModelState();
         });
     }
 
     getDefenseModelState(type: string): DefenseModelState {
         if (!this.defenseModelStates[type]) {
-            this.defenseModelStates[type] = {
-                modelConfidence: 35,
-                modelVersion: 1,
-                inferenceCharge: 0
-            };
+            this.defenseModelStates[type] = createDefaultDefenseModelState();
+        } else {
+            this.defenseModelStates[type] = normalizeDefenseModelState(this.defenseModelStates[type] as any);
         }
         return this.defenseModelStates[type];
     }
 
-    trainDefenseModelType(type: string, itemType: string): boolean {
+    addTrainingData(type: string, itemType: string): number {
         const state = this.getDefenseModelState(type);
-        if (itemType === 'WEIGHT_UPDATE') {
-            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 2, 0, 100);
-        } else if (itemType === 'TRAINED_MODEL') {
-            state.modelConfidence = Phaser.Math.Clamp(state.modelConfidence + 10, 0, 100);
-            state.modelVersion++;
-        } else if (itemType === 'INFERENCE_UNIT') {
-            state.inferenceCharge += 5;
-        } else {
+        const value = getTrainingDataValue(itemType);
+        if (value <= 0) return 0;
+        state.accumulatedTrainingData += value;
+        return value;
+    }
+
+    startTrainingIfReady(type: string, durationTicks: number = CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS): boolean {
+        const state = this.getDefenseModelState(type);
+        if (state.isTraining || state.accumulatedTrainingData < state.currentRequirement) {
             return false;
         }
 
+        state.accumulatedTrainingData -= state.currentRequirement;
+        state.isTraining = true;
+        state.trainingProgressTicks = 0;
+        state.trainingDurationTicks = Math.max(1, Math.ceil(durationTicks));
         this.syncDefenseModelType(type);
         return true;
+    }
+
+    completeTraining(type: string): 'accuracy' | 'damage' {
+        const state = this.getDefenseModelState(type);
+        const reward = applyCompletedTraining(state);
+        state.isTraining = false;
+        state.trainingProgressTicks = 0;
+        state.trainingDurationTicks = CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS;
+        state.currentRequirement = getNextTrainingRequirement(state.currentRequirement);
+        this.syncDefenseModelType(type);
+        this.uiManager?.createBuildingButtons();
+        return reward.kind;
+    }
+
+    isGpuUnlocked(): boolean {
+        return isGpuUnlocked(this.defenseModelStates);
     }
 
     syncDefenseModelType(type: string): void {

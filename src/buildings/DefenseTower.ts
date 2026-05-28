@@ -8,6 +8,7 @@ import { getCategoryColor } from '../visuals/visualTheme';
 export default class DefenseTower extends BaseBuilding {
     fireTimer: number;
     modelConfidence: number;
+    damageBonus: number;
     modelVersion: number;
     inferenceCharge: number;
     lockedTarget: BaseEnemy | null;
@@ -19,7 +20,12 @@ export default class DefenseTower extends BaseBuilding {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
         this.fireTimer = 0;
         const sharedModel = (scene as IMainScene).getDefenseModelState?.(type);
-        this.modelConfidence = Phaser.Math.Clamp(config.customState?.modelConfidence ?? sharedModel?.modelConfidence ?? 35, 0, 100);
+        this.modelConfidence = Phaser.Math.Clamp(
+            config.customState?.modelAccuracy ?? config.customState?.modelConfidence ?? sharedModel?.modelAccuracy ?? CONFIG.MODEL_TRAINING.BASE_ACCURACY,
+            0,
+            100
+        );
+        this.damageBonus = Math.max(0, config.customState?.damageBonus ?? sharedModel?.damageBonus ?? 0);
         this.modelVersion = Math.max(1, config.customState?.modelVersion ?? sharedModel?.modelVersion ?? 1);
         this.inferenceCharge = Math.max(0, config.customState?.inferenceCharge ?? sharedModel?.inferenceCharge ?? 0);
         this.lockedTarget = null;
@@ -185,14 +191,14 @@ export default class DefenseTower extends BaseBuilding {
     }
 
     applyModelState(state: DefenseModelState): void {
-        this.modelConfidence = Phaser.Math.Clamp(state.modelConfidence, 0, 100);
+        this.modelConfidence = Phaser.Math.Clamp(state.modelAccuracy, 0, 100);
+        this.damageBonus = Math.max(0, state.damageBonus);
         this.modelVersion = Math.max(1, state.modelVersion);
         this.inferenceCharge = Math.max(0, state.inferenceCharge);
     }
 
     improveModel(itemType: string): boolean {
-        const trained = (this.scene as IMainScene).trainDefenseModelType?.(this.type, itemType) ?? false;
-        return trained;
+        return ((this.scene as IMainScene).addTrainingData?.(this.type, itemType) ?? 0) > 0;
     }
 
     onTick(_tickCount: number): void {
@@ -243,7 +249,8 @@ export default class DefenseTower extends BaseBuilding {
 
         const damageMultiplier = researchManager?.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1) ?? 1;
         const confidenceFactor = 0.6 + this.modelConfidence / 125;
-        const actualDamage = dConfig.DAMAGE * damageMultiplier * confidenceFactor;
+        const modelDamageMultiplier = 1 + this.damageBonus / 100;
+        const actualDamage = dConfig.DAMAGE * damageMultiplier * confidenceFactor * modelDamageMultiplier;
         const hitChance = Phaser.Math.Clamp(0.45 + this.modelConfidence / 180, 0.05, 0.95);
 
         if (dConfig.IS_AOE) {
