@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CONFIG } from '../config';
+import { CONFIG, CORE_KEY } from '../config';
 import { IMainScene } from '../types';
 
 export default class CameraController {
@@ -81,7 +81,7 @@ export default class CameraController {
     }
 
     centerOnCore(): void {
-        const core = this.scene.buildingManager.get('0,0');
+        const core = this.scene.buildingManager.get(CORE_KEY);
         if (!core) return;
 
         this.camera.centerOn(core.container.x, core.container.y);

@@ -68,9 +68,6 @@ export default class GridRenderer {
         for (let y = sectorStartY; y < startY + height + sectorSize; y += sectorSize) {
             this.graphics.lineBetween(startX, y, startX + width, y);
         }
-
-        this.graphics.fillStyle(VISUAL_THEME.world.gridAxis, 0.08);
-        this.graphics.fillCircle(CONFIG.GRID_SIZE * 2, CONFIG.GRID_SIZE * 2, CONFIG.GRID_SIZE * 3.2);
     }
 
     drawTerrain(startX: number, startY: number, width: number, height: number): void {

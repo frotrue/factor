@@ -1,4 +1,4 @@
-import { CONFIG } from '../config';
+import { CONFIG, CORE_KEY } from '../config';
 import EventBus from './EventBus';
 import { CoreDataEvent, PowerUpdateData } from '../types';
 import type MainScene from '../scenes/MainScene';
@@ -281,7 +281,7 @@ export default class UIManager {
     private renderGameOverStats(): void {
         const statsEl = document.getElementById('game-over-stats');
         if (!statsEl) return;
-        const core = this.scene.buildingManager.get('0,0');
+        const core = this.scene.buildingManager.get(CORE_KEY);
         const coreBuilding = core instanceof Core ? core : null;
         const summary = createRunResultSummary({
             wave: this.scene.waveManager.currentWave,

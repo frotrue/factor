@@ -127,20 +127,61 @@ export default class MapManager {
         const y = tileY * this.gridSize;
         const key = `${x},${y}`;
         if (this.resourceMap.has(key)) return;
-        if (Math.abs(tileX) < 4 && Math.abs(tileY) < 4) return;
+        const coreMinX = CONFIG.CORE_ORIGIN.TILE_X - 1;
+        const coreMaxX = CONFIG.CORE_ORIGIN.TILE_X + (CONFIG.BUILDINGS.CORE.WIDTH || 1);
+        const coreMinY = CONFIG.CORE_ORIGIN.TILE_Y - 1;
+        const coreMaxY = CONFIG.CORE_ORIGIN.TILE_Y + (CONFIG.BUILDINGS.CORE.HEIGHT || 1);
+        if (tileX >= coreMinX && tileX <= coreMaxX && tileY >= coreMinY && tileY <= coreMaxY) return;
         this.terrainMap.set(key, 'BLOCKER');
     }
 
     addEarlyLaneBlockers(): void {
-        for (let y = -22; y <= -8; y++) {
-            if (y >= -16 && y <= -12) continue;
-            this.addTerrainBlocker(-4, y);
-            this.addTerrainBlocker(4, y);
+        // North corridor walls (vertical walls with gate)
+        for (let y = -50; y <= -20; y++) {
+            if (y >= -38 && y <= -32) continue; // gate
+            this.addTerrainBlocker(-10, y);
+            this.addTerrainBlocker(10, y);
+        }
+        // North horizontal bar
+        for (let x = -20; x <= 20; x++) {
+            if (Math.abs(x) <= 4) continue; // gate
+            this.addTerrainBlocker(x, -42);
         }
 
-        for (let x = -8; x <= 8; x++) {
-            if (Math.abs(x) <= 2) continue;
-            this.addTerrainBlocker(x, -18);
+        // South corridor walls (mirror of north)
+        for (let y = 20; y <= 50; y++) {
+            if (y >= 32 && y <= 38) continue; // gate
+            this.addTerrainBlocker(-10, y);
+            this.addTerrainBlocker(10, y);
+        }
+        // South horizontal bar
+        for (let x = -20; x <= 20; x++) {
+            if (Math.abs(x) <= 4) continue; // gate
+            this.addTerrainBlocker(x, 42);
+        }
+
+        // East corridor walls (horizontal walls with gate)
+        for (let x = 20; x <= 50; x++) {
+            if (x >= 32 && x <= 38) continue; // gate
+            this.addTerrainBlocker(x, -10);
+            this.addTerrainBlocker(x, 10);
+        }
+        // East vertical bar
+        for (let y = -20; y <= 20; y++) {
+            if (Math.abs(y) <= 4) continue; // gate
+            this.addTerrainBlocker(42, y);
+        }
+
+        // West corridor walls (mirror of east)
+        for (let x = -50; x <= -20; x++) {
+            if (x >= -38 && x <= -32) continue; // gate
+            this.addTerrainBlocker(x, -10);
+            this.addTerrainBlocker(x, 10);
+        }
+        // West vertical bar
+        for (let y = -20; y <= 20; y++) {
+            if (Math.abs(y) <= 4) continue; // gate
+            this.addTerrainBlocker(-42, y);
         }
     }
 
@@ -275,12 +316,14 @@ export default class MapManager {
     }
 
     private isCoreFootprintTile(x: number, y: number): boolean {
+        const originX = CONFIG.CORE_ORIGIN.TILE_X * this.gridSize;
+        const originY = CONFIG.CORE_ORIGIN.TILE_Y * this.gridSize;
         const width = CONFIG.BUILDINGS.CORE.WIDTH || 1;
         const height = CONFIG.BUILDINGS.CORE.HEIGHT || 1;
-        return x >= 0
-            && x < width * this.gridSize
-            && y >= 0
-            && y < height * this.gridSize
+        return x >= originX
+            && x < originX + width * this.gridSize
+            && y >= originY
+            && y < originY + height * this.gridSize
             && x % this.gridSize === 0
             && y % this.gridSize === 0;
     }

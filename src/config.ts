@@ -2,6 +2,7 @@ import { GameConfig } from './types';
 
 export const CONFIG: GameConfig = {
     GRID_SIZE: 32,
+    CORE_ORIGIN: { TILE_X: -2, TILE_Y: -2 },
     TICK_RATE: 500,
 
     TIMING: {
@@ -439,40 +440,47 @@ export const CONFIG: GameConfig = {
             MAP_TYPE: 'random',
             WORLD_BOUNDS: { minX: -64, maxX: 64, minY: -64, maxY: 64 },
             BUILD_BOUNDS: { minX: -64, maxX: 64, minY: -64, maxY: 64 },
-            RESOURCE_BOUNDS: { minX: -56, maxX: 56, minY: -56, maxY: 56 },
+            RESOURCE_BOUNDS: { minX: -60, maxX: 60, minY: -60, maxY: 60 },
             CAMERA_PADDING_TILES: 4,
-            STARTER_SAFE_AREA: { minX: -12, maxX: 12, minY: -12, maxY: 12 },
+            STARTER_SAFE_AREA: { minX: -20, maxX: 20, minY: -20, maxY: 20 },
             FIXED_RESOURCES: [
-                { type: 'SILICON', x: 28, y: -36, size: 5 },
-                { type: 'ENERGY', x: 36, y: -30, size: 4 },
-                { type: 'SILICON', x: 34, y: 26, size: 5 },
-                { type: 'ENERGY', x: -42, y: 28, size: 4 },
-                { type: 'SILICON', x: -40, y: -36, size: 4 }
+                // North quadrant
+                { type: 'SILICON', x: -10, y: -46, size: 5 },
+                { type: 'ENERGY', x: 8, y: -42, size: 4 },
+                // East quadrant
+                { type: 'SILICON', x: 40, y: -8, size: 5 },
+                { type: 'ENERGY', x: 44, y: 10, size: 4 },
+                // South quadrant
+                { type: 'SILICON', x: 6, y: 42, size: 5 },
+                { type: 'ENERGY', x: -12, y: 46, size: 4 },
+                // West quadrant
+                { type: 'SILICON', x: -46, y: 6, size: 5 },
+                { type: 'ENERGY', x: -42, y: -10, size: 4 }
             ],
             STARTER_ZONES: [
                 {
                     type: 'SILICON',
-                    area: { minX: -6, maxX: -3, minY: -4, maxY: 1 },
+                    area: { minX: -8, maxX: -4, minY: -6, maxY: -1 },
                     patchSize: 3,
                     minTiles: 9
                 },
                 {
                     type: 'ENERGY',
-                    area: { minX: 1, maxX: 5, minY: 1, maxY: 5 },
+                    area: { minX: 3, maxX: 7, minY: 3, maxY: 7 },
                     patchSize: 3,
                     minTiles: 9
                 }
             ],
             RANDOM_RESOURCES: {
                 types: ['SILICON', 'ENERGY'],
-                patchCount: { min: 18, max: 28 },
+                patchCount: { min: 24, max: 36 },
                 patchSize: { min: 2, max: 5 },
-                range: { minX: -56, maxX: 56, minY: -56, maxY: 56 },
+                range: { minX: -60, maxX: 60, minY: -60, maxY: 60 },
                 exclusionZones: []
             },
             STARTER_VALIDATION: {
                 center: { x: 0, y: 0 },
-                radius: 8,
+                radius: 16,
                 maxRepairAttempts: 5
             },
             TERRAIN_LAYOUTS: ['earlyLaneBlockers']
@@ -699,3 +707,9 @@ export const CONFIG: GameConfig = {
         }
     }
 };
+
+/** Core placement in pixel coordinates, derived from CONFIG.CORE_ORIGIN. */
+export const CORE_PIXEL_X = CONFIG.CORE_ORIGIN.TILE_X * CONFIG.GRID_SIZE;
+export const CORE_PIXEL_Y = CONFIG.CORE_ORIGIN.TILE_Y * CONFIG.GRID_SIZE;
+/** BuildingManager key for the core building. */
+export const CORE_KEY = `${CORE_PIXEL_X},${CORE_PIXEL_Y}`;

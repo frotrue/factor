@@ -200,6 +200,7 @@ export interface GameConfig {
     MODEL_TRAINING: ModelTrainingConfig;
     ENEMIES: Record<string, EnemyConfig>;
     RESEARCH: Record<string, ResearchNode>;
+    CORE_ORIGIN: { TILE_X: number; TILE_Y: number };
     DIFFICULTY: Record<string, DifficultyConfig>;
 }
 

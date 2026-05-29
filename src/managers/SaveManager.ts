@@ -2,7 +2,7 @@ import MainScene from '../scenes/MainScene';
 import { SaveData, SavedBuilding, SavedItem, SavedEnemy } from '../types';
 import EventBus from './EventBus';
 import Core from '../buildings/Core';
-import { CONFIG } from '../config';
+import { CONFIG, CORE_KEY, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
 import { getLanguage, setLanguage } from '../i18n';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
@@ -101,7 +101,7 @@ export default class SaveManager {
             terrainMapArray.push({ key, type });
         });
 
-        const coreBuilding = this.scene.buildingManager.get(`0,0`) as Core | null;
+        const coreBuilding = this.scene.buildingManager.get(CORE_KEY) as Core | null;
         const audioSettings = this.scene.soundManager?.getSettings?.() ?? { masterVolume: 0.6, muted: false };
 
         const saveData: SaveData = {
@@ -198,7 +198,7 @@ export default class SaveManager {
             this.scene.gridRenderer.draw(true);
 
             // Load Core
-            const core = this.scene.buildingManager.place(0, 0, 'CORE', 0, { skipCost: true }) as Core;
+            const core = this.scene.buildingManager.place(CORE_PIXEL_X, CORE_PIXEL_Y, 'CORE', 0, { skipCost: true }) as Core;
             if (core) {
                 core.hp = data.core.hp;
                 core.totalDataReceived = data.core.totalDataReceived;

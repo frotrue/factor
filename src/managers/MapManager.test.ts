@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIG } from '../config';
+import { CONFIG, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
 import MapManager from './MapManager';
 
 describe('MapManager terrain blockers', () => {
@@ -18,7 +18,7 @@ describe('MapManager terrain blockers', () => {
 
         mapManager.generateResourcePatches();
 
-        expect(mapManager.isTerrainBlocked(0, 0)).toBe(false);
+        expect(mapManager.isTerrainBlocked(CORE_PIXEL_X, CORE_PIXEL_Y)).toBe(false);
         expect(mapManager.getTerrainMap().size).toBeGreaterThan(0);
         expect(countResourceNearCore(mapManager, 'SILICON')).toBeGreaterThanOrEqual(9);
         expect(countResourceNearCore(mapManager, 'ENERGY')).toBeGreaterThanOrEqual(9);
@@ -38,8 +38,8 @@ describe('MapManager terrain blockers', () => {
         expect(Array.from(first.getTerrainMap().entries())).toEqual(Array.from(second.getTerrainMap().entries()));
         expect(countResourceNearCore(first, 'SILICON')).toBeGreaterThanOrEqual(9);
         expect(countResourceNearCore(first, 'ENERGY')).toBeGreaterThanOrEqual(9);
-        expect(first.getResourceAt(0, 0)).toBeNull();
-        expect(first.getResourceAt(CONFIG.GRID_SIZE, CONFIG.GRID_SIZE)).toBeNull();
+        expect(first.getResourceAt(CORE_PIXEL_X, CORE_PIXEL_Y)).toBeNull();
+        expect(first.getResourceAt(CORE_PIXEL_X + CONFIG.GRID_SIZE, CORE_PIXEL_Y + CONFIG.GRID_SIZE)).toBeNull();
     });
 
     it('generates a compact standalone tutorial arena with expected resource patches and walls', () => {
@@ -82,13 +82,14 @@ describe('MapManager terrain blockers', () => {
 });
 
 function countResourceNearCore(mapManager: MapManager, type: string): number {
+    const radius = CONFIG.MAP_PRESETS.standard.STARTER_VALIDATION?.radius ?? 8;
     let count = 0;
     mapManager.getResourceMap().forEach((resourceType, key) => {
         if (resourceType !== type) return;
         const [x, y] = key.split(',').map(Number);
         const tileX = x / CONFIG.GRID_SIZE;
         const tileY = y / CONFIG.GRID_SIZE;
-        if (Math.abs(tileX) <= 8 && Math.abs(tileY) <= 8) {
+        if (Math.abs(tileX) <= radius && Math.abs(tileY) <= radius) {
             count++;
         }
     });

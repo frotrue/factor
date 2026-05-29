@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CONFIG } from '../config';
+import { CONFIG, CORE_KEY, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
 import { getBuildingName, t } from '../i18n';
 import BaseBuilding from '../buildings/BaseBuilding';
 
@@ -134,11 +134,11 @@ export default class MainScene extends Phaser.Scene {
             this.mapManager.generateResourcePatches();
         }
         this.cameraController.applyBounds();
-        this.buildingManager.place(0, 0, 'CORE', 0);
+        this.buildingManager.place(CORE_PIXEL_X, CORE_PIXEL_Y, 'CORE', 0);
         this.cameraController.centerOnCore();
 
         // 시작 시 일정량의 실리콘 제공을 위한 창고 설치
-        const startStorage = this.buildingManager.place(-64, 0, 'STORAGE', 0);
+        const startStorage = this.buildingManager.place((CONFIG.CORE_ORIGIN.TILE_X - 2) * CONFIG.GRID_SIZE, CONFIG.CORE_ORIGIN.TILE_Y * CONFIG.GRID_SIZE, 'STORAGE', 0);
         if (startStorage) {
             for (let i = 0; i < 100; i++) {
                 startStorage.inputBuffer.push('SILICON');
@@ -190,7 +190,7 @@ export default class MainScene extends Phaser.Scene {
         }, 'MainScene');
 
         EventBus.on('WAVE_STARTED', ({ wave, routes }) => {
-            const core = this.buildingManager.get('0,0') as Core | null;
+            const core = this.buildingManager.get(CORE_KEY) as Core | null;
             this.currentWaveStats = {
                 wave,
                 enemiesDestroyed: 0,
@@ -209,7 +209,7 @@ export default class MainScene extends Phaser.Scene {
 
         EventBus.on('WAVE_ENDED', () => {
             if (!this.currentWaveStats) return;
-            const core = this.buildingManager.get('0,0') as Core | null;
+            const core = this.buildingManager.get(CORE_KEY) as Core | null;
             const summary = createWaveResultSummary({
                 wave: this.currentWaveStats.wave,
                 enemiesDestroyed: this.currentWaveStats.enemiesDestroyed,

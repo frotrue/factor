@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import BaseEnemy from '../enemies/BaseEnemy';
-import { CONFIG } from '../config';
+import { CONFIG, CORE_KEY, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
 import EventBus from './EventBus';
 import BuildingManager from './BuildingManager';
 import { IMainScene } from '../types';
@@ -90,14 +90,14 @@ export default class WaveManager {
     }
 
     getCoreTarget(): Point {
-        const core = this.buildingManager.get('0,0');
+        const core = this.buildingManager.get(CORE_KEY);
         if (core) {
             const coreConfig = CONFIG.BUILDINGS[core.type];
             return getFootprintCenter(core.x, core.y, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
         }
 
         const coreConfig = CONFIG.BUILDINGS.CORE;
-        return getFootprintCenter(0, 0, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
+        return getFootprintCenter(CORE_PIXEL_X, CORE_PIXEL_Y, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
     }
 
     startWave(): void {
