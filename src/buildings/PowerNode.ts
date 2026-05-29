@@ -26,6 +26,7 @@ export default class PowerNode extends BaseBuilding {
     }
 
     drawNodeEnergy(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.nodeGraphics.clear();
         if (this.destroyed) return;
 

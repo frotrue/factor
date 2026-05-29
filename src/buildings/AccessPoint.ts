@@ -55,6 +55,7 @@ export default class AccessPoint extends BaseBuilding {
     }
 
     drawAPCrosshairs(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.crosshairGraphics.clear();
         if (this.destroyed) return;
 

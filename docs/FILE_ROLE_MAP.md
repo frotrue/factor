@@ -32,12 +32,13 @@
 | `src/buildings/PowerPlant.ts` | Energy 자원 위 발전소 활성 여부 및 융합 제어 코어 렌더링 | 전력 생산 | 액티브(녹색 융합 제어 코어 링, 3개 회전 노드, 확산 파동) 및 인액티브(적색 경고 링) 드로잉과 누수 없는 트윈 탑재 | PowerManager 간접 |
 | `src/buildings/PowerNode.ts`, `SolarPanel.ts` | 전력 범위 노드 및 솔라 표면 네온 그리드/반사광 연출 | 전력망 확장 | PowerNode(중앙 전하 스타 크리스탈 및 4개 회전 골드 틱), SolarPanel(2x2 그리드 셀 및 대각선 스크롤링 네온 반사 빔) 비주얼 탑재 | `src/utils/powerPreview.test.ts` |
 | `src/buildings/AccessPoint.ts` | AP 시각/기본 범위/대역폭 상태 | 무선 데이터 릴레이 | 전송 정책은 `CableManager`와 `utils/apRelay.ts` | `src/utils/apRelay.test.ts` |
+| `src/buildings/Repeater.ts` | 무버퍼 유선 케이블 중계 노드 | 긴/우회 케이블망, 전력 의존 데이터 경유 | `CableManager`가 powered Repeater를 투명 relay endpoint로 처리. Repeater 파괴/제거 시 연결 케이블도 제거 | `src/managers/CableManager.test.ts` |
 | `src/managers/TickSystem.ts` | 고정 틱 실행, 전력/케이블/건물 onTick 순서 | 생산, 전력, AP, 케이블 | `gameSpeed`가 tick interval을 나눔 | 생산/파워 관련 테스트 간접 |
-| `src/managers/CableManager.ts` | 케이블 연결, 큐, 데이터 이동 (실리콘 케이블 전송 대응), AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | 큐 방향, bandwidth, AP 제외 정책 변경 시 테스트 필요. 실리콘 전송 기능 추가됨. | `src/utils/apRelay.test.ts`, E2E cable |
+| `src/managers/CableManager.ts` | 케이블 연결, 거리 비용/환불, 최대 길이, BLOCKER 충돌, 큐, 데이터 이동, Repeater 경유, AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | `canConnect()`가 UI preview와 실제 연결의 단일 검증 경로. Repeater는 무버퍼라 relay 실패 시 incoming cable queue에 packet이 남음 | `src/managers/CableManager.test.ts`, `src/utils/cablePath.test.ts`, `src/utils/apRelay.test.ts`, E2E cable |
 | `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 풋프린트 중심 범위 계산, 소비자 할당, blackout 적용 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서와 멀티타일 건물 중심 범위가 전체 런타임에 영향 | `src/utils/powerPreview.test.ts`, `src/utils/geometry.test.ts` 보조 |
 | `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 코어 중심 target 전달, 보상, boss aura, next-wave briefing 발행 | 방어 압박, 연구 개방 신호, 튜토리얼 mock wave | 튜토리얼 중 FIRST_WAVE 이전에는 웨이브를 동결하고, FIRST_WAVE 단계에서 북쪽 gate mock wave를 사용. 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음 | `src/utils/waveSimulation.test.ts`, `src/utils/waveBriefingKey.test.ts`, `src/utils/gridPath.test.ts`, E2E threat panel |
 | `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과/적 실루엣 렌더 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의. 경로 계산은 `utils/gridPath.ts`로 분리 | `src/utils/gridPath.test.ts`, `src/utils/enemyBuildingInteraction.test.ts` |
-| `src/managers/MapManager.ts` | 자원 패치와 BLOCKER 지형 생성, 작은 튜토리얼 arena 맵, 캠페인 랜덤 맵 | 초기 맵, 튜토리얼 맵, 저장 복원, 적 경로 차단 | `generateTutorialMap()`은 건물 학습용 소형 arena와 북쪽 게이트, `generateResourcePatches()`는 캠페인용 랜덤 맵. 튜토리얼 완료 시 맵을 확장하지 않고 새 캠페인 맵으로 전환 | `src/managers/MapManager.test.ts` |
+| `src/managers/MapManager.ts` | 자원 패치와 BLOCKER 지형 생성, map/build/camera bounds 조회, 작은 튜토리얼 arena 맵, 캠페인 seed 맵 | 초기 맵, 튜토리얼 맵, 저장 복원, 적 경로 차단, 배치/카메라 제한 | standard preset은 `-64..64` world/build bounds와 `-56..56` resource bounds를 가진 큰 유한 맵. bounds 필드는 `MainScene.isBlocked()`와 `CameraController`가 사용 | `src/managers/MapManager.test.ts` |
 | `src/managers/GridRenderer.ts` | 배경, 섹터 그리드, 자원 패치, BLOCKER 지형 렌더 | 카메라 이동/줌 중 월드 시각화 | camera dirty 기반 렌더이므로 무거운 per-tile 효과 주의 | build, E2E startup |
 | `src/managers/SaveManager.ts` | localStorage 저장/로드, 런타임 재구성 | 자동 저장, 설정, 연구, 케이블/적/건물/맵 복원 | 포맷 변경 시 migration과 SaveData 갱신. 튜토리얼 모드에서는 일반 캠페인 저장 슬롯을 쓰지 않고, 캠페인에서는 `settings.mapType`과 resource/terrain map 데이터를 복원 | `src/utils/saveMigration.test.ts`, `src/utils/enemyRestore.ts`, E2E save |
 | `src/utils/saveMigration.ts` | 구버전 저장 데이터 기본값 보정 | 로드 안정성 | 새 필드는 기본값과 버전 처리 필요 | `src/utils/saveMigration.test.ts` |
@@ -60,6 +61,7 @@
 | `src/utils/progressionGates.ts` | 초반 목표와 고급 시스템 숨김 정책 | UI 빌드바/목표 패널 | 초반 AP/Fast/Fiber/Unloader 노출 정책 | `src/utils/progressionGates.test.ts` |
 | `src/utils/productionSimulation.ts` | 생산 라인 장기 시뮬레이션 | 밸런스 검증용 순수 모델 | 실제 CableManager와 완전 동일하지 않을 수 있음 | `src/utils/productionSimulation.test.ts` |
 | `src/utils/apRelay.ts` | AP 소스/타겟 선택 정책 | CableManager 무선 릴레이 | Storage/DataCache를 자동 source에서 제외 | `src/utils/apRelay.test.ts` |
+| `src/utils/cablePath.ts` | 자유각 케이블 거리와 타일 교차 샘플링 | 케이블 비용/최대 길이/BLOCKER 충돌 | 샘플링 판정과 화면에 보이는 선이 어긋나면 케이블 UX가 나빠짐 | `src/utils/cablePath.test.ts` |
 | `src/utils/enemyBuildingInteraction.ts` | 적의 건물 공격 우선순위 | BaseEnemy 공격 타겟 | Core/Firewall/일반 건물 우선순위 확인 | `src/utils/enemyBuildingInteraction.test.ts` |
 | `src/utils/tutorialFlow.ts` | 건물 역할 튜토리얼 단계/진행/허용 건물/완료 메타/시각 힌트 정의 | TutorialManager, UI copy, 월드 고스트/흐름 힌트 | i18n 키와 단계 순서 연결. `completion` 메타가 실제 진행 조건이므로 새 단계 추가 시 TutorialManager 검사와 E2E를 함께 갱신. 좌표는 튜토리얼 맵의 자원/전력/빈 칸 조건과 함께 유지 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | `tests/e2e/app-smoke.spec.ts` | 실제 브라우저 smoke, 배치/케이블/모바일/저장/언어 | 회귀 최종 방어선 | Phaser canvas 좌표 테스트라 viewport 변경 영향 큼 | Playwright |

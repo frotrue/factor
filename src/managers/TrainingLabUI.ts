@@ -162,16 +162,31 @@ export default class TrainingLabUI {
             const available = this.scene.researchManager.isJobAvailable(node.ID);
             const selected = lab.activeJobId === node.ID;
             const percent = Math.min(100, Math.round((progress.progress / node.COST) * 100));
+            const trainingPercent = progress.isTraining
+                ? Math.min(100, Math.round(((progress.trainingProgressTicks ?? 0) / (progress.trainingDurationTicks ?? 1)) * 100))
+                : 0;
+
             const row = document.createElement('button');
             row.className = `training-target-row ${selected ? 'active' : ''}`;
             row.type = 'button';
             row.disabled = !available && !progress.completed;
+
+            let statusText = '';
+            if (progress.completed) {
+                statusText = textForKey('trainingLab.completed');
+            } else if (progress.isTraining) {
+                statusText = `Researching: ${trainingPercent}%`;
+            } else {
+                statusText = available ? textForKey('trainingLab.waiting') : textForKey('research.action.locked');
+            }
+
             row.innerHTML = `
                 <span class="training-target-name">${textForKey(`research.${node.ID}.name`)}</span>
                 <span class="training-target-stat">${progress.completed ? textForKey('trainingLab.completed') : textForKey('trainingLab.systemProgress', { current: Math.floor(progress.progress), required: node.COST })}</span>
                 <span class="training-target-effect">${textForKey(`research.${node.ID}.description`)}</span>
                 <span class="training-progress-track"><span style="width:${percent}%"></span></span>
-                <span class="training-target-effect">${available ? textForKey('trainingLab.waiting') : textForKey('research.action.locked')}</span>
+                <span class="training-target-effect">${statusText}</span>
+                <span class="training-progress-track training-progress-work"><span style="width:${trainingPercent}%"></span></span>
             `;
             this.uiManager.guardDomPointer(row);
             row.onclick = event => {

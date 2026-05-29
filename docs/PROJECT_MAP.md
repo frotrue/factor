@@ -6,7 +6,7 @@
 
 Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다.
 
-핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, Neural Operations Lab 작업으로 공장을 성장시키는 흐름입니다. Lab은 RAW_DATA/LABELED_DATA/WEIGHT_UPDATE를 각각 1/3/5 진행도로 소비해 방어 모델과 시스템 프로토콜 작업을 진행합니다. 방어 모델은 학습 시간을 거쳐 정확도와 공격력 보너스를 올리며, 정확도 100% 이후에는 GPU Cluster를 Lab 옆에 붙여 학습 시간을 크게 줄일 수 있습니다. 현재 빌드는 난이도 선택, 건물 역할 중심 튜토리얼, 일반 캠페인과 분리된 작은 건물 학습용 튜토리얼 arena 맵, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 케이블/AP 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
+핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, Neural Operations Lab 작업으로 공장을 성장시키는 흐름입니다. Lab은 RAW_DATA/LABELED_DATA/WEIGHT_UPDATE를 각각 1/3/5 진행도로 소비해 방어 모델과 시스템 프로토콜 작업을 진행합니다. 방어 모델은 학습 시간을 거쳐 정확도와 공격력 보너스를 올리며, 정확도 100% 이후에는 GPU Cluster를 Lab 옆에 붙여 학습 시간을 크게 줄일 수 있습니다. 현재 빌드는 난이도 선택, 건물 역할 중심 튜토리얼, 일반 캠페인과 분리된 작은 건물 학습용 튜토리얼 arena 맵, 큰 유한 캠페인 맵 bounds, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 거리/장애물 제한이 있는 케이블/AP/Repeater 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
 
 ## 주요 기술 스택
 
@@ -116,7 +116,7 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 - `src/managers/EventBus.ts`: owner 기반 cleanup이 Scene shutdown과 테스트 안정성에 연결됩니다.
 - `src/managers/SaveManager.ts` + `src/utils/saveMigration.ts` + `src/types.ts`: 저장 포맷 변경은 마이그레이션과 테스트를 같이 갱신해야 합니다.
 - `src/managers/PowerManager.ts`: 전력망은 건물 `hasPower`를 직접 바꾸므로 생산/케이블/방어 전체에 영향이 큽니다.
-- `src/managers/CableManager.ts`: 케이블 큐, AP 자동 릴레이, 연구 보너스, 저장 큐 복원과 연결됩니다.
+- `src/managers/CableManager.ts`: 케이블 큐, 거리 비용, 최대 길이, BLOCKER 충돌, Repeater 경유, AP 자동 릴레이, 연구 보너스, 저장 큐 복원과 연결됩니다.
 - `src/enemies/BaseEnemy.ts`: 이동/건물 공격/코어 피해/특수 적 효과가 한 파일에 모여 있어 밸런스 변경의 파급이 큽니다. 경로 계산은 `src/utils/gridPath.ts`, target/범위 중심은 `src/utils/geometry.ts` 테스트로 먼저 고정하세요.
 - `index.html`과 `src/styles/main.css`: Playwright가 DOM id와 텍스트 일부에 의존합니다. id 변경 시 E2E를 같이 수정하세요.
 

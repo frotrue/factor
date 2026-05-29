@@ -347,7 +347,7 @@ export default class InputController {
                 if (scene.buildingManager.has(key)) {
                     const cables = scene.cableManager.getCablesForBuilding(normalizedKey);
                     if (cables.length > 0) {
-                        cables.forEach(c => scene.cableManager.disconnect(c.id));
+                        cables.forEach(c => scene.cableManager.disconnect(c.id, true));
                         scene.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                     } else {
                         scene.buildingManager.remove(key);
@@ -369,24 +369,31 @@ export default class InputController {
                             return;
                         }
                         if (scene.cableStartKey !== normalizedKey) {
-                            const costPerTile = cConfig.COST_PER_TILE || 0;
-                            if (costPerTile > 0) {
-                                const canAfford = scene.inventoryManager.canAfford([{ resource: 'SILICON', amount: costPerTile }]);
+                            const validation = scene.cableManager.canConnect(scene.cableStartKey!, normalizedKey, mode);
+                            if (!validation.ok) {
+                                scene.uiManager.logMessage(this.getCableValidationMessage(validation), true);
+                                scene.cableState = 'IDLE';
+                                scene.cableStartKey = null;
+                                scene.uiManager.setMobileActionStatus(null);
+                                return;
+                            }
+                            if (validation.cost > 0) {
+                                const canAfford = scene.inventoryManager.canAfford([{ resource: 'SILICON', amount: validation.cost }]);
                                 if (!canAfford) {
                                     scene.cableState = 'IDLE';
                                     scene.cableStartKey = null;
                                     scene.uiManager.setMobileActionStatus(null);
-                                    scene.uiManager.logMessage(`System: Not enough Silicon for cable. Need: ${costPerTile}`, true);
+                                    scene.uiManager.logMessage(`System: Not enough Silicon for cable. Need: ${validation.cost}`, true);
                                     return;
                                 }
                             }
-                            if (scene.cableManager.connect(scene.cableStartKey!, normalizedKey, mode)) {
-                                if (costPerTile > 0) {
-                                    scene.inventoryManager.spend([{ resource: 'SILICON', amount: costPerTile }]);
+                            if (scene.cableManager.connect(scene.cableStartKey!, normalizedKey, mode, { costPaid: validation.cost })) {
+                                if (validation.cost > 0) {
+                                    scene.inventoryManager.spend([{ resource: 'SILICON', amount: validation.cost }]);
                                 }
-                                scene.uiManager.logMessage(`System: Cable connected.`);
+                                scene.uiManager.logMessage(`System: Cable connected. Cost: ${validation.cost} Silicon.`);
                             } else {
-                                scene.uiManager.logMessage(`System: Cable connection already exists.`, true);
+                                scene.uiManager.logMessage(`System: Cable connection failed.`, true);
                             }
                         }
                         scene.cableState = 'IDLE';
@@ -436,12 +443,28 @@ export default class InputController {
             if ((mode === 'BASIC' || mode === 'FIBER') && scene.buildingManager.has(key)) {
                 const cables = scene.cableManager.getCablesForBuilding(normalizedKey);
                 if (cables.length > 0) {
-                    cables.forEach(c => scene.cableManager.disconnect(c.id));
+                    cables.forEach(c => scene.cableManager.disconnect(c.id, true));
                     scene.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                 }
             } else if (scene.buildingManager.has(key)) {
                 scene.buildingManager.remove(key);
             }
         }
+    }
+
+    private getCableValidationMessage(validation: { reason?: string; distanceTiles: number; maxLengthTiles: number; blockedTile?: { x: number; y: number } }): string {
+        if (validation.reason === 'too-far') {
+            return `System: Cable too far (${validation.distanceTiles}/${validation.maxLengthTiles} tiles). Add a Repeater.`;
+        }
+        if (validation.reason === 'blocked') {
+            const tile = validation.blockedTile;
+            return tile
+                ? `System: Cable blocked by terrain at [${tile.x}, ${tile.y}].`
+                : 'System: Cable blocked by terrain.';
+        }
+        if (validation.reason === 'out-of-bounds') return 'System: Cable endpoint is outside the operation area.';
+        if (validation.reason === 'duplicate') return 'System: Cable connection already exists.';
+        if (validation.reason === 'same-endpoint') return 'System: Select a different building for the cable endpoint.';
+        return 'System: Cable endpoint is invalid.';
     }
 }

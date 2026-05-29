@@ -100,7 +100,7 @@ describe('intrusion route planning', () => {
     });
 
     it('keeps generated spawn points on the selected route edge', () => {
-        const halfMap = 60 * 32 / 2;
+        const halfMap = 64 * 32;
 
         expect(getSpawnPointForRoute('NORTH', 0.5)).toEqual({ x: 0, y: -halfMap });
         expect(getSpawnPointForRoute('EAST', 0.5)).toEqual({ x: halfMap, y: 0 });

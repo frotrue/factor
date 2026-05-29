@@ -21,7 +21,7 @@ export const CONFIG: GameConfig = {
     },
 
     OPTIMIZATION: {
-        GRID_REDRAW_THRESHOLD: 0.1
+        GRID_REDRAW_THRESHOLD: 2.0
     },
 
     DIRECTIONS: [
@@ -280,6 +280,16 @@ export const CONFIG: GameConfig = {
             POWER: { CONSUMPTION: 10, PRODUCTION: 0 },
             CATEGORY: 'LOGISTICS',
             COST: [{ resource: 'SILICON', amount: 15 }]
+        },
+        REPEATER: {
+            ID: 'REPEATER',
+            NAME: '케이블 중계기 (Repeater)',
+            COLOR: 0x75f0c8,
+            HP: 120,
+            DESCRIPTION: 'Powered wired relay node for extending cable networks around blocked or long routes.',
+            POWER: { CONSUMPTION: 4, PRODUCTION: 0 },
+            CATEGORY: 'LOGISTICS',
+            COST: [{ resource: 'SILICON', amount: 8 }]
         }
     },
 
@@ -290,6 +300,7 @@ export const CONFIG: GameConfig = {
             COLOR: 0x5aa9ff,
             BANDWIDTH: 3,
             COST_PER_TILE: 1,
+            MAX_LENGTH_TILES: 8,
             MAX_QUEUE: 10
         },
         FIBER: {
@@ -298,6 +309,7 @@ export const CONFIG: GameConfig = {
             COLOR: 0x50f4ff,
             BANDWIDTH: 8,
             COST_PER_TILE: 3,
+            MAX_LENGTH_TILES: 16,
             MAX_QUEUE: 20,
             UNLOCK_REQUIRED: 'TECH_FIBER_OPTIC'
         }
@@ -405,6 +417,65 @@ export const CONFIG: GameConfig = {
             COLOR: 0x162235,
             BLOCKS_BUILDING: true,
             BLOCKS_ENEMY: true
+        }
+    },
+
+    MAP_PRESETS: {
+        tutorial: {
+            ID: 'tutorial',
+            MAP_TYPE: 'tutorial',
+            WORLD_BOUNDS: { minX: -9, maxX: 8, minY: -9, maxY: 8 },
+            BUILD_BOUNDS: { minX: -8, maxX: 7, minY: -8, maxY: 7 },
+            CAMERA_PADDING_TILES: 3,
+            FIXED_RESOURCES: [
+                { type: 'SILICON', x: -5, y: -3, size: 3 },
+                { type: 'ENERGY', x: 2, y: 2, size: 3 },
+                { type: 'SILICON', x: -2, y: -6, size: 2 }
+            ],
+            TERRAIN_LAYOUTS: ['tutorialArenaWalls']
+        },
+        standard: {
+            ID: 'standard',
+            MAP_TYPE: 'random',
+            WORLD_BOUNDS: { minX: -64, maxX: 64, minY: -64, maxY: 64 },
+            BUILD_BOUNDS: { minX: -64, maxX: 64, minY: -64, maxY: 64 },
+            RESOURCE_BOUNDS: { minX: -56, maxX: 56, minY: -56, maxY: 56 },
+            CAMERA_PADDING_TILES: 4,
+            STARTER_SAFE_AREA: { minX: -12, maxX: 12, minY: -12, maxY: 12 },
+            FIXED_RESOURCES: [
+                { type: 'SILICON', x: 28, y: -36, size: 5 },
+                { type: 'ENERGY', x: 36, y: -30, size: 4 },
+                { type: 'SILICON', x: 34, y: 26, size: 5 },
+                { type: 'ENERGY', x: -42, y: 28, size: 4 },
+                { type: 'SILICON', x: -40, y: -36, size: 4 }
+            ],
+            STARTER_ZONES: [
+                {
+                    type: 'SILICON',
+                    area: { minX: -6, maxX: -3, minY: -4, maxY: 1 },
+                    patchSize: 3,
+                    minTiles: 9
+                },
+                {
+                    type: 'ENERGY',
+                    area: { minX: 1, maxX: 5, minY: 1, maxY: 5 },
+                    patchSize: 3,
+                    minTiles: 9
+                }
+            ],
+            RANDOM_RESOURCES: {
+                types: ['SILICON', 'ENERGY'],
+                patchCount: { min: 18, max: 28 },
+                patchSize: { min: 2, max: 5 },
+                range: { minX: -56, maxX: 56, minY: -56, maxY: 56 },
+                exclusionZones: []
+            },
+            STARTER_VALIDATION: {
+                center: { x: 0, y: 0 },
+                radius: 8,
+                maxRepairAttempts: 5
+            },
+            TERRAIN_LAYOUTS: ['earlyLaneBlockers']
         }
     },
 
@@ -534,9 +605,9 @@ export const CONFIG: GameConfig = {
             ID: 'TECH_DISTRIBUTED_AP',
             NAME: '분산 AP 처리',
             COST: 150,
-            DESCRIPTION: 'AP 범위를 2칸 늘리고 케이블 처리량을 1 증가시킵니다.',
+            DESCRIPTION: 'AP 범위를 2칸 늘리고 케이블 처리량과 길이를 증가시킵니다.',
             UNLOCKS: {},
-            EFFECTS: { AP_RANGE_BONUS: 2, CABLE_BANDWIDTH_BONUS: 1 }
+            EFFECTS: { AP_RANGE_BONUS: 2, CABLE_BANDWIDTH_BONUS: 1, CABLE_LENGTH_BONUS: 4 }
         },
         TECH_FIBER_OPTIC: {
             ID: 'TECH_FIBER_OPTIC',

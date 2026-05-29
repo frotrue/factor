@@ -28,6 +28,7 @@ export default class CameraController {
     setup(): void {
         const isMobile = this.scene.isMobileLayout;
         this.camera.setZoom(isMobile ? 1 : CONFIG.CAMERA.DEFAULT_ZOOM);
+        this.applyBounds();
 
         this.scene.input.on('wheel', (pointer: Phaser.Input.Pointer, _gameObjects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
             const cam = this.camera;
@@ -58,6 +59,7 @@ export default class CameraController {
             // scroll = world - screenCenter - (screen - screenCenter) / zoom
             cam.scrollX = worldX - halfWidth - (mouse.x - halfWidth) / newZoom;
             cam.scrollY = worldY - halfHeight - (mouse.y - halfHeight) / newZoom;
+            this.clampToBounds();
         });
 
         this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -69,6 +71,7 @@ export default class CameraController {
             if (shouldPan) {
                 this.camera.scrollX -= (pointer.x - pointer.prevPosition.x) / this.camera.zoom;
                 this.camera.scrollY -= (pointer.y - pointer.prevPosition.y) / this.camera.zoom;
+                this.clampToBounds();
             }
         });
 
@@ -82,6 +85,7 @@ export default class CameraController {
         if (!core) return;
 
         this.camera.centerOn(core.container.x, core.container.y);
+        this.clampToBounds();
     }
 
     handlePinchZoom(): boolean {
@@ -105,6 +109,7 @@ export default class CameraController {
         const newZoom = Phaser.Math.Clamp(oldZoom + zoomDelta, 0.45, CONFIG.CAMERA.MAX_ZOOM);
         if (newZoom !== oldZoom) {
             this.camera.setZoom(newZoom);
+            this.clampToBounds();
         }
         this.lastPinchDistance = distance;
         return true;
@@ -120,5 +125,24 @@ export default class CameraController {
         if (this.keys.right.isDown) this.camera.scrollX += speed;
         if (this.keys.up.isDown) this.camera.scrollY -= speed;
         if (this.keys.down.isDown) this.camera.scrollY += speed;
+        this.clampToBounds();
+    }
+
+    applyBounds(): void {
+        const bounds = this.scene.mapManager?.getCameraBoundsPixels?.();
+        if (!bounds) return;
+        this.camera.setBounds(bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+
+    clampToBounds(): void {
+        const bounds = this.scene.mapManager?.getCameraBoundsPixels?.();
+        if (!bounds) return;
+
+        const viewWidth = this.camera.width / this.camera.zoom;
+        const viewHeight = this.camera.height / this.camera.zoom;
+        const maxScrollX = bounds.x + bounds.width - viewWidth;
+        const maxScrollY = bounds.y + bounds.height - viewHeight;
+        this.camera.scrollX = Phaser.Math.Clamp(this.camera.scrollX, bounds.x, Math.max(bounds.x, maxScrollX));
+        this.camera.scrollY = Phaser.Math.Clamp(this.camera.scrollY, bounds.y, Math.max(bounds.y, maxScrollY));
     }
 }

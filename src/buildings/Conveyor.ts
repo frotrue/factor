@@ -32,6 +32,7 @@ export default class Conveyor extends BaseBuilding {
     }
 
     drawChevronArrows(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.conveyorGraphics.clear();
         if (this.destroyed) return;
 

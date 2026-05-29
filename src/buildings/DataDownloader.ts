@@ -38,6 +38,7 @@ export default class DataDownloader extends BaseBuilding {
     }
 
     drawSignalWaves(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.signalGraphics.clear();
         if (this.destroyed) return;
 

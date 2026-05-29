@@ -130,5 +130,33 @@ export default class SettingsUI {
                 };
             }
         });
+
+        // FPS limiter buttons
+        const fpsButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-fps]'));
+        fpsButtons.forEach(btn => this.uiManager.guardDomPointer(btn));
+
+        const savedFps = localStorage.getItem('gradium_fps_limit');
+        const initialFps = savedFps ? parseInt(savedFps, 10) : 240;
+        this.applyFpsLimit(initialFps, fpsButtons);
+
+        fpsButtons.forEach(btn => {
+            btn.onclick = event => {
+                event.preventDefault();
+                event.stopPropagation();
+                const fps = parseInt(btn.dataset.fps || '240', 10);
+                this.applyFpsLimit(fps, fpsButtons);
+                localStorage.setItem('gradium_fps_limit', String(fps));
+            };
+        });
+    }
+
+    private applyFpsLimit(fps: number, buttons: HTMLButtonElement[]): void {
+        const game = this.scene.game;
+        if (game?.loop) {
+            (game.loop as any).targetFps = fps;
+        }
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.fps || '0', 10) === fps);
+        });
     }
 }

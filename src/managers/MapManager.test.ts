@@ -19,9 +19,27 @@ describe('MapManager terrain blockers', () => {
         mapManager.generateResourcePatches();
 
         expect(mapManager.isTerrainBlocked(0, 0)).toBe(false);
-        expect(mapManager.isTerrainBlocked(2 * CONFIG.GRID_SIZE, 2 * CONFIG.GRID_SIZE)).toBe(false);
-        expect(mapManager.isTerrainBlocked(-5 * CONFIG.GRID_SIZE, -3 * CONFIG.GRID_SIZE)).toBe(false);
         expect(mapManager.getTerrainMap().size).toBeGreaterThan(0);
+        expect(countResourceNearCore(mapManager, 'SILICON')).toBeGreaterThanOrEqual(9);
+        expect(countResourceNearCore(mapManager, 'ENERGY')).toBeGreaterThanOrEqual(9);
+    });
+
+    it('generates deterministic campaign resources for a preset seed', () => {
+        const first = new MapManager();
+        const second = new MapManager();
+
+        first.generateMap({ presetId: 'standard', seed: 12345 });
+        second.generateMap({ presetId: 'standard', seed: 12345 });
+
+        expect(first.mapType).toBe('random');
+        expect(first.mapPresetId).toBe('standard');
+        expect(first.mapSeed).toBe(12345);
+        expect(Array.from(first.getResourceMap().entries())).toEqual(Array.from(second.getResourceMap().entries()));
+        expect(Array.from(first.getTerrainMap().entries())).toEqual(Array.from(second.getTerrainMap().entries()));
+        expect(countResourceNearCore(first, 'SILICON')).toBeGreaterThanOrEqual(9);
+        expect(countResourceNearCore(first, 'ENERGY')).toBeGreaterThanOrEqual(9);
+        expect(first.getResourceAt(0, 0)).toBeNull();
+        expect(first.getResourceAt(CONFIG.GRID_SIZE, CONFIG.GRID_SIZE)).toBeNull();
     });
 
     it('generates a compact standalone tutorial arena with expected resource patches and walls', () => {
@@ -30,6 +48,8 @@ describe('MapManager terrain blockers', () => {
         mapManager.generateTutorialMap();
 
         expect(mapManager.mapType).toBe('tutorial');
+        expect(mapManager.mapPresetId).toBe('tutorial');
+        expect(mapManager.mapSeed).toBeNull();
         expect(mapManager.getResourceAt(-5 * CONFIG.GRID_SIZE, -3 * CONFIG.GRID_SIZE)).toBe('SILICON');
         expect(mapManager.getResourceAt(-1 * CONFIG.GRID_SIZE, -1 * CONFIG.GRID_SIZE)).toBeNull();
         expect(mapManager.getResourceAt(-2 * CONFIG.GRID_SIZE, -6 * CONFIG.GRID_SIZE)).toBe('SILICON');
@@ -51,10 +71,26 @@ describe('MapManager terrain blockers', () => {
         mapManager.generateResourcePatches();
 
         expect(mapManager.mapType).toBe('random');
+        expect(mapManager.mapPresetId).toBe('standard');
+        expect(mapManager.mapSeed).not.toBeNull();
         expect(mapManager.getResourceMap()).not.toEqual(tutorialResources);
         expect(mapManager.getTerrainMap()).not.toEqual(tutorialTerrain);
         expect(mapManager.getResourceAt(-2 * CONFIG.GRID_SIZE, -6 * CONFIG.GRID_SIZE)).toBeNull();
-        expect(mapManager.getResourceAt(-5 * CONFIG.GRID_SIZE, -3 * CONFIG.GRID_SIZE)).toBe('SILICON');
-        expect(mapManager.getResourceAt(2 * CONFIG.GRID_SIZE, 2 * CONFIG.GRID_SIZE)).toBe('ENERGY');
+        expect(countResourceNearCore(mapManager, 'SILICON')).toBeGreaterThanOrEqual(9);
+        expect(countResourceNearCore(mapManager, 'ENERGY')).toBeGreaterThanOrEqual(9);
     });
 });
+
+function countResourceNearCore(mapManager: MapManager, type: string): number {
+    let count = 0;
+    mapManager.getResourceMap().forEach((resourceType, key) => {
+        if (resourceType !== type) return;
+        const [x, y] = key.split(',').map(Number);
+        const tileX = x / CONFIG.GRID_SIZE;
+        const tileY = y / CONFIG.GRID_SIZE;
+        if (Math.abs(tileX) <= 8 && Math.abs(tileY) <= 8) {
+            count++;
+        }
+    });
+    return count;
+}

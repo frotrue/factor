@@ -21,9 +21,36 @@ export default class EffectsManager {
     private bufferMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
     private inferenceLocks = new Map<string, InferenceLockMarker>();
     private routeHintObjects: Phaser.GameObjects.GameObject[] = [];
+    private _circlePool: Phaser.GameObjects.Arc[] = [];
+    private _graphicsPool: Phaser.GameObjects.Graphics[] = [];
 
     constructor(scene: MainScene) {
         this.scene = scene;
+    }
+
+    private getPooledCircle(x: number, y: number, radius: number, color: number, alpha: number = 1): Phaser.GameObjects.Arc {
+        const c = this._circlePool.pop();
+        if (c) {
+            c.setPosition(x, y);
+            c.setRadius(radius);
+            c.setFillStyle(color, alpha);
+            c.setVisible(true);
+            c.setActive(true);
+            c.setAlpha(1);
+            c.setScale(1);
+            return c;
+        }
+        return this.scene.add.circle(x, y, radius, color, alpha);
+    }
+
+    private returnCircle(c: Phaser.GameObjects.Arc): void {
+        if (this._circlePool.length < 30) {
+            c.setVisible(false);
+            c.setActive(false);
+            this._circlePool.push(c);
+        } else {
+            c.destroy();
+        }
     }
 
     playBuildOnline(building: BaseBuilding, type: string): void {
@@ -169,7 +196,7 @@ export default class EffectsManager {
     }
 
     playEnemyKilled(x: number, y: number): void {
-        const burst = this.scene.add.circle(x, y, 6, VISUAL_THEME.buildings.online, 0);
+        const burst = this.getPooledCircle(x, y, 6, VISUAL_THEME.buildings.online, 0);
         burst.setDepth(41);
         burst.setStrokeStyle(2, VISUAL_THEME.buildings.online, 0.8);
         this.scene.tweens.add({
@@ -177,7 +204,7 @@ export default class EffectsManager {
             radius: 22,
             alpha: 0,
             duration: 240,
-            onComplete: () => burst.destroy()
+            onComplete: () => this.returnCircle(burst)
         });
     }
 
@@ -189,7 +216,7 @@ export default class EffectsManager {
         trail.lineStyle(2, 0xffffff, 0.68);
         trail.strokeLineShape(new Phaser.Geom.Line(x, y, targetX, targetY));
 
-        const proj = this.scene.add.circle(x, y, 3, 0xffffff);
+        const proj = this.getPooledCircle(x, y, 3, 0xffffff);
         proj.setStrokeStyle(2, 0x69e7ff, 0.8);
         proj.setDepth(40);
 
@@ -206,8 +233,8 @@ export default class EffectsManager {
             y: targetY,
             duration: 100,
             onComplete: () => {
-                proj.destroy();
-                const impact = this.scene.add.circle(targetX, targetY, 4, 0xffffff, 0);
+                this.returnCircle(proj);
+                const impact = this.getPooledCircle(targetX, targetY, 4, 0xffffff, 0);
                 impact.setDepth(41);
                 impact.setStrokeStyle(2, 0x69e7ff, 0.88);
                 this.scene.tweens.add({
@@ -215,7 +242,7 @@ export default class EffectsManager {
                     radius: 14,
                     alpha: 0,
                     duration: 160,
-                    onComplete: () => impact.destroy()
+                    onComplete: () => this.returnCircle(impact)
                 });
                 onHit();
             }
@@ -505,8 +532,10 @@ export default class EffectsManager {
     updatePowerWarnings(): void {
         this.updateInferenceLocks();
 
-        const activeOutages = new Set<BaseBuilding>();
-        const activeBuffers = new Set<BaseBuilding>();
+        // Track which buildings still have markers to clean up stale ones
+        const stillHasOutage = new Set<BaseBuilding>();
+        const stillHasBuffer = new Set<BaseBuilding>();
+
         this.scene.buildingManager.forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             const hasOutage = Boolean(pConfig && pConfig.CONSUMPTION > 0 && !building.hasPower);
@@ -514,7 +543,7 @@ export default class EffectsManager {
             building.container.setAlpha(hasOutage ? 0.62 : 1);
 
             if (hasOutage) {
-                activeOutages.add(building);
+                stillHasOutage.add(building);
                 let marker = this.outageMarkers.get(building);
                 if (!marker) {
                     marker = this.scene.add.graphics();
@@ -534,7 +563,7 @@ export default class EffectsManager {
             const inputFull = building.maxBufferSize > 0 && building.inputBuffer?.length >= building.maxBufferSize;
             const outputFull = building.maxBufferSize > 0 && building.outputBuffer?.length >= building.maxBufferSize;
             if (inputFull || outputFull) {
-                activeBuffers.add(building);
+                stillHasBuffer.add(building);
                 let marker = this.bufferMarkers.get(building);
                 if (!marker) {
                     marker = this.scene.add.graphics();
@@ -554,13 +583,13 @@ export default class EffectsManager {
         });
 
         this.outageMarkers.forEach((marker, building) => {
-            if (!activeOutages.has(building)) {
+            if (!stillHasOutage.has(building)) {
                 marker.destroy();
                 this.outageMarkers.delete(building);
             }
         });
         this.bufferMarkers.forEach((marker, building) => {
-            if (!activeBuffers.has(building)) {
+            if (!stillHasBuffer.has(building)) {
                 marker.destroy();
                 this.bufferMarkers.delete(building);
             }

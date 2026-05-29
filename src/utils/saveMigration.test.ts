@@ -20,6 +20,8 @@ describe('migrateSaveData', () => {
         expect(migrated.settings.difficulty).toBe('HARD');
         expect(migrated.settings.language).toBe('ko');
         expect(migrated.settings.mapType).toBe('random');
+        expect(migrated.settings.mapPresetId).toBe('standard');
+        expect(migrated.settings.mapSeed).toBeUndefined();
     });
 
     it('normalizes building buffers and rotations', () => {
@@ -55,7 +57,9 @@ describe('migrateSaveData', () => {
                 difficulty: 'EASY',
                 language: 'en',
                 muted: true,
-                mapType: 'tutorial'
+                mapType: 'tutorial',
+                mapPresetId: 'tutorial',
+                mapSeed: 98765
             }
         });
 
@@ -68,6 +72,8 @@ describe('migrateSaveData', () => {
         expect(migrated.settings.masterVolume).toBe(0.6);
         expect(migrated.settings.muted).toBe(true);
         expect(migrated.settings.mapType).toBe('tutorial');
+        expect(migrated.settings.mapPresetId).toBe('tutorial');
+        expect(migrated.settings.mapSeed).toBe(98765);
     });
 
     it('restores enemy max HP with effective wave and difficulty scaling', () => {

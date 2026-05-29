@@ -53,7 +53,9 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         muted: data.settings?.muted ?? false,
         tutorialCompleted: data.settings?.tutorialCompleted ?? false,
         tutorialStep: data.settings?.tutorialStep ?? 0,
-        mapType: data.settings?.mapType === 'tutorial' ? 'tutorial' : 'random'
+        mapType: data.settings?.mapType === 'tutorial' ? 'tutorial' : 'random',
+        mapPresetId: data.settings?.mapPresetId === 'tutorial' ? 'tutorial' : 'standard',
+        mapSeed: typeof data.settings?.mapSeed === 'number' ? data.settings.mapSeed : undefined
     };
     data.resourceMap = data.resourceMap || [];
     data.terrainMap = data.terrainMap || [];

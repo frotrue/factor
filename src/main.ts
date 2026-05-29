@@ -9,6 +9,8 @@ declare global {
     }
 }
 
+const savedFps = parseInt(localStorage.getItem('gradium_fps_limit') || '240', 10);
+
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: window.innerWidth,
@@ -17,6 +19,10 @@ const config: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#050510',
     pixelArt: false,
     scene: [MainMenuScene, MainScene],
+    fps: {
+        target: savedFps,
+        forceSetTimeOut: false
+    },
     scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH

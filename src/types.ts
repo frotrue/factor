@@ -84,6 +84,66 @@ export interface TerrainConfig {
     BLOCKS_ENEMY: boolean;
 }
 
+export type MapPresetId = 'tutorial' | 'standard';
+export type MapType = 'tutorial' | 'random';
+
+export interface TileArea {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+export interface MapBounds {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+export interface ResourcePatchConfig {
+    type: string;
+    x: number;
+    y: number;
+    size: number;
+}
+
+export interface StarterResourceZoneConfig {
+    type: string;
+    area: TileArea;
+    patchSize: number;
+    minTiles: number;
+}
+
+export interface RandomResourceConfig {
+    types: string[];
+    patchCount: { min: number; max: number };
+    patchSize: { min: number; max: number };
+    range: TileArea;
+    exclusionZones: TileArea[];
+}
+
+export interface StarterValidationConfig {
+    center: { x: number; y: number };
+    radius: number;
+    maxRepairAttempts: number;
+}
+
+export interface MapPresetConfig {
+    ID: MapPresetId;
+    MAP_TYPE: MapType;
+    WORLD_BOUNDS?: MapBounds;
+    BUILD_BOUNDS?: MapBounds;
+    RESOURCE_BOUNDS?: MapBounds;
+    CAMERA_PADDING_TILES?: number;
+    STARTER_SAFE_AREA?: MapBounds;
+    FIXED_RESOURCES?: ResourcePatchConfig[];
+    STARTER_ZONES?: StarterResourceZoneConfig[];
+    RANDOM_RESOURCES?: RandomResourceConfig;
+    STARTER_VALIDATION?: StarterValidationConfig;
+    TERRAIN_LAYOUTS?: Array<'earlyLaneBlockers' | 'tutorialArenaWalls'>;
+}
+
 // ── 전역 설정용 추가 인터페이스 ──
 export interface CableConfig {
     ID: string;
@@ -91,6 +151,7 @@ export interface CableConfig {
     COLOR: number;
     BANDWIDTH: number;
     COST_PER_TILE: number;
+    MAX_LENGTH_TILES: number;
     MAX_QUEUE: number;
     UNLOCK_REQUIRED?: string;
 }
@@ -135,6 +196,7 @@ export interface GameConfig {
     ITEMS: Record<string, ItemConfig>;
     RESOURCE_PATCHES: Record<string, number>;
     TERRAIN: Record<string, TerrainConfig>;
+    MAP_PRESETS: Record<MapPresetId, MapPresetConfig>;
     MODEL_TRAINING: ModelTrainingConfig;
     ENEMIES: Record<string, EnemyConfig>;
     RESEARCH: Record<string, ResearchNode>;
@@ -172,6 +234,7 @@ export interface ResearchEffects {
     TOWER_FIRE_RATE_MULTIPLIER?: number;
     AP_RANGE_BONUS?: number;
     CABLE_BANDWIDTH_BONUS?: number;
+    CABLE_LENGTH_BONUS?: number;
     FIREWALL_HP_MULTIPLIER?: number;
 }
 
@@ -195,6 +258,9 @@ export type LabJobCategory = 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL';
 export interface LabJobProgress {
     progress: number;
     completed: boolean;
+    isTraining?: boolean;
+    trainingProgressTicks?: number;
+    trainingDurationTicks?: number;
 }
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
@@ -204,7 +270,7 @@ export type BuildingType =
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
     | 'MODEL_TRAINING_LAB' | 'GPU_CLUSTER'
-    | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE';
+    | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE' | 'REPEATER';
 
 // ── 케이블 연결 ──
 export interface CableConnection {
@@ -214,6 +280,7 @@ export interface CableConnection {
     bandwidth: number;
     queue: CablePacket[];
     cableType: 'BASIC' | 'FIBER';
+    costPaid?: number;
     flowDirection?: 'FORWARD' | 'BACKWARD';
 }
 
@@ -378,6 +445,7 @@ export interface SavedCable {
     toKey: string;
     cableType: string;
     queue: Array<string | CablePacket>;
+    costPaid?: number;
 }
 
 export interface SaveData {
@@ -412,7 +480,9 @@ export interface SaveData {
         muted?: boolean;
         tutorialCompleted?: boolean;
         tutorialStep?: number;
-        mapType?: 'tutorial' | 'random';
+        mapType?: MapType;
+        mapPresetId?: MapPresetId;
+        mapSeed?: number;
     };
     resourceMap: { key: string; type: string }[];
     terrainMap: { key: string; type: string }[];

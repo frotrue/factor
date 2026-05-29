@@ -24,7 +24,6 @@ export interface SpawnPoint {
     y: number;
 }
 
-const MAP_TILE_SPAN = 60;
 const INTRUSION_ROUTES: IntrusionRoute[] = [
     { id: 'NORTH', label: 'North Port' },
     { id: 'EAST', label: 'East Port' },
@@ -119,19 +118,23 @@ function getRecommendedDefense(wave: number, routes: IntrusionRoute[]): string {
 }
 
 export function getSpawnPointForRoute(routeId: IntrusionRouteId, progress: number): SpawnPoint {
-    const mapSize = MAP_TILE_SPAN * CONFIG.GRID_SIZE;
-    const halfMap = mapSize / 2;
-    const offset = -halfMap + clampUnit(progress) * mapSize;
+    const bounds = CONFIG.MAP_PRESETS.standard.WORLD_BOUNDS ?? { minX: -30, maxX: 30, minY: -30, maxY: 30 };
+    const minX = bounds.minX * CONFIG.GRID_SIZE;
+    const maxX = bounds.maxX * CONFIG.GRID_SIZE;
+    const minY = bounds.minY * CONFIG.GRID_SIZE;
+    const maxY = bounds.maxY * CONFIG.GRID_SIZE;
+    const xOffset = minX + clampUnit(progress) * (maxX - minX);
+    const yOffset = minY + clampUnit(progress) * (maxY - minY);
 
     switch (routeId) {
         case 'NORTH':
-            return { x: offset, y: -halfMap };
+            return { x: xOffset, y: minY };
         case 'EAST':
-            return { x: halfMap, y: offset };
+            return { x: maxX, y: yOffset };
         case 'SOUTH':
-            return { x: offset, y: halfMap };
+            return { x: xOffset, y: maxY };
         case 'WEST':
-            return { x: -halfMap, y: offset };
+            return { x: minX, y: yOffset };
     }
 }
 

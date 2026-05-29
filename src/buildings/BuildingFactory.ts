@@ -18,6 +18,7 @@ import Recycler from './Recycler';
 import DataCache from './DataCache';
 import ModelTrainingLab from './ModelTrainingLab';
 import GpuCluster from './GpuCluster';
+import Repeater from './Repeater';
 import { BuildingOptions } from '../types';
 
 type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
@@ -41,6 +42,7 @@ const REGISTRY: Record<string, BuildingClass> = {
     GPU_CLUSTER: GpuCluster,
     RECYCLER: Recycler,
     ACCESS_POINT: AccessPoint,
+    REPEATER: Repeater,
     CONVEYOR: Conveyor,
     FAST_LINK: FastLink,
     DATA_CACHE: DataCache

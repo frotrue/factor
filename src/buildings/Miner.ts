@@ -50,6 +50,7 @@ export default class Miner extends BaseBuilding {
     }
 
     drawScanLine(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.scanGraphics.clear();
         if (this.destroyed) return;
 

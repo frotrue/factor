@@ -35,10 +35,12 @@ npm run test:e2e -- --workers=1
 | `src/i18n.test.ts` | 기본 언어, 번역 fallback/key 동작 |
 | `src/buildings/BaseBuilding.test.ts` | 공통 건물 상태와 기본 동작 |
 | `src/managers/EventBus.test.ts` | owner/callback 기반 이벤트 제거 |
+| `src/managers/CableManager.test.ts` | 케이블 거리 비용, 최대 길이, 연구 길이 보너스, BLOCKER 충돌, `costPaid` 저장 |
 | `src/managers/EffectsManager.test.ts` | 경고 마커 등 이펙트 manager 안정성 |
-| `src/managers/MapManager.test.ts` | 지형 blocker, safe zone, 랜덤 맵 생성, 작은 튜토리얼 arena 맵, 튜토리얼/캠페인 맵 생성 경로 분리 |
+| `src/managers/MapManager.test.ts` | 지형 blocker, seed 기반 캠페인 맵 재현, starter 자원 보장, 작은 튜토리얼 arena 맵, 튜토리얼/캠페인 wrapper 경로 분리 |
 | `src/managers/ResearchManager.test.ts` | Lab 기반 시스템 프로토콜 진행도, 완료, 선행조건, 저장 복원 |
 | `src/utils/apRelay.test.ts` | AP 자동 릴레이 source/target 선택 |
+| `src/utils/cablePath.test.ts` | 자유각 케이블 거리 계산과 선분 tile 샘플링 |
 | `src/utils/buildingLifecycle.test.ts` | 수동 제거와 전투 파괴 이벤트 의미 분리 |
 | `src/utils/enemyBuildingInteraction.test.ts` | 적의 건물 공격 우선순위 |
 | `src/utils/geometry.test.ts` | 멀티타일 건물 중심 좌표와 중심 기반 범위 tile 계산 |
@@ -63,7 +65,7 @@ npm run test:e2e -- --workers=1
 |---|---|
 | `src/config.ts` 밸런스/ID | `npm test -- src/config.test.ts`, 관련 utils 테스트 |
 | 건물 생산/버퍼 | `src/utils/productionSimulation.test.ts`, 관련 건물 테스트, E2E placement |
-| 케이블/AP | `src/utils/apRelay.test.ts`, `tests/e2e/app-smoke.spec.ts` cable tests |
+| 케이블/AP/Repeater | `src/managers/CableManager.test.ts`, `src/utils/cablePath.test.ts`, `src/utils/apRelay.test.ts`, `tests/e2e/app-smoke.spec.ts` cable tests |
 | 전력망/오버레이 | `src/utils/powerPreview.test.ts`, `src/utils/geometry.test.ts`, E2E hotkeys/overlays |
 | 웨이브/적/난이도 | `src/utils/waveSimulation.test.ts`, `gridPath.test.ts`, `geometry.test.ts`, `enemyBuildingInteraction.test.ts`, E2E threat panel |
 | 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |

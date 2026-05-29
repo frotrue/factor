@@ -27,6 +27,7 @@ export default class SolarPanel extends BaseBuilding {
     }
 
     drawSolarGrid(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.solarGraphics.clear();
         if (this.destroyed) return;
 

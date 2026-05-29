@@ -120,8 +120,9 @@ export default class PowerManager {
             const queue = [node];
             visited.add(node.key);
 
-            while (queue.length > 0) {
-                const current = queue.shift()!;
+            let qi = 0;
+            while (qi < queue.length) {
+                const current = queue[qi++];
                 network.buildings.push(current.key);
                 this.buildingNetworkMap.set(current.key, network);
                 network.production += current.production;
@@ -130,12 +131,13 @@ export default class PowerManager {
                     this.poweredArea.add(tile);
                 });
 
-                nodes.forEach(candidate => {
-                    if (visited.has(candidate.key)) return;
-                    if (!this.tilesOverlap(current.tiles, candidate.tiles)) return;
+                for (let ci = 0; ci < nodes.length; ci++) {
+                    const candidate = nodes[ci];
+                    if (visited.has(candidate.key)) continue;
+                    if (!this.rangesOverlap(current, candidate)) continue;
                     visited.add(candidate.key);
                     queue.push(candidate);
-                });
+                }
             }
 
             networks.push(network);
@@ -217,6 +219,17 @@ export default class PowerManager {
             if (larger.has(tile)) return true;
         }
         return false;
+    }
+
+    private rangesOverlap(a: PowerNode, b: PowerNode): boolean {
+        const aW = CONFIG.BUILDINGS[a.building.type]?.WIDTH || 1;
+        const aH = CONFIG.BUILDINGS[a.building.type]?.HEIGHT || 1;
+        const bW = CONFIG.BUILDINGS[b.building.type]?.WIDTH || 1;
+        const bH = CONFIG.BUILDINGS[b.building.type]?.HEIGHT || 1;
+        const dx = Math.abs(a.x - b.x) / this.gridSize;
+        const dy = Math.abs(a.y - b.y) / this.gridSize;
+        return dx <= a.range + b.range + Math.max(aW, bW)
+            && dy <= a.range + b.range + Math.max(aH, bH);
     }
 
     getNetworkForBuilding(key: string): PowerNetwork | null {

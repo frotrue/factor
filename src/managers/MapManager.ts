@@ -1,10 +1,18 @@
 import { CONFIG } from '../config';
+import { MapBounds, MapPresetConfig, MapPresetId, MapType, StarterResourceZoneConfig, TileArea } from '../types';
+
+interface GenerateMapOptions {
+    presetId: MapPresetId;
+    seed?: number;
+}
 
 export default class MapManager {
     resourceMap: Map<string, string>;
     terrainMap: Map<string, string>;
     gridSize: number;
-    mapType: 'tutorial' | 'random';
+    mapType: MapType;
+    mapPresetId: MapPresetId;
+    mapSeed: number | null;
     tutorialBounds = {
         minTileX: -9,
         maxTileX: 8,
@@ -17,37 +25,91 @@ export default class MapManager {
         this.terrainMap = new Map();
         this.gridSize = CONFIG.GRID_SIZE;
         this.mapType = 'random';
+        this.mapPresetId = 'standard';
+        this.mapSeed = null;
+    }
+
+    generateMap({ presetId, seed }: GenerateMapOptions): number | null {
+        const preset = CONFIG.MAP_PRESETS[presetId];
+        this.mapPresetId = preset.ID;
+        this.mapType = preset.MAP_TYPE;
+        this.mapSeed = preset.RANDOM_RESOURCES || preset.STARTER_ZONES ? seed ?? this.createSeed() : null;
+        this.resourceMap.clear();
+        this.terrainMap.clear();
+
+        const random = this.mapSeed === null ? null : this.createRandom(this.mapSeed);
+
+        this.addTerrainLayouts(preset);
+        preset.FIXED_RESOURCES?.forEach(patch => this.addPatch(patch.x, patch.y, patch.size, patch.type));
+
+        if (random) {
+            preset.STARTER_ZONES?.forEach(zone => this.addPatchInZone(zone, random));
+            this.addRandomResourcePatches(preset, random);
+        }
+
+        if (preset.MAP_TYPE === 'random') {
+            this.cleanupReservedResources();
+        }
+        this.repairStarterResources(preset, random);
+        if (preset.MAP_TYPE === 'random') {
+            this.cleanupReservedResources();
+        }
+
+        return this.mapSeed;
     }
 
     generateResourcePatches(): void {
-        this.mapType = 'random';
-        this.resourceMap.clear();
-        this.terrainMap.clear();
-        const types = ['SILICON', 'ENERGY'];
-        const numPatches = Math.floor(Math.random() * 8) + 8;
+        this.generateMap({ presetId: 'standard' });
+    }
 
-        for (let i = 0; i < numPatches; i++) {
-            const type = i < types.length ? types[i] : types[Math.floor(Math.random() * types.length)];
-            let startX: number, startY: number, isSafeZone: boolean;
-            do {
-                startX = Math.floor(Math.random() * 61) - 30;
-                startY = Math.floor(Math.random() * 61) - 30;
-                // Exclude the tutorial zone (x: -6 to 4, y: -6 to 4) from random resource patches
-                isSafeZone = startX >= -6 && startX <= 4 && startY >= -6 && startY <= 4;
-            } while (isSafeZone);
+    getCurrentPreset(): MapPresetConfig {
+        return CONFIG.MAP_PRESETS[this.mapPresetId];
+    }
 
-            const size = Math.floor(Math.random() * 4) + 2;
-            this.addPatch(startX, startY, size, type);
-        }
+    getWorldBounds(): MapBounds | null {
+        return this.getCurrentPreset().WORLD_BOUNDS || null;
+    }
 
-        this.addGuaranteedSpawnPatches();
-        this.addEarlyLaneBlockers();
+    getBuildBounds(): MapBounds | null {
+        const preset = this.getCurrentPreset();
+        return preset.BUILD_BOUNDS || preset.WORLD_BOUNDS || null;
+    }
+
+    getCameraBoundsPixels(): { x: number; y: number; width: number; height: number } | null {
+        const bounds = this.getWorldBounds();
+        if (!bounds) return null;
+
+        const padding = (this.getCurrentPreset().CAMERA_PADDING_TILES ?? 0) * this.gridSize;
+        const minX = bounds.minX * this.gridSize - padding;
+        const minY = bounds.minY * this.gridSize - padding;
+        const maxX = (bounds.maxX + 1) * this.gridSize + padding;
+        const maxY = (bounds.maxY + 1) * this.gridSize + padding;
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    isAreaWithinBuildBounds(x: number, y: number, widthTiles: number, heightTiles: number): boolean {
+        const bounds = this.getBuildBounds();
+        if (!bounds) return true;
+
+        const minTileX = x / this.gridSize;
+        const minTileY = y / this.gridSize;
+        const maxTileX = minTileX + widthTiles - 1;
+        const maxTileY = minTileY + heightTiles - 1;
+        return minTileX >= bounds.minX
+            && maxTileX <= bounds.maxX
+            && minTileY >= bounds.minY
+            && maxTileY <= bounds.maxY;
     }
 
     addGuaranteedSpawnPatches(): void {
-        // Keep both early-game resources inside the 10x10 spawn area without covering the core tile.
-        this.addPatch(-5, -3, 3, 'SILICON');
-        this.addPatch(2, 2, 3, 'ENERGY');
+        CONFIG.MAP_PRESETS.standard.STARTER_ZONES?.forEach(zone => {
+            this.addPatch(zone.area.minX, zone.area.minY, zone.patchSize, zone.type);
+        });
     }
 
     addPatch(startX: number, startY: number, size: number, type: string): void {
@@ -84,20 +146,7 @@ export default class MapManager {
 
     /** Small standalone training arena for learning core building roles. */
     generateTutorialMap(): void {
-        this.mapType = 'tutorial';
-        this.resourceMap.clear();
-        this.terrainMap.clear();
-
-        // Fixed Silicon patch: top-left of core, aligned with the Miner lesson.
-        this.addPatch(-5, -3, 3, 'SILICON');
-
-        // Energy patch: bottom-right of core, visible but outside the first building tile.
-        this.addPatch(2, 2, 3, 'ENERGY');
-
-        // Small north patch for showing that resources can exist beyond the first station.
-        this.addPatch(-2, -6, 2, 'SILICON');
-
-        this.addTutorialArenaWalls();
+        this.generateMap({ presetId: 'tutorial' });
     }
 
     /** Compact arena boundary with a small north gate for the tutorial wave. */
@@ -145,5 +194,131 @@ export default class MapManager {
 
     getTerrainMap(): Map<string, string> {
         return this.terrainMap;
+    }
+
+    private addTerrainLayouts(preset: MapPresetConfig): void {
+        preset.TERRAIN_LAYOUTS?.forEach(layout => {
+            if (layout === 'earlyLaneBlockers') {
+                this.addEarlyLaneBlockers();
+            } else if (layout === 'tutorialArenaWalls') {
+                this.addTutorialArenaWalls();
+            }
+        });
+    }
+
+    private addRandomResourcePatches(preset: MapPresetConfig, random: () => number): void {
+        if (!preset.RANDOM_RESOURCES) return;
+
+        const config = preset.RANDOM_RESOURCES;
+        const count = this.randomInt(random, config.patchCount.min, config.patchCount.max);
+
+        for (let i = 0; i < count; i++) {
+            const type = i < config.types.length
+                ? config.types[i]
+                : config.types[this.randomInt(random, 0, config.types.length - 1)];
+            const size = this.randomInt(random, config.patchSize.min, config.patchSize.max);
+            const start = this.pickPatchStart(config.range, size, random, config.exclusionZones);
+            this.addPatch(start.x, start.y, size, type);
+        }
+    }
+
+    private repairStarterResources(preset: MapPresetConfig, random: (() => number) | null): void {
+        if (!random || !preset.STARTER_ZONES || !preset.STARTER_VALIDATION) return;
+
+        for (let attempt = 0; attempt < preset.STARTER_VALIDATION.maxRepairAttempts; attempt++) {
+            let repaired = false;
+            for (const zone of preset.STARTER_ZONES) {
+                const count = this.countResourceInRadius(
+                    zone.type,
+                    preset.STARTER_VALIDATION.center.x,
+                    preset.STARTER_VALIDATION.center.y,
+                    preset.STARTER_VALIDATION.radius
+                );
+                if (count >= zone.minTiles) continue;
+                this.addPatchInZone(zone, random);
+                repaired = true;
+            }
+            this.cleanupReservedResources();
+            if (!repaired) return;
+        }
+    }
+
+    private addPatchInZone(zone: StarterResourceZoneConfig, random: () => number): void {
+        const startX = this.randomInt(random, zone.area.minX, zone.area.maxX - zone.patchSize + 1);
+        const startY = this.randomInt(random, zone.area.minY, zone.area.maxY - zone.patchSize + 1);
+        this.addPatch(startX, startY, zone.patchSize, zone.type);
+    }
+
+    private pickPatchStart(
+        area: TileArea,
+        size: number,
+        random: () => number,
+        exclusionZones: TileArea[] = []
+    ): { x: number; y: number } {
+        for (let attempt = 0; attempt < 100; attempt++) {
+            const x = this.randomInt(random, area.minX, area.maxX);
+            const y = this.randomInt(random, area.minY, area.maxY);
+            if (!exclusionZones.some(zone => this.areaContainsTile(zone, x, y))) {
+                return { x, y };
+            }
+        }
+        return { x: area.minX, y: area.minY };
+    }
+
+    private cleanupReservedResources(): void {
+        Array.from(this.resourceMap.keys()).forEach(key => {
+            const [x, y] = key.split(',').map(Number);
+            if (this.isCoreFootprintTile(x, y) || this.terrainMap.has(key)) {
+                this.resourceMap.delete(key);
+            }
+        });
+    }
+
+    private isCoreFootprintTile(x: number, y: number): boolean {
+        const width = CONFIG.BUILDINGS.CORE.WIDTH || 1;
+        const height = CONFIG.BUILDINGS.CORE.HEIGHT || 1;
+        return x >= 0
+            && x < width * this.gridSize
+            && y >= 0
+            && y < height * this.gridSize
+            && x % this.gridSize === 0
+            && y % this.gridSize === 0;
+    }
+
+    private countResourceInRadius(type: string, centerTileX: number, centerTileY: number, radius: number): number {
+        let count = 0;
+        this.resourceMap.forEach((resourceType, key) => {
+            if (resourceType !== type) return;
+            const [x, y] = key.split(',').map(Number);
+            const tileX = x / this.gridSize;
+            const tileY = y / this.gridSize;
+            if (Math.abs(tileX - centerTileX) <= radius && Math.abs(tileY - centerTileY) <= radius) {
+                count++;
+            }
+        });
+        return count;
+    }
+
+    private areaContainsTile(area: TileArea, tileX: number, tileY: number): boolean {
+        return tileX >= area.minX && tileX <= area.maxX && tileY >= area.minY && tileY <= area.maxY;
+    }
+
+    private randomInt(random: () => number, min: number, max: number): number {
+        return Math.floor(random() * (max - min + 1)) + min;
+    }
+
+    private createSeed(): number {
+        return Math.floor(Math.random() * 0xffffffff);
+    }
+
+    private createRandom(seed: number): () => number {
+        let state = seed >>> 0;
+        return () => {
+            state += 0x6D2B79F5;
+            let value = state;
+            value = Math.imul(value ^ value >>> 15, value | 1);
+            value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+            return ((value ^ value >>> 14) >>> 0) / 4294967296;
+        };
     }
 }

@@ -77,7 +77,8 @@ export default class SaveManager {
             fromKey: c.fromKey,
             toKey: c.toKey,
             cableType: c.cableType,
-            queue: [...c.queue]
+            queue: [...c.queue],
+            costPaid: c.costPaid
         }));
 
         const enemies: SavedEnemy[] = [];
@@ -135,7 +136,9 @@ export default class SaveManager {
                 muted: audioSettings.muted,
                 tutorialCompleted: this.scene.tutorialManager?.isCompleted?.() ?? false,
                 tutorialStep: this.scene.tutorialManager?.getSavedStep?.() ?? 0,
-                mapType: this.scene.mapManager.mapType
+                mapType: this.scene.mapManager.mapType,
+                mapPresetId: this.scene.mapManager.mapPresetId,
+                mapSeed: this.scene.mapManager.mapSeed ?? undefined
             },
             resourceMap: resourceMapArray,
             terrainMap: terrainMapArray,
@@ -182,6 +185,8 @@ export default class SaveManager {
                 });
             }
             this.scene.mapManager.mapType = data.settings?.mapType ?? 'random';
+            this.scene.mapManager.mapPresetId = data.settings?.mapPresetId ?? 'standard';
+            this.scene.mapManager.mapSeed = data.settings?.mapSeed ?? null;
             this.scene.mapManager.terrainMap.clear();
             if (data.terrainMap && data.terrainMap.length > 0) {
                 data.terrainMap.forEach(r => {
@@ -257,7 +262,10 @@ export default class SaveManager {
             if (data.cables) {
                 data.cables.forEach(c => {
                     const cableType = c.cableType === 'FIBER' ? 'FIBER' : 'BASIC';
-                    if (this.scene.cableManager.connect(c.fromKey, c.toKey, cableType)) {
+                    const fallbackCost = typeof c.costPaid === 'number'
+                        ? c.costPaid
+                        : this.scene.cableManager.getCableCost(c.fromKey, c.toKey, cableType);
+                    if (this.scene.cableManager.connect(c.fromKey, c.toKey, cableType, { skipValidation: true, costPaid: fallbackCost })) {
                         const id = this.scene.cableManager.makeCableId(c.fromKey, c.toKey);
                         const cable = this.scene.cableManager.cables.get(id);
                         if (cable) {

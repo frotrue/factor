@@ -29,6 +29,8 @@ export default class BaseEnemy {
     specialTimer: number;
     attackTimer: number;
     auraSpeedMultiplier: number;
+    private _hpDirty: boolean = true;
+    private _statusDrawn: boolean = false;
 
     constructor(scene: Phaser.Scene, type: string, x: number, y: number, hpMultiplier: number = 1, id: string, buildingManager: BuildingManager) {
         this.scene = scene;
@@ -70,7 +72,7 @@ export default class BaseEnemy {
             this.hp = 0;
             this.die();
         } else {
-            this.drawHpBar();
+            this._hpDirty = true;
         }
     }
 
@@ -98,11 +100,13 @@ export default class BaseEnemy {
         const percent = Math.max(0, this.hp / this.maxHp);
 
         this.hpBar.fillStyle(0x270914, 0.92);
-        this.hpBar.fillRect(this.x - width / 2, this.y - 12, width, height);
+        this.hpBar.fillRect(-width / 2, -12, width, height);
 
         const hpColor = percent > 0.5 ? VISUAL_THEME.buildings.online : percent > 0.25 ? VISUAL_THEME.buildings.warning : VISUAL_THEME.buildings.danger;
         this.hpBar.fillStyle(hpColor, 1);
-        this.hpBar.fillRect(this.x - width / 2, this.y - 12, width * percent, height);
+        this.hpBar.fillRect(-width / 2, -12, width * percent, height);
+        this.hpBar.setPosition(this.x, this.y);
+        this._hpDirty = false;
     }
 
     update(deltaMs: number, targetX: number, targetY: number): void {
@@ -143,8 +147,12 @@ export default class BaseEnemy {
         }
 
         this.sprite.setPosition(this.x, this.y);
-        this.drawHpBar();
-        this.updateStatusVisuals();
+        if (this._hpDirty) {
+            this.drawHpBar();
+        } else {
+            this.hpBar.setPosition(this.x, this.y);
+        }
+        this.repositionStatusVisuals();
 
 
         const inCoreBounds = (this.x >= 0 && this.x <= 128 && this.y >= 0 && this.y <= 128);
@@ -207,40 +215,51 @@ export default class BaseEnemy {
                 duration: this.type === 'ADVERSARIAL' ? 350 : 550
             });
         }
-        this.updateStatusVisuals();
+        this.drawStatusVisualsOnce();
     }
 
-    updateStatusVisuals(): void {
+    /** Draw status visuals once relative to origin (0,0). Only called once per enemy. */
+    private drawStatusVisualsOnce(): void {
         this.statusGraphics.clear();
         if (this.auraGraphics) this.auraGraphics.clear();
         if (!this.active) return;
 
         if (this.type === 'DDOS_BOT') {
             this.statusGraphics.lineStyle(1, VISUAL_THEME.enemies.DDOS_BOT, 0.85);
-            this.statusGraphics.lineBetween(this.x - 8, this.y, this.x + 8, this.y);
-            this.statusGraphics.lineBetween(this.x, this.y - 8, this.x, this.y + 8);
-            this.statusGraphics.strokeCircle(this.x, this.y, 9);
+            this.statusGraphics.lineBetween(-8, 0, 8, 0);
+            this.statusGraphics.lineBetween(0, -8, 0, 8);
+            this.statusGraphics.strokeCircle(0, 0, 9);
         } else if (this.type === 'MALWARE') {
             this.statusGraphics.lineStyle(2, VISUAL_THEME.enemies.MALWARE, 0.92);
-            this.statusGraphics.strokeCircle(this.x, this.y, 14);
+            this.statusGraphics.strokeCircle(0, 0, 14);
             this.statusGraphics.fillStyle(VISUAL_THEME.enemies.MALWARE, 0.9);
-            this.statusGraphics.fillCircle(this.x + 10, this.y - 10, 3);
+            this.statusGraphics.fillCircle(10, -10, 3);
         } else if (this.type === 'ADVERSARIAL') {
             this.statusGraphics.lineStyle(2, VISUAL_THEME.enemies.ADVERSARIAL, 0.92);
-            this.statusGraphics.strokeCircle(this.x, this.y, 12);
-            this.statusGraphics.lineBetween(this.x - 8, this.y - 8, this.x + 8, this.y + 8);
-            this.statusGraphics.lineBetween(this.x + 8, this.y - 8, this.x - 8, this.y + 8);
+            this.statusGraphics.strokeCircle(0, 0, 12);
+            this.statusGraphics.lineBetween(-8, -8, 8, 8);
+            this.statusGraphics.lineBetween(8, -8, -8, 8);
         } else if (this.type === 'OVERFITTED_MODEL' && this.auraGraphics) {
             this.auraGraphics.fillStyle(VISUAL_THEME.enemies.OVERFITTED_MODEL, 0.08);
             this.auraGraphics.lineStyle(2, VISUAL_THEME.enemies.OVERFITTED_MODEL, 0.36);
-            this.auraGraphics.fillCircle(this.x, this.y, CONFIG.GRID_SIZE * 8);
-            this.auraGraphics.strokeCircle(this.x, this.y, CONFIG.GRID_SIZE * 8);
+            this.auraGraphics.fillCircle(0, 0, CONFIG.GRID_SIZE * 8);
+            this.auraGraphics.strokeCircle(0, 0, CONFIG.GRID_SIZE * 8);
             this.statusGraphics.fillStyle(0xffffff, 0.9);
-            this.statusGraphics.fillCircle(this.x, this.y - 20, 4);
+            this.statusGraphics.fillCircle(0, -20, 4);
         } else {
             this.statusGraphics.lineStyle(1, VISUAL_THEME.enemies.NOISE, 0.72);
-            this.statusGraphics.strokeCircle(this.x, this.y, (CONFIG.ENEMIES[this.type]?.RADIUS ?? 8) + 4);
+            this.statusGraphics.strokeCircle(0, 0, (CONFIG.ENEMIES[this.type]?.RADIUS ?? 8) + 4);
         }
+        this._statusDrawn = true;
+    }
+
+    /** Reposition status visuals without redrawing. Draws once if not yet drawn. */
+    repositionStatusVisuals(): void {
+        if (!this._statusDrawn) {
+            this.drawStatusVisualsOnce();
+        }
+        this.statusGraphics.setPosition(this.x, this.y);
+        if (this.auraGraphics) this.auraGraphics.setPosition(this.x, this.y);
     }
 
     getHitChanceMultiplier(): number {

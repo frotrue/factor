@@ -8,6 +8,15 @@ import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
  * 모든 건물의 기반 클래스
  */
 export default class BaseBuilding {
+    /** Shared frame counter for visual update throttling across all buildings */
+    private static _visualFrameCount = 0;
+    static tickVisualFrame(): void { BaseBuilding._visualFrameCount++; }
+
+    /** Returns true if this frame should skip visual updates (2 of 3 frames skipped) */
+    protected shouldThrottleVisuals(): boolean {
+        return BaseBuilding._visualFrameCount % 3 !== 0;
+    }
+
     scene: Phaser.Scene;
     x: number;
     y: number;

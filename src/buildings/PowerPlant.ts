@@ -49,6 +49,7 @@ export default class PowerPlant extends BaseBuilding {
     }
 
     drawContainmentCore(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.plantGraphics.clear();
         if (this.destroyed) return;
 

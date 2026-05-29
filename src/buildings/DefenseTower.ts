@@ -54,6 +54,7 @@ export default class DefenseTower extends BaseBuilding {
     }
 
     drawTowerVisuals(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.towerGraphics.clear();
         if (this.destroyed) return;
 

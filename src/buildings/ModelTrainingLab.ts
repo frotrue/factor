@@ -56,8 +56,13 @@ export default class ModelTrainingLab extends BaseBuilding {
         if (this.isInfected(tickCount) && tickCount % 2 !== 0) return;
 
         this.drainInputBufferToActiveJob();
-        if (this.autoTrain && this.getActiveJobCategory() === 'DEFENSE_MODEL') {
-            this.advanceTraining();
+        if (this.autoTrain) {
+            const category = this.getActiveJobCategory();
+            if (category === 'DEFENSE_MODEL') {
+                this.advanceTraining();
+            } else if (category === 'SYSTEM_PROTOCOL') {
+                this.advanceSystemProtocolTraining();
+            }
         }
         this.refreshStatusText();
     }
@@ -181,6 +186,38 @@ export default class ModelTrainingLab extends BaseBuilding {
         return true;
     }
 
+    advanceSystemProtocolTraining(): boolean {
+        if (!this.activeJobId) return false;
+
+        const scene = this.scene as IMainScene;
+        const progress = scene.researchManager.getJobProgress(this.activeJobId);
+        const research = CONFIG.RESEARCH[this.activeJobId];
+        if (!research || progress.completed) return false;
+
+        const activeGpuCount = this.countAdjacentGpuClusters(true);
+
+        if (!progress.isTraining) {
+            if (progress.progress >= research.COST) {
+                const duration = getTrainingDurationTicks(activeGpuCount, research.COST);
+                scene.researchManager.startJobTraining(this.activeJobId, duration);
+            } else {
+                return false;
+            }
+        }
+
+        const currentProgress = scene.researchManager.getJobProgress(this.activeJobId);
+        if (currentProgress.isTraining) {
+            scene.researchManager.advanceJobTraining(this.activeJobId);
+            const updatedProgress = scene.researchManager.getJobProgress(this.activeJobId);
+            if (updatedProgress.completed) {
+                scene.uiManager?.renderTrainingLab();
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     countAdjacentGpuClusters(requirePower: boolean): number {
         const scene = this.scene as IMainScene;
         const matches = new Set<BaseBuilding>();
@@ -228,7 +265,18 @@ export default class ModelTrainingLab extends BaseBuilding {
                 this.statusText.setColor('#fca5a5');
                 return;
             }
-            this.statusText.setText(`${research.NAME}\n${Math.floor(progress.progress)}/${research.COST}\nSYSTEM`);
+
+            let progressText = '';
+            if (progress.completed) {
+                progressText = 'COMPLETED';
+            } else if (progress.isTraining) {
+                const pct = Math.round(((progress.trainingProgressTicks ?? 0) / (progress.trainingDurationTicks ?? 1)) * 100);
+                progressText = `RESEARCHING... ${pct}%`;
+            } else {
+                progressText = `${Math.floor(progress.progress)}/${research.COST}`;
+            }
+
+            this.statusText.setText(`${research.NAME}\n${progressText}\nSYSTEM`);
             this.statusText.setColor(progress.completed ? '#a5b4fc' : '#99f6e4');
             return;
         }

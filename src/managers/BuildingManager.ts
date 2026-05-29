@@ -9,6 +9,7 @@ import { getBuildingLifecycleEvent, type BuildingRemovalReason } from '../utils/
 export default class BuildingManager {
     scene: IMainScene;
     buildings: Map<string, BaseBuilding>;
+    private _uniqueCache: BaseBuilding[] | null = null;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -48,6 +49,7 @@ export default class BuildingManager {
                     this.buildings.set(key, building);
                 }
             }
+            this._uniqueCache = null;
             EventBus.emit('BUILDING_PLACED', { key: `${x},${y}`, building, type });
         }
         return building;
@@ -82,6 +84,7 @@ export default class BuildingManager {
                     this.buildings.delete(k);
                 }
             }
+            this._uniqueCache = null;
             building.destroy();
             const event = getBuildingLifecycleEvent(reason);
             if (event === 'BUILDING_DESTROYED') {
@@ -101,8 +104,12 @@ export default class BuildingManager {
     }
 
     forEach(callback: (building: BaseBuilding) => void): void {
-        const uniqueBuildings = new Set(this.buildings.values());
-        uniqueBuildings.forEach(callback);
+        if (!this._uniqueCache) {
+            this._uniqueCache = [...new Set(this.buildings.values())];
+        }
+        for (let i = 0; i < this._uniqueCache.length; i++) {
+            callback(this._uniqueCache[i]);
+        }
     }
 
     getAll(): Map<string, BaseBuilding> {

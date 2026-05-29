@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
 import { getBuildingName, t } from '../i18n';
+import BaseBuilding from '../buildings/BaseBuilding';
 
 import BuildingManager from '../managers/BuildingManager';
 import ItemManager from '../managers/ItemManager';
@@ -60,6 +61,7 @@ export default class MainScene extends Phaser.Scene {
     cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
     cableStartKey: string | null = null;
     cableDraftGraphics!: Phaser.GameObjects.Graphics;
+    private _cableDraftLine = new Phaser.Geom.Line();
 
     currentRotation: number = 0;
     gameSpeed: number = 1;
@@ -70,6 +72,8 @@ export default class MainScene extends Phaser.Scene {
     showDefenseRange: boolean = false;
     defenseRangeDirty: boolean = false;
     bloomEnabled: boolean = true;
+    private _powerWarningDirty: boolean = true;
+    private _powerWarningFrameCount: number = 0;
 
     powerGridGraphics!: Phaser.GameObjects.Graphics;
     defenseRangeGraphics!: Phaser.GameObjects.Graphics;
@@ -129,6 +133,7 @@ export default class MainScene extends Phaser.Scene {
         } else {
             this.mapManager.generateResourcePatches();
         }
+        this.cameraController.applyBounds();
         this.buildingManager.place(0, 0, 'CORE', 0);
         this.cameraController.centerOnCore();
 
@@ -159,6 +164,7 @@ export default class MainScene extends Phaser.Scene {
 
         EventBus.on('POWER_UPDATED', () => {
             this.powerGridDirty = true;
+            this._powerWarningDirty = true;
         }, 'MainScene');
 
         EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
@@ -418,6 +424,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number): void {
+        BaseBuilding.tickVisualFrame();
         this.updateCursorPosition();
         this.gridRenderer.draw();
 
@@ -430,19 +437,46 @@ export default class MainScene extends Phaser.Scene {
 
         this.cableManager.markDirtyIfThrottlingChanged();
         this.cableManager.drawCables();
-        this.effectsManager.updatePowerWarnings();
+
+        // Throttle power warnings: only update when power state changes or every 15 frames for pulse animations
+        this._powerWarningFrameCount++;
+        if (this._powerWarningDirty || this._powerWarningFrameCount >= 15) {
+            this.effectsManager.updatePowerWarnings();
+            this._powerWarningDirty = false;
+            this._powerWarningFrameCount = 0;
+        }
 
         if (this.cableState === 'CABLE_START' && this.cableStartKey) {
             this.cableDraftGraphics.clear();
             const pointer = this.input.activePointer;
             const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const mode = this.uiManager.getSelectedBuildingType();
+            const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+            const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+            const hoveredKey = this.cableManager.normalizeKey(`${snappedX},${snappedY}`, this.buildingManager);
+            const hasEndpoint = this.buildingManager.has(`${snappedX},${snappedY}`);
+            const validation = (mode === 'BASIC' || mode === 'FIBER') && hasEndpoint
+                ? this.cableManager.canConnect(this.cableStartKey, hoveredKey, mode)
+                : null;
+            const isInvalid = validation ? !validation.ok : false;
+            const cableColor = mode === 'FIBER' ? VISUAL_THEME.cables.fiber : VISUAL_THEME.cables.basic;
+            const color = isInvalid ? VISUAL_THEME.overlays.invalid : cableColor;
             const center = this.cableManager.getBuildingCenter(this.cableStartKey);
+            const target = hasEndpoint ? this.cableManager.getBuildingCenter(hoveredKey) : worldPoint;
             const cx1 = center.x;
             const cy1 = center.y;
-            this.cableDraftGraphics.lineStyle(7, VISUAL_THEME.cables.fiber, 0.1);
-            this.cableDraftGraphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, worldPoint.x, worldPoint.y));
-            this.cableDraftGraphics.lineStyle(2, 0xffffff, 0.62);
-            this.cableDraftGraphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, worldPoint.x, worldPoint.y));
+            this.cableDraftGraphics.lineStyle(7, color, 0.1);
+            this._cableDraftLine.setTo(cx1, cy1, target.x, target.y);
+            this.cableDraftGraphics.strokeLineShape(this._cableDraftLine);
+            this.cableDraftGraphics.lineStyle(2, isInvalid ? VISUAL_THEME.overlays.invalid : 0xffffff, 0.72);
+            this.cableDraftGraphics.strokeLineShape(this._cableDraftLine);
+            if (validation?.blockedTile) {
+                const x = validation.blockedTile.x + CONFIG.GRID_SIZE / 2;
+                const y = validation.blockedTile.y + CONFIG.GRID_SIZE / 2;
+                this.cableDraftGraphics.lineStyle(3, VISUAL_THEME.overlays.invalid, 0.95);
+                this.cableDraftGraphics.lineBetween(x - 8, y - 8, x + 8, y + 8);
+                this.cableDraftGraphics.lineBetween(x + 8, y - 8, x - 8, y + 8);
+            }
         } else {
             this.cableDraftGraphics.clear();
         }
@@ -471,6 +505,9 @@ export default class MainScene extends Phaser.Scene {
             for (let dy = 0; dy < h; dy++) {
                 const tileX = x + dx * CONFIG.GRID_SIZE;
                 const tileY = y + dy * CONFIG.GRID_SIZE;
+                if (!this.mapManager.isAreaWithinBuildBounds(tileX, tileY, 1, 1)) {
+                    return true;
+                }
                 if (this.buildingManager.has(`${tileX},${tileY}`) || this.mapManager.isTerrainBlocked(tileX, tileY)) {
                     return true;
                 }

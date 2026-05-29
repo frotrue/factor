@@ -31,6 +31,7 @@ export default class Unloader extends BaseBuilding {
     }
 
     drawPiston(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.unloaderGraphics.clear();
         if (this.destroyed) return;
 

@@ -42,6 +42,7 @@ export default class ResearchManager {
 
         this.unlockedResearch.add(researchId);
         this.jobProgress[researchId] = {
+            ...this.getJobProgress(researchId),
             progress: Math.max(this.getJobProgress(researchId).progress, research.COST),
             completed: true
         };
@@ -69,16 +70,42 @@ export default class ResearchManager {
         if (!research || current.completed || !this.isJobAvailable(researchId)) return current;
 
         const next: LabJobProgress = {
+            ...current,
             progress: Math.min(research.COST, current.progress + Math.max(0, amount)),
             completed: false
         };
         this.jobProgress[researchId] = next;
-        if (next.progress >= research.COST) {
-            this.unlock(researchId);
-            return this.getJobProgress(researchId);
-        }
         EventBus.emit('LAB_JOB_PROGRESS', { id: researchId, progress: next.progress, required: research.COST });
         return next;
+    }
+
+    startJobTraining(researchId: string, durationTicks: number): void {
+        const progress = this.getJobProgress(researchId);
+        const research = CONFIG.RESEARCH[researchId];
+        if (!research || progress.completed || progress.isTraining) return;
+
+        this.jobProgress[researchId] = {
+            ...progress,
+            isTraining: true,
+            trainingProgressTicks: 0,
+            trainingDurationTicks: Math.max(1, Math.ceil(durationTicks))
+        };
+        EventBus.emit('LAB_JOB_PROGRESS', { id: researchId, progress: progress.progress, required: research.COST });
+    }
+
+    advanceJobTraining(researchId: string): void {
+        const progress = this.jobProgress[researchId];
+        if (!progress || !progress.isTraining || progress.completed) return;
+
+        progress.trainingProgressTicks = (progress.trainingProgressTicks ?? 0) + 1;
+        if (progress.trainingProgressTicks >= (progress.trainingDurationTicks ?? 1)) {
+            progress.isTraining = false;
+            progress.completed = true;
+            this.unlock(researchId);
+        } else {
+            const research = CONFIG.RESEARCH[researchId];
+            EventBus.emit('LAB_JOB_PROGRESS', { id: researchId, progress: progress.progress, required: research.COST });
+        }
     }
 
     getUnlockedResearch(): string[] {
@@ -118,7 +145,10 @@ export default class ResearchManager {
         Object.entries(progress).forEach(([id, value]) => {
             this.jobProgress[id] = {
                 progress: Math.max(0, value.progress ?? 0),
-                completed: Boolean(value.completed || this.unlockedResearch.has(id))
+                completed: Boolean(value.completed || this.unlockedResearch.has(id)),
+                isTraining: value.isTraining,
+                trainingProgressTicks: value.trainingProgressTicks,
+                trainingDurationTicks: value.trainingDurationTicks
             };
         });
         this.unlockedResearch.forEach(id => {

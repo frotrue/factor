@@ -42,8 +42,7 @@ export default class AbstractProcessor extends BaseBuilding {
             sweepY: 12,
             duration: 2000,
             yoyo: true,
-            repeat: -1,
-            onUpdate: () => this.drawProcessorVisuals()
+            repeat: -1
         });
 
         this.processorTween2 = scene.tweens.add({
@@ -56,6 +55,7 @@ export default class AbstractProcessor extends BaseBuilding {
     }
 
     drawProcessorVisuals(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.processorGraphics.clear();
         if (this.destroyed) return;
 

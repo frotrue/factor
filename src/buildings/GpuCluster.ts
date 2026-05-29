@@ -24,6 +24,7 @@ export default class GpuCluster extends BaseBuilding {
     }
 
     drawGpuCore(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.gpuGraphics.clear();
         if (this.destroyed) return;
 

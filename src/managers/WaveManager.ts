@@ -275,12 +275,35 @@ export default class WaveManager {
     }
 
     applyBossAuras(): void {
-        const bosses = Array.from(this.enemies.values()).filter(e => e.active && e.type === 'OVERFITTED_MODEL');
+        // Quick scan: count bosses without allocating a filtered array
+        let hasBoss = false;
+        this.enemies.forEach(e => {
+            if (e.active && e.type === 'OVERFITTED_MODEL') hasBoss = true;
+        });
+
+        if (!hasBoss) {
+            // Reset all multipliers without boss distance checks
+            this.enemies.forEach(enemy => {
+                enemy.auraSpeedMultiplier = 1;
+            });
+            return;
+        }
+
+        // Collect bosses only when we know there are some
+        const bosses: BaseEnemy[] = [];
+        this.enemies.forEach(e => {
+            if (e.active && e.type === 'OVERFITTED_MODEL') bosses.push(e);
+        });
+
         this.enemies.forEach(enemy => {
             enemy.auraSpeedMultiplier = 1;
             if (enemy.type === 'OVERFITTED_MODEL') return;
-            const boosted = bosses.some(boss => Phaser.Math.Distance.Between(enemy.x, enemy.y, boss.x, boss.y) <= CONFIG.GRID_SIZE * 8);
-            if (boosted) enemy.auraSpeedMultiplier = 1.25;
+            for (let i = 0; i < bosses.length; i++) {
+                if (Phaser.Math.Distance.Between(enemy.x, enemy.y, bosses[i].x, bosses[i].y) <= CONFIG.GRID_SIZE * 8) {
+                    enemy.auraSpeedMultiplier = 1.25;
+                    break;
+                }
+            }
         });
     }
 
@@ -317,10 +340,13 @@ export default class WaveManager {
 
     getEnemiesInRange(x: number, y: number, range: number): BaseEnemy[] {
         const inRange: BaseEnemy[] = [];
+        const maxDist = range * CONFIG.GRID_SIZE;
+        const maxDistSq = maxDist * maxDist;
         this.enemies.forEach(enemy => {
             if (!enemy.active) return;
-            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-            if (dist <= range * CONFIG.GRID_SIZE) {
+            const dx = x - enemy.x;
+            const dy = y - enemy.y;
+            if (dx * dx + dy * dy <= maxDistSq) {
                 inRange.push(enemy);
             }
         });

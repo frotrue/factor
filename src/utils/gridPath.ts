@@ -19,6 +19,46 @@ export interface GridPathOptions {
     maxReturnedSteps?: number;
 }
 
+class MinHeap<T> {
+    private data: T[] = [];
+    constructor(private score: (item: T) => number) {}
+    get size() { return this.data.length; }
+    push(item: T) {
+        this.data.push(item);
+        this.bubbleUp(this.data.length - 1);
+    }
+    pop(): T | undefined {
+        const top = this.data[0];
+        const last = this.data.pop();
+        if (this.data.length > 0 && last !== undefined) {
+            this.data[0] = last;
+            this.bubbleDown(0);
+        }
+        return top;
+    }
+    private bubbleUp(i: number) {
+        while (i > 0) {
+            const parent = (i - 1) >> 1;
+            if (this.score(this.data[i]) >= this.score(this.data[parent])) break;
+            [this.data[i], this.data[parent]] = [this.data[parent], this.data[i]];
+            i = parent;
+        }
+    }
+    private bubbleDown(i: number) {
+        const n = this.data.length;
+        while (true) {
+            let smallest = i;
+            const left = 2 * i + 1;
+            const right = 2 * i + 2;
+            if (left < n && this.score(this.data[left]) < this.score(this.data[smallest])) smallest = left;
+            if (right < n && this.score(this.data[right]) < this.score(this.data[smallest])) smallest = right;
+            if (smallest === i) break;
+            [this.data[i], this.data[smallest]] = [this.data[smallest], this.data[i]];
+            i = smallest;
+        }
+    }
+}
+
 export function findGridPath(options: GridPathOptions): GridPoint[] {
     const {
         startWorld,
@@ -26,42 +66,33 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
         gridSize,
         directions,
         isBlocked,
-        maxVisited = 2500,
-        maxDistanceFromStart = 35,
+        maxVisited = 12000,
+        maxDistanceFromStart = 80,
         maxReturnedSteps = 8
     } = options;
     const start = { x: Math.floor(startWorld.x / gridSize), y: Math.floor(startWorld.y / gridSize) };
     const target = { x: Math.floor(targetWorld.x / gridSize), y: Math.floor(targetWorld.y / gridSize) };
     const startKey = `${start.x},${start.y}`;
     const targetKey = `${target.x},${target.y}`;
-    const open = [start];
     const closed = new Set<string>();
     const cameFrom = new Map<string, string>();
     const gScore = new Map<string, number>([[startKey, 0]]);
 
     const heuristic = (point: { x: number; y: number }) => Math.abs(target.x - point.x) + Math.abs(target.y - point.y);
 
-    while (open.length > 0 && closed.size < maxVisited) {
-        open.sort((a, b) => {
-            const aKey = `${a.x},${a.y}`;
-            const bKey = `${b.x},${b.y}`;
-            const aScore = (gScore.get(aKey) ?? Infinity) + heuristic(a);
-            const bScore = (gScore.get(bKey) ?? Infinity) + heuristic(b);
-            return aScore - bScore;
-        });
-        const current = open.shift()!;
+    const open = new MinHeap<{ x: number; y: number }>(
+        (node) => (gScore.get(`${node.x},${node.y}`) ?? Infinity) + heuristic(node)
+    );
+    open.push(start);
+
+    while (open.size > 0 && closed.size < maxVisited) {
+        const current = open.pop()!;
         const currentKey = `${current.x},${current.y}`;
         if (currentKey === targetKey) break;
         if (closed.has(currentKey)) continue;
         closed.add(currentKey);
 
-        const sortedDirs = directions.slice().sort((a, b) => {
-            const da = Math.abs(target.x - (current.x + a.x)) + Math.abs(target.y - (current.y + a.y));
-            const db = Math.abs(target.x - (current.x + b.x)) + Math.abs(target.y - (current.y + b.y));
-            return da - db;
-        });
-
-        for (const dir of sortedDirs) {
+        for (const dir of directions) {
             const next = { x: current.x + dir.x, y: current.y + dir.y };
             const key = `${next.x},${next.y}`;
             if (closed.has(key)) continue;

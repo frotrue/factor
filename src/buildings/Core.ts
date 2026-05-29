@@ -60,6 +60,7 @@ export default class Core extends BaseBuilding {
     }
 
     drawQuantumCore(): void {
+        if (this.shouldThrottleVisuals()) return;
         this.coreGraphics.clear();
         if (this.destroyed) return;
 
