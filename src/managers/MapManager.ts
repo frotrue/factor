@@ -1,5 +1,5 @@
 import { CONFIG } from '../config';
-import { MapBounds, MapPresetConfig, MapPresetId, MapType, StarterResourceZoneConfig, TileArea } from '../types';
+import { MapBounds, MapPresetConfig, MapPresetId, MapType, ResourceRingConfig, StarterResourceZoneConfig, TileArea } from '../types';
 
 interface GenerateMapOptions {
     presetId: MapPresetId;
@@ -33,7 +33,7 @@ export default class MapManager {
         const preset = CONFIG.MAP_PRESETS[presetId];
         this.mapPresetId = preset.ID;
         this.mapType = preset.MAP_TYPE;
-        this.mapSeed = preset.RANDOM_RESOURCES || preset.STARTER_ZONES ? seed ?? this.createSeed() : null;
+        this.mapSeed = preset.RANDOM_RESOURCES || preset.RESOURCE_RINGS || preset.STARTER_ZONES ? seed ?? this.createSeed() : null;
         this.resourceMap.clear();
         this.terrainMap.clear();
 
@@ -44,7 +44,11 @@ export default class MapManager {
 
         if (random) {
             preset.STARTER_ZONES?.forEach(zone => this.addPatchInZone(zone, random));
-            this.addRandomResourcePatches(preset, random);
+            if (preset.RESOURCE_RINGS) {
+                this.addResourceRingPatches(preset, random);
+            } else {
+                this.addRandomResourcePatches(preset, random);
+            }
         }
 
         if (preset.MAP_TYPE === 'random') {
@@ -357,6 +361,75 @@ export default class MapManager {
             const start = this.pickPatchStart(config.range, size, random, config.exclusionZones);
             this.addPatch(start.x, start.y, size, type);
         }
+    }
+
+    private addResourceRingPatches(preset: MapPresetConfig, random: () => number): void {
+        preset.RESOURCE_RINGS?.forEach(ring => {
+            const count = this.randomInt(random, ring.patchCount.min, ring.patchCount.max);
+            for (let i = 0; i < count; i++) {
+                const size = this.randomInt(random, ring.patchSize.min, ring.patchSize.max);
+                const start = this.pickResourceRingStart(ring, size, random, preset);
+                if (!start) continue;
+                this.addPatch(start.x, start.y, size, this.pickRingResourceType(start.x, start.y, ring, random));
+            }
+        });
+    }
+
+    private pickResourceRingStart(
+        ring: ResourceRingConfig,
+        size: number,
+        random: () => number,
+        preset: MapPresetConfig
+    ): { x: number; y: number } | null {
+        const bounds = preset.RESOURCE_BOUNDS || preset.BUILD_BOUNDS || preset.WORLD_BOUNDS || {
+            minX: -60,
+            maxX: 60,
+            minY: -60,
+            maxY: 60
+        };
+
+        for (let attempt = 0; attempt < 100; attempt++) {
+            const angle = random() * Math.PI * 2;
+            const distance = this.randomInt(random, ring.minDistance, ring.maxDistance);
+            const x = Math.round(Math.cos(angle) * distance - Math.floor(size / 2));
+            const y = Math.round(Math.sin(angle) * distance - Math.floor(size / 2));
+            if (this.isResourcePatchPlacementValid(x, y, size, bounds, preset)) {
+                return { x, y };
+            }
+        }
+        return null;
+    }
+
+    private isResourcePatchPlacementValid(
+        startX: number,
+        startY: number,
+        size: number,
+        bounds: MapBounds,
+        preset: MapPresetConfig
+    ): boolean {
+        if (startX < bounds.minX || startY < bounds.minY) return false;
+        if (startX + size - 1 > bounds.maxX || startY + size - 1 > bounds.maxY) return false;
+
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const tileX = startX + i;
+                const tileY = startY + j;
+                const x = tileX * this.gridSize;
+                const y = tileY * this.gridSize;
+                const key = `${x},${y}`;
+                if (this.terrainMap.has(key) || this.resourceMap.has(key) || this.isCoreFootprintTile(x, y)) return false;
+                if (preset.STARTER_SAFE_AREA && this.areaContainsTile(preset.STARTER_SAFE_AREA, tileX, tileY)) return false;
+            }
+        }
+        return true;
+    }
+
+    private pickRingResourceType(tileX: number, tileY: number, ring: ResourceRingConfig, random: () => number): string {
+        if (!ring.directionalBias) {
+            return random() < 0.5 ? 'SILICON' : 'ENERGY';
+        }
+        const siliconChance = tileY < 0 || tileX > 0 ? 0.6 : 0.4;
+        return random() < siliconChance ? 'SILICON' : 'ENERGY';
     }
 
     private repairStarterResources(preset: MapPresetConfig, random: (() => number) | null): void {

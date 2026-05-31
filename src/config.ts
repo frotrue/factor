@@ -22,7 +22,8 @@ export const CONFIG: GameConfig = {
     },
 
     OPTIMIZATION: {
-        GRID_REDRAW_THRESHOLD: 2.0
+        GRID_REDRAW_THRESHOLD: 2.0,
+        GRID_CHUNK_TILES: 16
     },
 
     DIRECTIONS: [
@@ -478,6 +479,27 @@ export const CONFIG: GameConfig = {
                 range: { minX: -60, maxX: 60, minY: -60, maxY: 60 },
                 exclusionZones: []
             },
+            RESOURCE_RINGS: [
+                {
+                    minDistance: 17,
+                    maxDistance: 23,
+                    patchCount: { min: 4, max: 6 },
+                    patchSize: { min: 2, max: 3 }
+                },
+                {
+                    minDistance: 24,
+                    maxDistance: 44,
+                    patchCount: { min: 18, max: 26 },
+                    patchSize: { min: 3, max: 5 },
+                    directionalBias: true
+                },
+                {
+                    minDistance: 45,
+                    maxDistance: 60,
+                    patchCount: { min: 4, max: 8 },
+                    patchSize: { min: 4, max: 6 }
+                }
+            ],
             STARTER_VALIDATION: {
                 center: { x: 0, y: 0 },
                 radius: 16,

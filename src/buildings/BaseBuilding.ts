@@ -8,6 +8,8 @@ import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
  * 모든 건물의 기반 클래스
  */
 export default class BaseBuilding {
+    private static readonly bodyTextureKeys = new Set<string>();
+
     /** Shared frame counter for visual update throttling across all buildings */
     private static _visualFrameCount = 0;
     static tickVisualFrame(): void { BaseBuilding._visualFrameCount++; }
@@ -23,6 +25,7 @@ export default class BaseBuilding {
     type: string;
     rotation: number;
     container: Phaser.GameObjects.Container;
+    bodyImage?: Phaser.GameObjects.Image;
     graphics: Phaser.GameObjects.Graphics;
     inputBuffer: string[];
     outputBuffer: string[];
@@ -58,9 +61,12 @@ export default class BaseBuilding {
             y + (h * CONFIG.GRID_SIZE) / 2
         );
 
+        this.bodyImage = this.createBodyImage(config.color || bConfig.COLOR || 0xaaaaaa, w, h);
+        if (this.bodyImage) {
+            this.container.add(this.bodyImage);
+        }
         this.graphics = scene.add.graphics();
         this.container.add(this.graphics);
-        this.drawBody(config.color || bConfig.COLOR || 0xaaaaaa, w, h);
         this.drawCategoryAccent(w, h);
 
         this.inputBuffer = [];
@@ -102,46 +108,97 @@ export default class BaseBuilding {
     }
 
     drawBody(color: number, w: number, h: number): void {
-        const width = w * CONFIG.GRID_SIZE;
-        const height = h * CONFIG.GRID_SIZE;
-        const left = -width / 2;
-        const top = -height / 2;
-        const cx = 0;
-        const cy = 0;
+        const textureKey = this.ensureBodyTexture(color, w, h);
+        if (textureKey && this.bodyImage) {
+            this.bodyImage.setTexture(textureKey);
+            return;
+        }
 
         this.graphics.clear();
-        const accent = getCategoryColor(CONFIG.BUILDINGS[this.type]?.CATEGORY);
-        this.graphics.fillStyle(VISUAL_THEME.buildings.shadow, 0.36);
-        this.graphics.fillRoundedRect(left + 4, top + 5, width - 4, height - 4, 5);
-        this.graphics.fillStyle(VISUAL_THEME.buildings.panelDark, 0.96);
-        this.graphics.fillRoundedRect(left + 2, top + 2, width - 4, height - 4, 5);
-        this.graphics.fillStyle(color, 0.28);
-        this.graphics.fillRoundedRect(left + 5, top + 5, width - 10, height - 10, 4);
-        this.graphics.lineStyle(1, accent, 0.5);
-        this.graphics.strokeRoundedRect(left + 2, top + 2, width - 4, height - 4, 5);
-        this.graphics.lineStyle(1, VISUAL_THEME.buildings.bevel, 0.18);
-        this.graphics.strokeRoundedRect(left + 6, top + 6, width - 12, height - 12, 3);
-        this.graphics.fillStyle(accent, 0.16);
-        this.graphics.fillRect(left + 6, top + 6, width - 12, 3);
+        BaseBuilding.drawBodyGraphics(this.graphics, this.type, color, w, h, true);
+    }
 
-        this.graphics.lineStyle(2, 0xdbeafe, 0.52);
-        switch (this.type) {
+    private createBodyImage(color: number, w: number, h: number): Phaser.GameObjects.Image | undefined {
+        const textureKey = this.ensureBodyTexture(color, w, h);
+        if (!textureKey || !this.scene.add.image) return undefined;
+
+        return this.scene.add.image(0, 0, textureKey).setOrigin(0.5);
+    }
+
+    private ensureBodyTexture(color: number, w: number, h: number): string | null {
+        if (!this.scene.textures?.exists || !this.scene.textures?.remove || !this.scene.add.graphics) {
+            return null;
+        }
+
+        const textureKey = `building-body-${this.type}-${w}x${h}-${color.toString(16)}`;
+        if (BaseBuilding.bodyTextureKeys.has(textureKey) && this.scene.textures.exists(textureKey)) {
+            return textureKey;
+        }
+
+        const graphics = this.scene.add.graphics();
+        if (!graphics.generateTexture) {
+            graphics.destroy();
+            return null;
+        }
+
+        if (this.scene.textures.exists(textureKey)) {
+            this.scene.textures.remove(textureKey);
+        }
+
+        BaseBuilding.drawBodyGraphics(graphics, this.type, color, w, h, false);
+        graphics.generateTexture(textureKey, w * CONFIG.GRID_SIZE, h * CONFIG.GRID_SIZE);
+        graphics.destroy();
+        BaseBuilding.bodyTextureKeys.add(textureKey);
+        return textureKey;
+    }
+
+    private static drawBodyGraphics(
+        graphics: Phaser.GameObjects.Graphics,
+        type: string,
+        color: number,
+        w: number,
+        h: number,
+        centered: boolean
+    ): void {
+        const width = w * CONFIG.GRID_SIZE;
+        const height = h * CONFIG.GRID_SIZE;
+        const left = centered ? -width / 2 : 0;
+        const top = centered ? -height / 2 : 0;
+        const cx = centered ? 0 : width / 2;
+        const cy = centered ? 0 : height / 2;
+
+        const accent = getCategoryColor(CONFIG.BUILDINGS[type]?.CATEGORY);
+        graphics.fillStyle(VISUAL_THEME.buildings.shadow, 0.36);
+        graphics.fillRoundedRect(left + 4, top + 5, width - 4, height - 4, 5);
+        graphics.fillStyle(VISUAL_THEME.buildings.panelDark, 0.96);
+        graphics.fillRoundedRect(left + 2, top + 2, width - 4, height - 4, 5);
+        graphics.fillStyle(color, 0.28);
+        graphics.fillRoundedRect(left + 5, top + 5, width - 10, height - 10, 4);
+        graphics.lineStyle(1, accent, 0.5);
+        graphics.strokeRoundedRect(left + 2, top + 2, width - 4, height - 4, 5);
+        graphics.lineStyle(1, VISUAL_THEME.buildings.bevel, 0.18);
+        graphics.strokeRoundedRect(left + 6, top + 6, width - 12, height - 12, 3);
+        graphics.fillStyle(accent, 0.16);
+        graphics.fillRect(left + 6, top + 6, width - 12, 3);
+
+        graphics.lineStyle(2, 0xdbeafe, 0.52);
+        switch (type) {
             case 'MODEL_TRAINING_LAB':
                 for (let i = 0; i < 3; i++) {
-                    this.graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
+                    graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
                 }
-                this.graphics.lineStyle(2, accent, 0.72);
-                this.graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.18);
-                this.graphics.lineStyle(1, 0xffffff, 0.45);
-                this.graphics.lineBetween(cx - 12, cy, cx + 12, cy);
-                this.graphics.lineBetween(cx, cy - 12, cx, cy + 12);
+                graphics.lineStyle(2, accent, 0.72);
+                graphics.strokeCircle(cx, cy, Math.min(width, height) * 0.18);
+                graphics.lineStyle(1, 0xffffff, 0.45);
+                graphics.lineBetween(cx - 12, cy, cx + 12, cy);
+                graphics.lineBetween(cx, cy - 12, cx, cy + 12);
                 break;
             case 'GPU_CLUSTER':
-                this.graphics.strokeRoundedRect(cx - 10, cy - 10, 20, 20, 4);
-                this.graphics.lineStyle(1, accent, 0.55);
+                graphics.strokeRoundedRect(cx - 10, cy - 10, 20, 20, 4);
+                graphics.lineStyle(1, accent, 0.55);
                 for (let i = -1; i <= 1; i++) {
-                    this.graphics.lineBetween(cx - 7, cy + i * 5, cx + 7, cy + i * 5);
-                    this.graphics.lineBetween(cx + i * 5, cy - 7, cx + i * 5, cy + 7);
+                    graphics.lineBetween(cx - 7, cy + i * 5, cx + 7, cy + i * 5);
+                    graphics.lineBetween(cx + i * 5, cy - 7, cx + i * 5, cy + 7);
                 }
                 break;
             default:

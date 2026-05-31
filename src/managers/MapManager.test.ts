@@ -42,6 +42,20 @@ describe('MapManager terrain blockers', () => {
         expect(first.getResourceAt(CORE_PIXEL_X + CONFIG.GRID_SIZE, CORE_PIXEL_Y + CONFIG.GRID_SIZE)).toBeNull();
     });
 
+    it('concentrates campaign random resources in the midgame ring', () => {
+        const mapManager = new MapManager();
+
+        mapManager.generateMap({ presetId: 'standard', seed: 12345 });
+
+        const earlyTiles = countResourcesInDistanceBand(mapManager, 17, 23);
+        const midTiles = countResourcesInDistanceBand(mapManager, 24, 44);
+        const outerTiles = countResourcesInDistanceBand(mapManager, 45, 60);
+
+        expect(midTiles).toBeGreaterThan(earlyTiles);
+        expect(midTiles).toBeGreaterThan(outerTiles);
+        expect(midTiles).toBeGreaterThanOrEqual(150);
+    });
+
     it('generates a compact standalone tutorial arena with expected resource patches and walls', () => {
         const mapManager = new MapManager();
 
@@ -90,6 +104,20 @@ function countResourceNearCore(mapManager: MapManager, type: string): number {
         const tileX = x / CONFIG.GRID_SIZE;
         const tileY = y / CONFIG.GRID_SIZE;
         if (Math.abs(tileX) <= radius && Math.abs(tileY) <= radius) {
+            count++;
+        }
+    });
+    return count;
+}
+
+function countResourcesInDistanceBand(mapManager: MapManager, minDistance: number, maxDistance: number): number {
+    let count = 0;
+    mapManager.getResourceMap().forEach((_resourceType, key) => {
+        const [x, y] = key.split(',').map(Number);
+        const tileX = x / CONFIG.GRID_SIZE;
+        const tileY = y / CONFIG.GRID_SIZE;
+        const distance = Math.hypot(tileX, tileY);
+        if (distance >= minDistance && distance <= maxDistance) {
             count++;
         }
     });

@@ -123,6 +123,14 @@ export interface RandomResourceConfig {
     exclusionZones: TileArea[];
 }
 
+export interface ResourceRingConfig {
+    minDistance: number;
+    maxDistance: number;
+    patchCount: { min: number; max: number };
+    patchSize: { min: number; max: number };
+    directionalBias?: boolean;
+}
+
 export interface StarterValidationConfig {
     center: { x: number; y: number };
     radius: number;
@@ -140,6 +148,7 @@ export interface MapPresetConfig {
     FIXED_RESOURCES?: ResourcePatchConfig[];
     STARTER_ZONES?: StarterResourceZoneConfig[];
     RANDOM_RESOURCES?: RandomResourceConfig;
+    RESOURCE_RINGS?: ResourceRingConfig[];
     STARTER_VALIDATION?: StarterValidationConfig;
     TERRAIN_LAYOUTS?: Array<'earlyLaneBlockers' | 'tutorialArenaWalls'>;
 }
@@ -187,6 +196,7 @@ export interface GameConfig {
     };
     OPTIMIZATION: {
         GRID_REDRAW_THRESHOLD: number;
+        GRID_CHUNK_TILES: number;
     };
     DIRECTIONS: Direction[];
     BUILDINGS: Record<string, BuildingConfig>;

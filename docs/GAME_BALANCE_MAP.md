@@ -29,10 +29,12 @@
 - 캠페인 맵은 preset 기반 고정 구조물과 내부 seed 기반 자원 분배를 조합합니다. 장벽/핵심 동선은 preset으로 유지하고, 자원 위치만 seed로 흔들어 재플레이성을 줍니다.
 - seed는 유저에게 노출할 필요는 없지만 저장 데이터에는 `presetId + seed`로 남겨 재현 가능한 맵을 보장합니다.
 - 시작 자원은 고정 좌표가 아니라 starter zone 안에서 패치 단위로 배치합니다. 패치 전체가 zone 안에 들어가야 하며, seed에 따라 위치만 달라집니다.
-- 자원끼리 겹치면 나중에 배치한 자원이 덮어씁니다. random resource가 starter resource 일부를 덮어도 허용하고, core/reserved/blocker 타일 위 자원은 최종 cleanup에서 삭제합니다.
+- `RESOURCE_RINGS`가 있는 preset은 랜덤 자원을 코어 기준 거리대별로 배치합니다. 각 패치는 blocker 지형, 기존 자원, starter safe area, Core footprint와 겹치면 폐기하고 100회 안에 후보를 못 찾으면 해당 패치를 skip합니다.
+- standard 캠페인 맵의 랜덤 자원은 초반 ring 17~23타일에 소량, 중반 ring 24~44타일에 가장 많은 중형 패치, 외곽 ring 45~60타일에 소수 대형 패치를 둡니다. 중반 ring은 북/동 Silicon, 남/서 Energy 쪽으로 약한 방향 편향을 둡니다.
+- fixed/starter 자원은 기존처럼 먼저 배치됩니다. core/reserved/blocker 타일 위 자원은 최종 cleanup에서 삭제하며, starter resource 부족분은 패치 단위로 보정합니다.
 - 공정성 기준은 시작 반경 안 필수 `SILICON`/`ENERGY` 수량 보장으로 제한합니다. 전체 맵 자원 품질은 점수화하지 않고, 부족한 starter resource만 패치 단위로 보정합니다.
-- standard 캠페인 맵은 큰 유한 작전 구역입니다. world/build bounds는 `-64..64`, 랜덤 자원 생성 bounds는 `-56..56`이며, Core 주변 대략 `-12..12`를 시작 안전 구역으로 취급합니다.
-- 랜덤 패치 수는 넓어진 맵에 맞춰 18~28개로 증가했습니다. 좋은 자원 구역은 새 상위 자원보다 고밀도/복합/위험 위치로 표현하며, standard preset에는 통로 사이 중립지대 쪽 고정 Silicon/Energy 패치가 추가되어 있습니다.
+- standard 캠페인 맵은 큰 유한 작전 구역입니다. world/build bounds는 `-64..64`, 랜덤 자원 생성 bounds는 `-60..60`이며, Core 주변 `-20..20`을 시작 안전 구역으로 취급합니다.
+- 좋은 자원 구역은 새 상위 자원보다 고밀도/복합/위험 위치로 표현하며, standard preset에는 통로 사이 중립지대 쪽 고정 Silicon/Energy 패치가 추가되어 있습니다.
 
 ## 현재 생산 루프
 

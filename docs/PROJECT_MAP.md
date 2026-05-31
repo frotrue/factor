@@ -105,7 +105,7 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 | `src/styles/main.css` | PC 인게임 HUD shell, 모달/튜토리얼/모바일 회귀 레이아웃과 시각 상태 |
 | `src/managers/WaveManager.ts` + `src/utils/waveSimulation.ts` + `src/utils/waveBriefingKey.ts` | 웨이브 압박, 브리핑, 난이도 조정 |
 | `src/buildings/*` | 새 건물/건물별 생산/방어/물류 동작 |
-| `src/managers/GridRenderer.ts`, `src/buildings/BaseBuilding.ts`, `src/enemies/BaseEnemy.ts` | 월드 그리드, 건물 프레임, 적 실루엣의 핵심 캔버스 그래픽 |
+| `src/managers/GridRenderer.ts`, `src/buildings/BaseBuilding.ts`, `src/enemies/BaseEnemy.ts` | 월드 그리드, 건물 프레임, 적 실루엣의 핵심 캔버스 그래픽. `GridRenderer`는 보이는 타일을 매 프레임 직접 재그리지 않고 청크 텍스처 캐시를 우선 사용하며, `BaseBuilding`은 공통 정적 바디를 타입/크기/색상별 텍스처로 재사용 |
 | `src/utils/*` | 테스트 가능한 순수 로직 분리 지점. 적 경로는 `gridPath`, 멀티타일 중심/범위는 `geometry`, 건물 lifecycle 이벤트는 `buildingLifecycle`, 저장 적 HP 복원은 `enemyRestore`를 우선 확인 |
 | `tests/e2e/app-smoke.spec.ts` | 실제 캔버스+DOM 흐름 회귀 검증 |
 

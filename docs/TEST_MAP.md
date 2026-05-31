@@ -33,11 +33,12 @@ npm run test:e2e -- --workers=1
 |---|---|
 | `src/config.test.ts` | config 참조, 건물 텍스처, Core footprint, 건물 HP, BLOCKER 지형 |
 | `src/i18n.test.ts` | 기본 언어, 번역 fallback/key 동작 |
-| `src/buildings/BaseBuilding.test.ts` | 공통 건물 상태와 기본 동작 |
+| `src/buildings/BaseBuilding.test.ts` | 공통 건물 상태와 기본 동작, 기본 그래픽 fallback, 정적 바디 텍스처 캐시 재사용 |
 | `src/managers/EventBus.test.ts` | owner/callback 기반 이벤트 제거 |
 | `src/managers/CableManager.test.ts` | 케이블 거리 비용, 최대 길이, 연구 길이 보너스, BLOCKER 충돌, `costPaid` 저장 |
 | `src/managers/EffectsManager.test.ts` | 경고 마커 등 이펙트 manager 안정성 |
-| `src/managers/MapManager.test.ts` | 지형 blocker, seed 기반 캠페인 맵 재현, starter 자원 보장, 작은 튜토리얼 arena 맵, 튜토리얼/캠페인 wrapper 경로 분리 |
+| `src/managers/GridRenderer.test.ts` | 그리드 청크 텍스처 캐시 재사용, forced redraw 시 stale 청크/텍스처 정리 |
+| `src/managers/MapManager.test.ts` | 지형 blocker, seed 기반 캠페인 맵 재현, starter 자원 보장, 캠페인 RESOURCE_RINGS 중반 자원 집중, 작은 튜토리얼 arena 맵, 튜토리얼/캠페인 wrapper 경로 분리 |
 | `src/managers/ResearchManager.test.ts` | Lab 기반 시스템 프로토콜 진행도, 완료, 선행조건, 저장 복원 |
 | `src/utils/apRelay.test.ts` | AP 자동 릴레이 source/target 선택 |
 | `src/utils/cablePath.test.ts` | 자유각 케이블 거리 계산과 선분 tile 샘플링 |
@@ -74,7 +75,7 @@ npm run test:e2e -- --workers=1
 | 모델 훈련/GPU | `src/utils/modelTrainingProgress.test.ts`, `src/utils/modelTrainingSummary.test.ts`, `src/utils/saveMigration.test.ts`, 필요 시 E2E build menu/modal smoke |
 | 튜토리얼/목표 패널 | `tutorialFlow.test.ts`, `progressionGates.test.ts`, `tests/e2e/tutorial-guidance.spec.ts`, E2E startup panels. 튜토리얼은 우측 정보 레일에 도킹되며 캔버스 고스트/흐름 힌트는 `tutorialFlow.visualHints`, `tutorialFlow.completion`, `TutorialManager` 완료 검사기를 함께 확인 |
 | 게임오버/결과 요약 | `runResultSummary.test.ts`, `waveResultSummary.test.ts`, E2E wave summary |
-| 캔버스 그래픽/팔레트 | `npm run build`, `npm test`, `npx playwright test --workers=1`, 데스크톱 스크린샷. `visualTheme`, `GridRenderer`, `BaseBuilding`, `BaseEnemy`, `CableManager`, `OverlayController`를 함께 확인 |
+| 캔버스 그래픽/팔레트 | `src/managers/GridRenderer.test.ts`, `npm run build`, `npm test`, `npx playwright test --workers=1`, 데스크톱 스크린샷. `visualTheme`, `GridRenderer`, `BaseBuilding`, `BaseEnemy`, `CableManager`, `OverlayController`를 함께 확인 |
 
 ## 새 기능 추가 시 테스트 추가 기준
 
