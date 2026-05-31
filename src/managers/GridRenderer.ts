@@ -58,7 +58,9 @@ export default class GridRenderer {
         this.graphics.fillStyle(VISUAL_THEME.world.background, 1);
         this.graphics.fillRect(startX, startY, width, height);
 
-        const sectorSize = this.gridSize * 8;
+        const zoom = this.scene.cameras.main.zoom;
+        const sectorMultiplier = zoom < 0.45 ? 32 : 8;
+        const sectorSize = this.gridSize * sectorMultiplier;
         const sectorStartX = Math.floor(startX / sectorSize) * sectorSize;
         const sectorStartY = Math.floor(startY / sectorSize) * sectorSize;
         this.graphics.lineStyle(1, VISUAL_THEME.world.fog, 0.5);
@@ -77,8 +79,21 @@ export default class GridRenderer {
         const gridHeight = Math.ceil(height / this.gridSize) + 1;
         const terrainMap = this.mapManager.getTerrainMap();
 
-        for (let i = gridStartX; i < gridStartX + gridWidth; i++) {
-            for (let j = gridStartY; j < gridStartY + gridHeight; j++) {
+        const bounds = this.mapManager.getWorldBounds();
+        const minX = bounds ? bounds.minX : -64;
+        const maxX = bounds ? bounds.maxX : 64;
+        const minY = bounds ? bounds.minY : -64;
+        const maxY = bounds ? bounds.maxY : 64;
+
+        const startI = Math.max(gridStartX, minX);
+        const endI = Math.min(gridStartX + gridWidth, maxX + 1);
+        const startJ = Math.max(gridStartY, minY);
+        const endJ = Math.min(gridStartY + gridHeight, maxY + 1);
+
+        const zoom = this.scene.cameras.main.zoom;
+
+        for (let i = startI; i < endI; i++) {
+            for (let j = startJ; j < endJ; j++) {
                 const x = i * this.gridSize;
                 const y = j * this.gridSize;
                 const type = terrainMap.get(`${x},${y}`);
@@ -89,7 +104,7 @@ export default class GridRenderer {
                 this.graphics.lineStyle(1, VISUAL_THEME.world.blockerEdge, 0.24);
                 this.graphics.strokeRoundedRect(x + 5, y + 5, this.gridSize - 10, this.gridSize - 10, 2);
 
-                if (type === 'BLOCKER') {
+                if (type === 'BLOCKER' && zoom >= 0.8) {
                     const inner = this.gridSize - 12;
                     this.graphics.lineStyle(1, VISUAL_THEME.world.blockerEdge, 0.45);
                     this.graphics.beginPath();
@@ -119,8 +134,19 @@ export default class GridRenderer {
         const gridHeight = Math.ceil(height / this.gridSize) + 1;
         const resourceMap = this.mapManager.getResourceMap();
 
-        for (let i = gridStartX; i < gridStartX + gridWidth; i++) {
-            for (let j = gridStartY; j < gridStartY + gridHeight; j++) {
+        const bounds = this.mapManager.getWorldBounds();
+        const minX = bounds ? bounds.minX : -64;
+        const maxX = bounds ? bounds.maxX : 64;
+        const minY = bounds ? bounds.minY : -64;
+        const maxY = bounds ? bounds.maxY : 64;
+
+        const startI = Math.max(gridStartX, minX);
+        const endI = Math.min(gridStartX + gridWidth, maxX + 1);
+        const startJ = Math.max(gridStartY, minY);
+        const endJ = Math.min(gridStartY + gridHeight, maxY + 1);
+
+        for (let i = startI; i < endI; i++) {
+            for (let j = startJ; j < endJ; j++) {
                 const x = i * this.gridSize;
                 const y = j * this.gridSize;
                 const type = resourceMap.get(`${x},${y}`);
@@ -138,34 +164,43 @@ export default class GridRenderer {
     }
 
     drawGridLines(startX: number, startY: number, width: number, height: number): void {
-        const offsetX = startX % this.gridSize;
-        const offsetY = startY % this.gridSize;
+        const zoom = this.scene.cameras.main.zoom;
 
-        this.graphics.lineStyle(1, VISUAL_THEME.world.gridMinor, 0.12);
-        this.graphics.beginPath();
-        for (let x = startX - offsetX; x < startX + width + this.gridSize; x += this.gridSize) {
-            const isMajor = Math.round(x / this.gridSize) % 4 === 0;
-            if (isMajor) continue;
-            this.graphics.moveTo(x, startY);
-            this.graphics.lineTo(x, startY + height);
+        // 1. Minor Grid Lines: skip completely if zoomed out far
+        if (zoom >= 0.8) {
+            const offsetX = startX % this.gridSize;
+            const offsetY = startY % this.gridSize;
+
+            this.graphics.lineStyle(1, VISUAL_THEME.world.gridMinor, 0.12);
+            this.graphics.beginPath();
+            for (let x = startX - offsetX; x < startX + width + this.gridSize; x += this.gridSize) {
+                const isMajor = Math.round(x / this.gridSize) % 4 === 0;
+                if (isMajor) continue;
+                this.graphics.moveTo(x, startY);
+                this.graphics.lineTo(x, startY + height);
+            }
+            for (let y = startY - offsetY; y < startY + height + this.gridSize; y += this.gridSize) {
+                const isMajor = Math.round(y / this.gridSize) % 4 === 0;
+                if (isMajor) continue;
+                this.graphics.moveTo(startX, y);
+                this.graphics.lineTo(startX + width, y);
+            }
+            this.graphics.strokePath();
         }
-        for (let y = startY - offsetY; y < startY + height + this.gridSize; y += this.gridSize) {
-            const isMajor = Math.round(y / this.gridSize) % 4 === 0;
-            if (isMajor) continue;
-            this.graphics.moveTo(startX, y);
-            this.graphics.lineTo(startX + width, y);
-        }
-        this.graphics.strokePath();
+
+        // 2. Major Grid Lines: simplify grid when zoomed way out
+        const majorStepMultiplier = zoom < 0.45 ? 16 : 4;
+        const majorGridSize = this.gridSize * majorStepMultiplier;
+        const offsetX = startX % majorGridSize;
+        const offsetY = startY % majorGridSize;
 
         this.graphics.lineStyle(1, VISUAL_THEME.world.gridMajor, 0.22);
         this.graphics.beginPath();
-        for (let x = startX - offsetX; x < startX + width + this.gridSize; x += this.gridSize) {
-            if (Math.round(x / this.gridSize) % 4 !== 0) continue;
+        for (let x = startX - offsetX; x < startX + width + majorGridSize; x += majorGridSize) {
             this.graphics.moveTo(x, startY);
             this.graphics.lineTo(x, startY + height);
         }
-        for (let y = startY - offsetY; y < startY + height + this.gridSize; y += this.gridSize) {
-            if (Math.round(y / this.gridSize) % 4 !== 0) continue;
+        for (let y = startY - offsetY; y < startY + height + majorGridSize; y += majorGridSize) {
             this.graphics.moveTo(startX, y);
             this.graphics.lineTo(startX + width, y);
         }

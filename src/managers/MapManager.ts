@@ -39,7 +39,7 @@ export default class MapManager {
 
         const random = this.mapSeed === null ? null : this.createRandom(this.mapSeed);
 
-        this.addTerrainLayouts(preset);
+        this.addTerrainLayouts(preset, random);
         preset.FIXED_RESOURCES?.forEach(patch => this.addPatch(patch.x, patch.y, patch.size, patch.type));
 
         if (random) {
@@ -135,53 +135,149 @@ export default class MapManager {
         this.terrainMap.set(key, 'BLOCKER');
     }
 
-    addEarlyLaneBlockers(): void {
-        // North corridor walls (vertical walls with gate)
+    addEarlyLaneBlockers(random?: (() => number) | null): void {
+        const rand = random || this.createRandom(12345);
+
+        // ==========================================
+        // 1. NORTH: Winding Sine Corridor (부드러운 곡선 협곡)
+        // ==========================================
+        const northPhase = rand() * Math.PI * 2;
+        const northAmp = 2 + rand() * 4; // 2 to 6 tiles wiggle
+        const northFreq = 0.08 + rand() * 0.08;
+        const northWidth = 10;
+
         for (let y = -50; y <= -20; y++) {
             if (y >= -38 && y <= -32) continue; // gate
-            this.addTerrainBlocker(-10, y);
-            this.addTerrainBlocker(10, y);
+            const wX = Math.round(Math.sin(y * northFreq + northPhase) * northAmp);
+            const leftWall = wX - Math.floor(northWidth / 2);
+            const rightWall = wX + Math.ceil(northWidth / 2);
+            this.addTerrainBlocker(leftWall, y);
+            this.addTerrainBlocker(rightWall, y);
         }
         // North horizontal bar
-        for (let x = -20; x <= 20; x++) {
-            if (Math.abs(x) <= 4) continue; // gate
+        const cX_bar_north = Math.round(Math.sin(-42 * northFreq + northPhase) * northAmp);
+        for (let x = -30; x <= 30; x++) {
+            if (x >= cX_bar_north - 4 && x <= cX_bar_north + 4) continue; // gate
             this.addTerrainBlocker(x, -42);
         }
 
-        // South corridor walls (mirror of north)
+        // ==========================================
+        // 2. SOUTH: Composite Jagged Canyon (울퉁불퉁한 암벽 협곡)
+        // ==========================================
+        const southPhase = rand() * Math.PI * 2;
+        const southAmpLow = 2 + rand() * 3;
+        const southFreqLow = 0.06 + rand() * 0.04;
+        const southWidth = 10;
+
         for (let y = 20; y <= 50; y++) {
             if (y >= 32 && y <= 38) continue; // gate
-            this.addTerrainBlocker(-10, y);
-            this.addTerrainBlocker(10, y);
+            // Low-frequency sine + High-frequency wiggle for jagged look
+            const wX = Math.round(
+                Math.sin(y * southFreqLow + southPhase) * southAmpLow +
+                Math.sin(y * 0.42 + southPhase * 2.5) * 1.6
+            );
+            const leftWall = wX - Math.floor(southWidth / 2);
+            const rightWall = wX + Math.ceil(southWidth / 2);
+            this.addTerrainBlocker(leftWall, y);
+            this.addTerrainBlocker(rightWall, y);
         }
         // South horizontal bar
-        for (let x = -20; x <= 20; x++) {
-            if (Math.abs(x) <= 4) continue; // gate
+        const cX_bar_south = Math.round(
+            Math.sin(42 * southFreqLow + southPhase) * southAmpLow +
+            Math.sin(42 * 0.42 + southPhase * 2.5) * 1.6
+        );
+        for (let x = -30; x <= 30; x++) {
+            if (x >= cX_bar_south - 4 && x <= cX_bar_south + 4) continue; // gate
             this.addTerrainBlocker(x, 42);
         }
 
-        // East corridor walls (horizontal walls with gate)
+        // ==========================================
+        // 3. EAST: Fortified Wall with Bastions (옹벽과 탑이 있는 성벽 지형)
+        // ==========================================
+        const eastPhase = rand() * Math.PI * 2;
+        const eastAmp = 2 + rand() * 3;
+        const eastFreq = 0.08 + rand() * 0.06;
+        const eastWidth = 10;
+
         for (let x = 20; x <= 50; x++) {
             if (x >= 32 && x <= 38) continue; // gate
-            this.addTerrainBlocker(x, -10);
-            this.addTerrainBlocker(x, 10);
+            const wY = Math.round(Math.sin(x * eastFreq + eastPhase) * eastAmp);
+            const topWall = wY - Math.floor(eastWidth / 2);
+            const bottomWall = wY + Math.ceil(eastWidth / 2);
+            
+            // Draw standard wall line
+            this.addTerrainBlocker(x, topWall);
+            this.addTerrainBlocker(x, bottomWall);
+
+            // Add thick defensive tower/bastion (3x3 cross) every 5 tiles
+            if (x % 5 === 0) {
+                this.addTerrainBlocker(x, topWall - 1);
+                this.addTerrainBlocker(x, topWall + 1);
+                this.addTerrainBlocker(x - 1, topWall);
+                this.addTerrainBlocker(x + 1, topWall);
+
+                this.addTerrainBlocker(x, bottomWall - 1);
+                this.addTerrainBlocker(x, bottomWall + 1);
+                this.addTerrainBlocker(x - 1, bottomWall);
+                this.addTerrainBlocker(x + 1, bottomWall);
+            }
         }
         // East vertical bar
-        for (let y = -20; y <= 20; y++) {
-            if (Math.abs(y) <= 4) continue; // gate
+        const cY_bar_east = Math.round(Math.sin(42 * eastFreq + eastPhase) * eastAmp);
+        for (let y = -30; y <= 30; y++) {
+            if (y >= cY_bar_east - 4 && y <= cY_bar_east + 4) continue; // gate
             this.addTerrainBlocker(42, y);
         }
 
-        // West corridor walls (mirror of east)
+        // ==========================================
+        // 4. WEST: Tapering Funnel Canyon (점점 좁아지는 깔때기 협곡)
+        // ==========================================
+        const westPhase = rand() * Math.PI * 2;
+        const westAmp = 1 + rand() * 2; // Keep wiggle smaller to focus on tapering shape
+        const westFreq = 0.08 + rand() * 0.06;
+
         for (let x = -50; x <= -20; x++) {
             if (x >= -38 && x <= -32) continue; // gate
-            this.addTerrainBlocker(x, -10);
-            this.addTerrainBlocker(x, 10);
+            
+            // Width starts at 16 tiles at map edge (x = -50) and tapers to 8 tiles at core side (x = -20)
+            const laneWidth = 16 - Math.round(8 * (x + 50) / 30);
+            const wY = Math.round(Math.sin(x * westFreq + westPhase) * westAmp);
+            const topWall = wY - Math.floor(laneWidth / 2);
+            const bottomWall = wY + Math.ceil(laneWidth / 2);
+            
+            this.addTerrainBlocker(x, topWall);
+            this.addTerrainBlocker(x, bottomWall);
         }
         // West vertical bar
-        for (let y = -20; y <= 20; y++) {
-            if (Math.abs(y) <= 4) continue; // gate
+        const cY_bar_west = Math.round(Math.sin(-42 * westFreq + westPhase) * westAmp);
+        for (let y = -30; y <= 30; y++) {
+            if (y >= cY_bar_west - 4 && y <= cY_bar_west + 4) continue; // gate
             this.addTerrainBlocker(-42, y);
+        }
+
+        // ==========================================
+        // 5. MAP DEBRIS: Scattered small clumps in empty space
+        // ==========================================
+        const bounds = this.getWorldBounds() || { minX: -64, maxX: 64, minY: -64, maxY: 64 };
+        const safe = CONFIG.MAP_PRESETS.standard.STARTER_SAFE_AREA || { minX: -20, maxX: 20, minY: -20, maxY: 20 };
+        const clumpCount = this.randomInt(rand, 12, 18);
+        for (let c = 0; c < clumpCount; c++) {
+            let startX = 0;
+            let startY = 0;
+            for (let attempt = 0; attempt < 50; attempt++) {
+                startX = this.randomInt(rand, bounds.minX + 4, bounds.maxX - 4);
+                startY = this.randomInt(rand, bounds.minY + 4, bounds.maxY - 4);
+                const inSafe = startX >= safe.minX && startX <= safe.maxX && startY >= safe.minY && startY <= safe.maxY;
+                if (!inSafe) break;
+            }
+            const clumpSize = this.randomInt(rand, 1, 3);
+            for (let i = 0; i < clumpSize; i++) {
+                for (let j = 0; j < clumpSize; j++) {
+                    if (rand() < 0.75) {
+                        this.addTerrainBlocker(startX + i, startY + j);
+                    }
+                }
+            }
         }
     }
 
@@ -237,10 +333,10 @@ export default class MapManager {
         return this.terrainMap;
     }
 
-    private addTerrainLayouts(preset: MapPresetConfig): void {
+    private addTerrainLayouts(preset: MapPresetConfig, random: (() => number) | null): void {
         preset.TERRAIN_LAYOUTS?.forEach(layout => {
             if (layout === 'earlyLaneBlockers') {
-                this.addEarlyLaneBlockers();
+                this.addEarlyLaneBlockers(random);
             } else if (layout === 'tutorialArenaWalls') {
                 this.addTutorialArenaWalls();
             }

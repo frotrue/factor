@@ -129,9 +129,8 @@ export default class CameraController {
     }
 
     applyBounds(): void {
-        const bounds = this.scene.mapManager?.getCameraBoundsPixels?.();
-        if (!bounds) return;
-        this.camera.setBounds(bounds.x, bounds.y, bounds.width, bounds.height);
+        // We do not use Phaser's internal setBounds because it fights with zoom levels and prevents centering on edges.
+        // Instead, we handle bounds clamping dynamically in clampToBounds.
     }
 
     clampToBounds(): void {
@@ -140,9 +139,19 @@ export default class CameraController {
 
         const viewWidth = this.camera.width / this.camera.zoom;
         const viewHeight = this.camera.height / this.camera.zoom;
-        const maxScrollX = bounds.x + bounds.width - viewWidth;
-        const maxScrollY = bounds.y + bounds.height - viewHeight;
-        this.camera.scrollX = Phaser.Math.Clamp(this.camera.scrollX, bounds.x, Math.max(bounds.x, maxScrollX));
-        this.camera.scrollY = Phaser.Math.Clamp(this.camera.scrollY, bounds.y, Math.max(bounds.y, maxScrollY));
+
+        const centerX = this.camera.scrollX + viewWidth / 2;
+        const centerY = this.camera.scrollY + viewHeight / 2;
+
+        const minCenterX = bounds.x;
+        const maxCenterX = bounds.x + bounds.width;
+        const minCenterY = bounds.y;
+        const maxCenterY = bounds.y + bounds.height;
+
+        const clampedCenterX = Phaser.Math.Clamp(centerX, minCenterX, maxCenterX);
+        const clampedCenterY = Phaser.Math.Clamp(centerY, minCenterY, maxCenterY);
+
+        this.camera.scrollX = clampedCenterX - viewWidth / 2;
+        this.camera.scrollY = clampedCenterY - viewHeight / 2;
     }
 }
