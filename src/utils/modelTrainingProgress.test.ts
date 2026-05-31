@@ -4,6 +4,7 @@ import {
     createDefaultDefenseModelState,
     getGpuTrainingSpeedMultiplier,
     getNextTrainingRequirement,
+    getTimeAdjustedModelAccuracy,
     getTrainingDataValue,
     getTrainingDurationTicks,
     isGpuUnlocked,
@@ -28,6 +29,7 @@ describe('modelTrainingProgress', () => {
         expect(createDefaultDefenseModelState()).toMatchObject({
             modelAccuracy: 40,
             damageBonus: 0,
+            trainingRewardPreference: 'accuracy',
             currentRequirement: 100,
             isTraining: false
         });
@@ -37,17 +39,26 @@ describe('modelTrainingProgress', () => {
         expect(normalizeDefenseModelState({ modelConfidence: 55 }).modelAccuracy).toBe(55);
     });
 
-    test('rewards accuracy before 100 and damage after 100 without a cap', () => {
+    test('applies the selected reward mode without capping damage', () => {
         const state = createDefaultDefenseModelState();
         state.modelAccuracy = 95;
         expect(applyCompletedTraining(state)).toEqual({ kind: 'accuracy', accuracyGain: 5, damageGain: 0 });
         expect(state.modelAccuracy).toBe(100);
 
+        state.trainingRewardPreference = 'damage';
         expect(applyCompletedTraining(state)).toEqual({ kind: 'damage', accuracyGain: 0, damageGain: 5 });
         expect(state.damageBonus).toBe(5);
         state.damageBonus = 995;
         applyCompletedTraining(state);
         expect(state.damageBonus).toBe(1000);
+    });
+
+    test('degrades effective model accuracy as game time advances', () => {
+        expect(getTimeAdjustedModelAccuracy(80, 0)).toBe(80);
+        expect(getTimeAdjustedModelAccuracy(80, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS - 1)).toBe(80);
+        expect(getTimeAdjustedModelAccuracy(80, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS)).toBe(79);
+        expect(getTimeAdjustedModelAccuracy(80, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS * 3)).toBe(77);
+        expect(getTimeAdjustedModelAccuracy(2, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS * 10)).toBe(CONFIG.MODEL_TRAINING.MIN_EFFECTIVE_ACCURACY);
     });
 
     test('caps active GPU speed bonus at four accelerators', () => {

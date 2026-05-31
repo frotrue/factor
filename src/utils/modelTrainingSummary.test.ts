@@ -24,6 +24,7 @@ describe('modelTrainingSummary', () => {
         const state = createDefaultDefenseModelState();
         state.modelAccuracy = 100;
         state.damageBonus = 15;
+        state.trainingRewardPreference = 'damage';
         state.isTraining = true;
         state.trainingProgressTicks = 30;
         state.trainingDurationTicks = 120;

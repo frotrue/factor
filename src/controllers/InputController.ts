@@ -258,7 +258,7 @@ export default class InputController {
                 const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
                 const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
                 const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
-                const modelConfidence = tower?.modelConfidence ?? CONFIG.MODEL_TRAINING.BASE_ACCURACY;
+                const modelConfidence = tower?.getEffectiveModelConfidence() ?? CONFIG.MODEL_TRAINING.BASE_ACCURACY;
                 const damageBonus = tower?.damageBonus ?? 0;
                 const confidenceFactor = 0.6 + modelConfidence / 125;
                 const modelDamageMultiplier = 1 + damageBonus / 100;

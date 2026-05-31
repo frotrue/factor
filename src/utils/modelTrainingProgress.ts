@@ -1,7 +1,7 @@
 import { CONFIG } from '../config';
-import type { DefenseModelState } from '../types';
+import type { DefenseModelState, TrainingRewardPreference } from '../types';
 
-export type TrainingRewardKind = 'accuracy' | 'damage';
+export type TrainingRewardKind = TrainingRewardPreference;
 
 export interface TrainingRewardResult {
     kind: TrainingRewardKind;
@@ -13,6 +13,7 @@ export function createDefaultDefenseModelState(): DefenseModelState {
     return {
         modelAccuracy: CONFIG.MODEL_TRAINING.BASE_ACCURACY,
         damageBonus: 0,
+        trainingRewardPreference: 'accuracy',
         modelVersion: 1,
         inferenceCharge: 0,
         accumulatedTrainingData: 0,
@@ -29,6 +30,7 @@ export function normalizeDefenseModelState(raw: Partial<DefenseModelState> & { m
     return {
         modelAccuracy: clamp(raw.modelAccuracy ?? legacyAccuracy ?? defaults.modelAccuracy, 0, 100),
         damageBonus: Math.max(0, raw.damageBonus ?? defaults.damageBonus),
+        trainingRewardPreference: raw.trainingRewardPreference === 'damage' ? 'damage' : 'accuracy',
         modelVersion: Math.max(1, raw.modelVersion ?? defaults.modelVersion),
         inferenceCharge: Math.max(0, raw.inferenceCharge ?? defaults.inferenceCharge),
         accumulatedTrainingData: Math.max(0, raw.accumulatedTrainingData ?? defaults.accumulatedTrainingData),
@@ -65,11 +67,18 @@ export function getTrainingDurationTicks(
 }
 
 export function getNextTrainingRewardKind(state: DefenseModelState): TrainingRewardKind {
-    return state.modelAccuracy < CONFIG.MODEL_TRAINING.GPU_UNLOCK_ACCURACY ? 'accuracy' : 'damage';
+    return state.trainingRewardPreference;
+}
+
+export function getTimeAdjustedModelAccuracy(modelAccuracy: number, currentTimeMs: number): number {
+    const intervalMs = Math.max(1, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS);
+    const elapsedIntervals = Math.max(0, Math.floor(currentTimeMs / intervalMs));
+    const decay = elapsedIntervals * Math.max(0, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_PER_INTERVAL);
+    return clamp(modelAccuracy - decay, CONFIG.MODEL_TRAINING.MIN_EFFECTIVE_ACCURACY, 100);
 }
 
 export function applyCompletedTraining(state: DefenseModelState): TrainingRewardResult {
-    if (state.modelAccuracy < CONFIG.MODEL_TRAINING.GPU_UNLOCK_ACCURACY) {
+    if (getNextTrainingRewardKind(state) === 'accuracy') {
         const previous = state.modelAccuracy;
         state.modelAccuracy = clamp(state.modelAccuracy + CONFIG.MODEL_TRAINING.ACCURACY_GAIN, 0, 100);
         state.modelVersion += 1;

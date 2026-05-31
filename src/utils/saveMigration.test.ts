@@ -97,11 +97,62 @@ describe('migrateSaveData', () => {
         expect(migrated.defenseModelStates?.CLASSIFIER).toMatchObject({
             modelAccuracy: 65,
             damageBonus: 0,
+            trainingRewardPreference: 'accuracy',
             modelVersion: 4,
             inferenceCharge: 2,
             accumulatedTrainingData: 0,
             currentRequirement: CONFIG.MODEL_TRAINING.INITIAL_DATA_REQUIREMENT,
             isTraining: false
+        });
+    });
+
+    it('promotes legacy lab active jobs into global training planner state', () => {
+        const migrated = migrateSaveData({
+            buildings: [
+                {
+                    x: 0,
+                    y: 0,
+                    type: 'MODEL_TRAINING_LAB',
+                    customState: {
+                        activeJobId: 'DEFENSE_FILTER',
+                        autoTrain: true
+                    }
+                }
+            ]
+        });
+
+        expect(migrated.trainingPlanner).toMatchObject({
+            activeJobId: 'DEFENSE_FILTER',
+            autoEnabled: true,
+            mode: 'AUTO_DECIDE'
+        });
+    });
+
+    it('prefers in-progress jobs over legacy lab selections when migrating planner state', () => {
+        const migrated = migrateSaveData({
+            defenseModelStates: {
+                CLASSIFIER: {
+                    modelAccuracy: 50,
+                    isTraining: true
+                }
+            },
+            buildings: [
+                {
+                    x: 0,
+                    y: 0,
+                    type: 'MODEL_TRAINING_LAB',
+                    customState: {
+                        activeJobId: 'TECH_EFFICIENT_MINING',
+                        autoTrain: false
+                    }
+                }
+            ]
+        });
+
+        expect(migrated.trainingPlanner).toMatchObject({
+            activeJobId: 'DEFENSE_CLASSIFIER',
+            autoEnabled: false,
+            mode: 'MANUAL_LOCK'
         });
     });
 });

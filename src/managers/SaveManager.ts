@@ -123,6 +123,7 @@ export default class SaveManager {
             buildings,
             defenseModelStates: this.scene.defenseModelStates,
             labJobProgress: this.scene.researchManager.getSavedJobProgress(),
+            trainingPlanner: this.scene.trainingPlanner.getState(),
             items,
             cables,
             settings: {
@@ -217,6 +218,7 @@ export default class SaveManager {
                 this.scene.researchManager.loadUnlockedResearch([]);
             }
             this.scene.researchManager.loadJobProgress(data.labJobProgress || {});
+            this.scene.trainingPlanner.loadState(data.trainingPlanner || {});
 
             this.scene.initializeDefenseModelStates();
             if (data.defenseModelStates) {

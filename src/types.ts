@@ -11,6 +11,7 @@ import type ResearchManager from './managers/ResearchManager';
 import type SaveManager from './managers/SaveManager';
 import type SoundManager from './managers/SoundManager';
 import type TickSystem from './managers/TickSystem';
+import type TrainingPlannerManager from './managers/TrainingPlannerManager';
 import type TutorialManager from './managers/TutorialManager';
 import type UIManager from './managers/UIManager';
 import type WaveManager from './managers/WaveManager';
@@ -218,6 +219,9 @@ export interface ModelTrainingConfig {
     TARGET_TYPES: string[];
     BASE_ACCURACY: number;
     ACCURACY_GAIN: number;
+    ACCURACY_DECAY_PER_INTERVAL: number;
+    ACCURACY_DECAY_INTERVAL_MS: number;
+    MIN_EFFECTIVE_ACCURACY: number;
     DAMAGE_GAIN: number;
     INITIAL_DATA_REQUIREMENT: number;
     REQUIREMENT_MULTIPLIER: number;
@@ -369,9 +373,27 @@ export interface DefenseTowerConfig {
     IS_AOE?: boolean;
 }
 
+export type TrainingRewardPreference = 'accuracy' | 'damage';
+export type TrainingPlannerMode = 'AUTO_DECIDE' | 'MANUAL_LOCK';
+
+export interface TrainingPlannerState {
+    activeJobId: string | null;
+    autoEnabled: boolean;
+    mode: TrainingPlannerMode;
+    lastDecisionReason?: string | null;
+}
+
+export interface TrainingPlannerDecision {
+    jobId: string | null;
+    rewardPreference?: TrainingRewardPreference;
+    score: number;
+    reason: string;
+}
+
 export interface DefenseModelState {
     modelAccuracy: number;
     damageBonus: number;
+    trainingRewardPreference: TrainingRewardPreference;
     modelVersion: number;
     inferenceCharge: number;
     accumulatedTrainingData: number;
@@ -397,6 +419,7 @@ export interface IMainScene extends Phaser.Scene {
     saveManager: SaveManager;
     soundManager: SoundManager;
     tutorialManager?: TutorialManager;
+    trainingPlanner: TrainingPlannerManager;
     defenseModelStates: Record<string, DefenseModelState>;
     mode: GameMode;
     gameSpeed: number;
@@ -405,7 +428,7 @@ export interface IMainScene extends Phaser.Scene {
     getDefenseModelState(type: string): DefenseModelState;
     addTrainingData(type: string, itemType: string): number;
     startTrainingIfReady(type: string, durationTicks?: number): boolean;
-    completeTraining(type: string): 'accuracy' | 'damage';
+    completeTraining(type: string): TrainingRewardPreference;
     isGpuUnlocked(): boolean;
     syncDefenseModelType(type: string): void;
     setGameSpeed(speed: number): void;
@@ -478,6 +501,7 @@ export interface SaveData {
     buildings: SavedBuilding[];
     defenseModelStates?: Record<string, DefenseModelState>;
     labJobProgress?: Record<string, LabJobProgress>;
+    trainingPlanner?: TrainingPlannerState;
     items: SavedItem[];
     cables?: SavedCable[];
     settings: {

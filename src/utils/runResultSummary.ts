@@ -32,6 +32,7 @@ export function createRunResultSummary(input: RunResultSummaryInput): RunResultS
     const bestState = best?.[1] ?? {
         modelAccuracy: 0,
         damageBonus: 0,
+        trainingRewardPreference: 'accuracy',
         modelVersion: 0,
         inferenceCharge: 0,
         accumulatedTrainingData: 0,

@@ -19,6 +19,7 @@ import CableManager from '../managers/CableManager';
 import EffectsManager from '../managers/EffectsManager';
 import SoundManager from '../managers/SoundManager';
 import TutorialManager from '../managers/TutorialManager';
+import TrainingPlannerManager from '../managers/TrainingPlannerManager';
 import EventBus from '../managers/EventBus';
 import { DefenseModelState, GameMode } from '../types';
 import DefenseTower from '../buildings/DefenseTower';
@@ -53,6 +54,7 @@ export default class MainScene extends Phaser.Scene {
     effectsManager!: EffectsManager;
     soundManager!: SoundManager;
     tutorialManager?: TutorialManager;
+    trainingPlanner!: TrainingPlannerManager;
     mode: GameMode = 'campaign';
     overlayController!: OverlayController;
     inputController!: InputController;
@@ -118,10 +120,11 @@ export default class MainScene extends Phaser.Scene {
         this.tickSystem = new TickSystem(this, this.buildingManager, this.itemManager, this.mapManager, this.powerManager);
         this.gridRenderer = new GridRenderer(this, this.mapManager);
         this.cameraController = new CameraController(this);
+        this.researchManager = new ResearchManager(this);
+        this.trainingPlanner = new TrainingPlannerManager(this);
         this.soundManager = new SoundManager();
         this.uiManager = new UIManager(this);
         this.saveManager = new SaveManager(this);
-        this.researchManager = new ResearchManager(this);
         this.inventoryManager = new InventoryManager(this.buildingManager);
         this.effectsManager = new EffectsManager(this);
         this.overlayController = new OverlayController(this);

@@ -3,7 +3,7 @@ import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
 import { CONFIG } from '../config';
 import { getBuildingName, textForKey } from '../i18n';
-import { getNextTrainingRewardKind, getTrainingDurationTicks } from '../utils/modelTrainingProgress';
+import { getNextTrainingRewardKind } from '../utils/modelTrainingProgress';
 
 export default class TrainingLabUI {
     private activeTrainingLab: ModelTrainingLab | null = null;
@@ -79,6 +79,32 @@ export default class TrainingLabUI {
             : textForKey('trainingLab.gpuLocked');
         modal.appendChild(overview);
 
+        const planner = this.scene.trainingPlanner;
+        const autoPanel = document.createElement('div');
+        autoPanel.className = 'training-lab-buffer training-auto-panel';
+        const modeLabel = planner.autoEnabled && planner.mode === 'AUTO_DECIDE'
+            ? textForKey('trainingLab.autoMode')
+            : textForKey('trainingLab.manualMode');
+        autoPanel.innerHTML = `
+            <span>${modeLabel}: ${planner.getJobLabel()}</span>
+            <span class="training-target-effect">${planner.lastDecisionReason ?? textForKey('trainingLab.manualReason')}</span>
+        `;
+        const autoBtn = document.createElement('button');
+        autoBtn.type = 'button';
+        autoBtn.className = `training-reward-btn ${planner.autoEnabled && planner.mode === 'AUTO_DECIDE' ? 'active' : ''}`;
+        autoBtn.textContent = planner.autoEnabled && planner.mode === 'AUTO_DECIDE'
+            ? textForKey('trainingLab.autoOn')
+            : textForKey('trainingLab.autoOff');
+        this.uiManager.guardDomPointer(autoBtn);
+        autoBtn.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            planner.setAutoEnabled(!(planner.autoEnabled && planner.mode === 'AUTO_DECIDE'));
+            this.render();
+        };
+        autoPanel.appendChild(autoBtn);
+        modal.appendChild(autoPanel);
+
         const list = document.createElement('div');
         list.id = 'training-target-list';
         list.className = 'training-target-list';
@@ -116,7 +142,7 @@ export default class TrainingLabUI {
         footer.className = 'training-lab-buffer';
         footer.textContent = textForKey('trainingLab.duration', {
             base: CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS,
-            current: getTrainingDurationTicks(summary.activeGpuCount, summary.selectedState?.currentRequirement)
+            current: planner.getEstimatedDurationTicks()
         });
         modal.appendChild(footer);
     }
@@ -124,7 +150,7 @@ export default class TrainingLabUI {
     private renderDefenseJobs(list: HTMLElement, lab: ModelTrainingLab): void {
         CONFIG.MODEL_TRAINING.TARGET_TYPES.forEach(type => {
             const state = this.scene.getDefenseModelState(type);
-            const selected = lab.activeJobId === lab.getDefenseJobId(type);
+            const selected = this.scene.trainingPlanner.activeJobId === lab.getDefenseJobId(type);
             const trainingPercent = state.isTraining
                 ? Math.min(100, Math.round((state.trainingProgressTicks / state.trainingDurationTicks) * 100))
                 : 0;
@@ -132,22 +158,51 @@ export default class TrainingLabUI {
             const nextReward = getNextTrainingRewardKind(state) === 'accuracy'
                 ? textForKey('trainingLab.nextAccuracy', { amount: CONFIG.MODEL_TRAINING.ACCURACY_GAIN })
                 : textForKey('trainingLab.nextDamage', { amount: CONFIG.MODEL_TRAINING.DAMAGE_GAIN });
-            const row = document.createElement('button');
+            const row = document.createElement('div');
             row.className = `training-target-row ${selected ? 'active' : ''}`;
-            row.type = 'button';
+            row.tabIndex = 0;
+            row.role = 'button';
             row.innerHTML = `
                 <span class="training-target-name">${getBuildingName(type)}</span>
                 <span class="training-target-stat">${textForKey('trainingLab.accuracy')}: ${Math.round(state.modelAccuracy)}% | ${textForKey('trainingLab.damage')}: +${Math.round(state.damageBonus)}%</span>
                 <span class="training-target-effect">${nextReward}</span>
+                <span class="training-reward-toggle" role="group" aria-label="${textForKey('trainingLab.rewardMode')}">
+                    <span class="training-target-effect">${textForKey('trainingLab.rewardMode')}</span>
+                    <button type="button" class="training-reward-btn ${state.trainingRewardPreference === 'accuracy' ? 'active' : ''}" data-reward="accuracy">${textForKey('trainingLab.rewardAccuracy')}</button>
+                    <button type="button" class="training-reward-btn ${state.trainingRewardPreference === 'damage' ? 'active' : ''}" data-reward="damage">${textForKey('trainingLab.rewardDamage')}</button>
+                </span>
                 <span class="training-target-effect">${textForKey('trainingLab.dataProgress', { current: Math.floor(state.accumulatedTrainingData), required: state.currentRequirement })}</span>
                 <span class="training-progress-track"><span style="width:${dataPercent}%"></span></span>
                 <span class="training-target-effect">${state.isTraining ? textForKey('trainingLab.trainingProgress', { progress: trainingPercent }) : textForKey('trainingLab.waiting')}</span>
                 <span class="training-progress-track training-progress-work"><span style="width:${trainingPercent}%"></span></span>
             `;
             this.uiManager.guardDomPointer(row);
+            row.querySelectorAll<HTMLButtonElement>('.training-reward-btn').forEach(btn => {
+                this.uiManager.guardDomPointer(btn);
+                btn.onclick = event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const reward = btn.dataset.reward === 'damage' ? 'damage' : 'accuracy';
+                    lab.setTrainingRewardPreference(type, reward);
+                    this.uiManager.logMessage(textForKey('trainingLab.rewardSet', {
+                        name: getBuildingName(type),
+                        reward: reward === 'accuracy'
+                            ? textForKey('trainingLab.rewardAccuracy')
+                            : textForKey('trainingLab.rewardDamage')
+                    }));
+                    this.render();
+                };
+            });
             row.onclick = event => {
                 event.preventDefault();
                 event.stopPropagation();
+                lab.setTarget(type);
+                this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
+                this.render();
+            };
+            row.onkeydown = event => {
+                if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return;
+                event.preventDefault();
                 lab.setTarget(type);
                 this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
                 this.render();
@@ -160,7 +215,7 @@ export default class TrainingLabUI {
         Object.values(CONFIG.RESEARCH).forEach(node => {
             const progress = this.scene.researchManager.getJobProgress(node.ID);
             const available = this.scene.researchManager.isJobAvailable(node.ID);
-            const selected = lab.activeJobId === node.ID;
+            const selected = this.scene.trainingPlanner.activeJobId === node.ID;
             const percent = Math.min(100, Math.round((progress.progress / node.COST) * 100));
             const trainingPercent = progress.isTraining
                 ? Math.min(100, Math.round(((progress.trainingProgressTicks ?? 0) / (progress.trainingDurationTicks ?? 1)) * 100))

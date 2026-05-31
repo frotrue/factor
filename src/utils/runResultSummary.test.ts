@@ -10,9 +10,9 @@ describe('createRunResultSummary', () => {
             totalDataReceived: 180,
             unlockedResearchCount: 3,
             modelStates: {
-                CLASSIFIER: { modelAccuracy: 55, damageBonus: 0, modelVersion: 2, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
-                FILTER: { modelAccuracy: 72, damageBonus: 0, modelVersion: 3, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
-                FIREWALL: { modelAccuracy: 100, damageBonus: 15, modelVersion: 8, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 }
+                CLASSIFIER: { modelAccuracy: 55, damageBonus: 0, trainingRewardPreference: 'accuracy', modelVersion: 2, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
+                FILTER: { modelAccuracy: 72, damageBonus: 0, trainingRewardPreference: 'accuracy', modelVersion: 3, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
+                FIREWALL: { modelAccuracy: 100, damageBonus: 15, trainingRewardPreference: 'damage', modelVersion: 8, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 }
             },
             getModelName: type => type
         });

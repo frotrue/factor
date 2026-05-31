@@ -107,8 +107,11 @@ flowchart TD
 - 시작 자원은 고정 좌표가 아니라 preset의 starter zone 안에서 seed로 배치합니다. 패치 전체가 zone 안에 들어가야 하며, 자원끼리 겹치면 나중에 배치한 자원이 덮어씁니다.
 - random resource가 starter resource 일부를 덮는 것은 허용합니다. 최종 cleanup에서 core/reserved/blocker 타일 위 자원은 삭제합니다.
 - 공정성 검증은 시작 반경 안 필수 자원 수량만 확인합니다. 부족하면 CONFIG 순서대로 starter zone에 패치 단위 보정을 반복하고, 보정도 기존 자원을 덮어씁니다.
+- standard terrain layout은 enemy route 시작점에서 Core 중심까지 tile 기반 예약 lane을 먼저 만들고, outer boundary terrain pass가 불규칙한 외곽 cave/rock mass를 형성합니다. 그 뒤 BLOCKER blob/rough line/cluster는 예약 영역과 fixed resource를 피해서 lane-side terrain과 expansion pocket을 채웁니다. 생성 후 긴 직선과 작은 파편을 정리하고, BFS가 실패하면 해당 lane 주변 blocker만 좁게 삭제해 적 이동 경로를 복구합니다.
+- standard resource patch는 square tile block 대신 dense center와 불규칙 edge를 가진 organic blob으로 배치합니다. tutorial preset은 seed 없는 고정 사각 자원/장벽을 유지합니다.
+- 다음 standard 맵 방향은 Mindustry-style region pass입니다. 현재 helper 경계는 `reservedEnemyPathTiles`를 corridor contract로 유지하면서 terrain region layer, lane-side shaping, ore vein/resource blob layer, tiny fragment cleanup을 순서대로 끼울 수 있게 둡니다.
 - tutorial preset은 같은 생성 시스템 안에 두되 seed 기반 자원 분배를 끄고 완전 고정 자원/장벽을 유지합니다.
-- standard preset은 큰 유한 작전 구역입니다. `WORLD_BOUNDS`/`BUILD_BOUNDS`는 `-64..64`, 랜덤 자원은 `RESOURCE_BOUNDS` `-56..56` 안에 생성됩니다. `CameraController`는 preset camera padding을 포함한 bounds로 스크롤을 clamp하고, `MainScene.isBlocked()`는 build bounds 밖 배치를 차단합니다.
+- standard preset은 큰 유한 작전 구역입니다. `WORLD_BOUNDS`/`BUILD_BOUNDS`는 `-64..64`, 랜덤 자원은 `RESOURCE_BOUNDS` `-60..60` 안에 생성됩니다. `CameraController`는 preset camera padding을 포함한 bounds로 스크롤을 clamp하고, `MainScene.isBlocked()`는 build bounds 밖 배치를 차단합니다.
 
 ## 케이블/Repeater 정책
 
@@ -157,9 +160,10 @@ flowchart TD
 - `CableManager` -> `apRelay`, `AccessPoint`, 건물 버퍼
 - `UIManager` -> `progressionGates`, `waveSimulation`, `runResultSummary`, 하위 UI managers
 - `ResearchManager` -> `CONFIG.RESEARCH`, Lab job progress
+- `TrainingPlannerManager` -> 전역 Lab active job, 자동/수동 모드, 자동 학습 후보 점수, 여러 Lab/GPU 학습 power 합산
 - `SaveManager` -> 거의 모든 manager + `saveMigration`, `enemyRestore`
 - `tutorialFlow` -> 건물 역할 튜토리얼 단계/허용 건물/완료 메타/월드 시각 힌트 데이터, `TutorialManager`가 이를 렌더링하고 생산/전력/케이블/웨이브/모델 대상 조건을 확인한 뒤 완료/스킵 시 새 캠페인 랜덤 맵으로 전환
-- `ModelTrainingLab` -> RAW/LABELED/WEIGHT 데이터를 방어 모델 또는 시스템 프로토콜 작업에 투입하고, 방어 모델 학습 시간 완료 시 정확도 또는 공격력 보너스를 올리며, `MODEL_TRAINING_TARGET_SET` 이벤트로 튜토리얼 최종 Lab 단계와 연결
+- `ModelTrainingLab` -> RAW/LABELED/WEIGHT 데이터를 `TrainingPlannerManager`의 전역 active job에 투입하고, 각 Lab/GPU의 학습 power를 전역 작업 진행에 기여하며, `MODEL_TRAINING_TARGET_SET` 이벤트로 튜토리얼 최종 Lab 단계와 연결
 - `GPU_CLUSTER` -> Research와 무관하게 아무 방어 모델 하나가 정확도 100%에 도달하면 빌드 UI에 노출되며, powered adjacent GPU가 `ModelTrainingLab` 학습 시간을 줄임
 
 ## 신규 기능 추가 위치와 일반 절차

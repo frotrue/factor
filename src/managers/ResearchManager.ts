@@ -93,11 +93,11 @@ export default class ResearchManager {
         EventBus.emit('LAB_JOB_PROGRESS', { id: researchId, progress: progress.progress, required: research.COST });
     }
 
-    advanceJobTraining(researchId: string): void {
+    advanceJobTraining(researchId: string, amount: number = 1): void {
         const progress = this.jobProgress[researchId];
         if (!progress || !progress.isTraining || progress.completed) return;
 
-        progress.trainingProgressTicks = (progress.trainingProgressTicks ?? 0) + 1;
+        progress.trainingProgressTicks = (progress.trainingProgressTicks ?? 0) + Math.max(0, amount);
         if (progress.trainingProgressTicks >= (progress.trainingDurationTicks ?? 1)) {
             progress.isTraining = false;
             progress.completed = true;
