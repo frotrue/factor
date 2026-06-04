@@ -15,9 +15,11 @@ npm test
 npm run build
 npm run test:e2e
 npx playwright test --workers=1
+node scripts\capture-ui-baseline.cjs
 ```
 
 로컬 안정 기준은 `npx playwright test --workers=1`입니다. Playwright 브라우저가 없으면 `npx playwright install chromium`을 실행합니다.
+UI 재개편 전 기준선 스크린샷과 Phase 0 검증 결과는 [UI_PHASE_0_BASELINE.md](./UI_PHASE_0_BASELINE.md)에 기록합니다.
 
 ## 테스트 구분
 
