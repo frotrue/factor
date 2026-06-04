@@ -7,7 +7,7 @@ import { getCategoryColor } from '../visuals/visualTheme';
 export default class PowerNode extends BaseBuilding {
     nodeGraphics: Phaser.GameObjects.Graphics;
     rotationAngle: number;
-    nodeTween: Phaser.Tweens.Tween;
+    nodeTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'POWER_NODE', { ...config, color: CONFIG.BUILDINGS.POWER_NODE.COLOR });
@@ -16,13 +16,18 @@ export default class PowerNode extends BaseBuilding {
         this.container.add(this.nodeGraphics);
 
         this.rotationAngle = 0;
-        this.nodeTween = scene.tweens.add({
-            targets: this,
-            rotationAngle: Math.PI * 2,
-            duration: 5000,
-            repeat: -1,
-            onUpdate: () => this.drawNodeEnergy()
-        });
+        this.nodeTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.nodeTween = scene.tweens.add({
+                targets: this,
+                rotationAngle: Math.PI * 2,
+                duration: 5000,
+                repeat: -1,
+                onUpdate: () => this.drawNodeEnergy()
+            });
+        } else {
+            this.drawNodeEnergy();
+        }
     }
 
     drawNodeEnergy(): void {

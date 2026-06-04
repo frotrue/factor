@@ -12,6 +12,7 @@ This directory separates current project documentation from historical planning 
 - [Next Tasks](NEXT_TASKS.md): short-term priorities for the next implementation sessions.
 - [Technical Debt Implementation Plan](tech_debt_implementation_plan.md): codebase risks and cleanup order.
 - [AP Session Relay Rework Plan](AP_SESSION_RELAY_REWORK_PLAN.md): current status of AP relay/session mechanics.
+- [Performance Implementation Report](PERFORMANCE_IMPLEMENTATION_REPORT.md): implementation scope for removing large-object-count performance bottlenecks.
 - [Automated Testing Guide](AUTOMATED_TESTING_GUIDE.md): Vitest, Playwright, and build verification workflow.
 - [QA Checklist](QA_CHECKLIST.md): manual and automated regression checklist.
 

@@ -1,6 +1,6 @@
 # QA Checklist
 
-Updated: 2026-05-23
+Updated: 2026-06-01
 
 ## Standard Automated Checks
 
@@ -9,7 +9,7 @@ Run from repository root:
 ```powershell
 npm test
 npm run build
-npm run test:e2e -- --workers=1
+npx playwright test --workers=1
 ```
 
 ## Current Automated Coverage
@@ -37,6 +37,9 @@ npm run test:e2e -- --workers=1
 - [x] EventBus ownership behavior
 - [x] Effects manager warning markers
 - [x] i18n key behavior
+- [x] Standard map enemy lane path reservation/BFS guarantee across seeds
+- [x] Standard map organic resources and blocker cluster cleanup
+- [x] Standard map irregular outer boundary terrain density
 
 ### Playwright
 
@@ -120,6 +123,26 @@ npm run test:e2e -- --workers=1
 - [ ] Old saves without terrain still load and regenerate lane blockers.
 
 ## Recent Verification Log
+
+### 2026-06-01
+
+- Large-factory performance pass, autosave chunk fixture, and E2E smoke consistency fixes completed.
+- Verified:
+  - `npm test`: 28 files / 108 tests passed
+  - `npm run build`: passed
+  - `npx playwright test tests/e2e/performance.spec.ts --project=desktop-chromium --workers=1`: 1 passed, includes 100/500/1000 building frame summary and 1000 building autosave chunk assertion
+  - `npx playwright test --workers=1`: 19 passed / 17 skipped
+- Fixed prior full-suite Playwright failures by moving desktop smoke placement clicks away from the starting Core/Storage footprints and by checking tutorial-to-campaign cleanup against tutorial-specific building coordinates.
+
+### 2026-05-31
+
+- Standard map blocker blob/rough-line and enemy path guarantee pass.
+- Verified:
+  - `npm test -- src/managers/MapManager.test.ts`: 1 file / 10 tests passed
+  - `npm test`: 26 files / 98 tests passed
+  - `npm run build`: passed, 74 modules transformed
+- Checked but not green:
+  - `npm run test:e2e`: 12 passed / 15 skipped / 6 failed. `npm run test:e2e -- --workers=1` produced the same suite result because npm passed `--workers` as an env warning rather than a Playwright worker override. Follow-up failures were in existing smoke/tutorial expectations (`#mission-panel` visibility under full suite run, tutorial factory cleanup assertion, desktop storage placement count), while the targeted desktop camera smoke passed when rerun alone.
 
 ### 2026-05-23
 

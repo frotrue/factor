@@ -16,8 +16,8 @@ export default class AbstractProcessor extends BaseBuilding {
     processorGraphics: Phaser.GameObjects.Graphics;
     sweepY: number;
     rotationAngle: number;
-    processorTween1: Phaser.Tweens.Tween;
-    processorTween2: Phaser.Tweens.Tween;
+    processorTween1: Phaser.Tweens.Tween | null;
+    processorTween2: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: string, recipeKey: string, config: BuildingOptions = {}) {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
@@ -37,21 +37,27 @@ export default class AbstractProcessor extends BaseBuilding {
         this.sweepY = -12;
         this.rotationAngle = 0;
 
-        this.processorTween1 = scene.tweens.add({
-            targets: this,
-            sweepY: 12,
-            duration: 2000,
-            yoyo: true,
-            repeat: -1
-        });
+        this.processorTween1 = null;
+        this.processorTween2 = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.processorTween1 = scene.tweens.add({
+                targets: this,
+                sweepY: 12,
+                duration: 2000,
+                yoyo: true,
+                repeat: -1
+            });
 
-        this.processorTween2 = scene.tweens.add({
-            targets: this,
-            rotationAngle: Math.PI * 2,
-            duration: 6000,
-            repeat: -1,
-            onUpdate: () => this.drawProcessorVisuals()
-        });
+            this.processorTween2 = scene.tweens.add({
+                targets: this,
+                rotationAngle: Math.PI * 2,
+                duration: 6000,
+                repeat: -1,
+                onUpdate: () => this.drawProcessorVisuals()
+            });
+        } else {
+            this.drawProcessorVisuals();
+        }
     }
 
     drawProcessorVisuals(): void {

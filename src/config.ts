@@ -72,7 +72,7 @@ export const CONFIG: GameConfig = {
             WIDTH: 4,
             HEIGHT: 4,
             HP: 1000,
-            POWER: { CONSUMPTION: 0, PRODUCTION: 50, RANGE: 3 },
+            POWER: { CONSUMPTION: 0, PRODUCTION: 50, RANGE: 5 },
             CATEGORY: 'NONE'
         },
         PROCESSOR: {

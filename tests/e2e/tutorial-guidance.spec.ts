@@ -129,10 +129,20 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
 
     const campaignStart = await page.evaluate(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
+        const tutorialBuildingKeys = [
+            '-96,-128',
+            '-160,-96',
+            '-192,0',
+            '128,-32',
+            '160,-32',
+            '160,64',
+            '-32,-224',
+            '160,128'
+        ];
         return {
             mode: scene.mode,
             mapType: scene.mapManager.mapType,
-            hasTutorialFactory: Boolean(scene.buildingManager.get('-32,-32')),
+            hasTutorialFactory: tutorialBuildingKeys.some(key => Boolean(scene.buildingManager.get(key))),
             campaignSaveExists: Boolean(localStorage.getItem('gradium_save')),
             tutorialCompleted: localStorage.getItem('gradium_tutorial_completed')
         };

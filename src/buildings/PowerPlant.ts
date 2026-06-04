@@ -9,7 +9,7 @@ export default class PowerPlant extends BaseBuilding {
     isActive: boolean;
     rotationAngle: number;
     waveRadius: number;
-    plantTween: Phaser.Tweens.Tween;
+    plantTween: Phaser.Tweens.Tween | null;
     waveTween?: Phaser.Tweens.Tween;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
@@ -22,15 +22,22 @@ export default class PowerPlant extends BaseBuilding {
         this.rotationAngle = 0;
         this.waveRadius = 5;
 
-        this.plantTween = scene.tweens.add({
-            targets: this,
-            rotationAngle: Math.PI * 2,
-            duration: 6000,
-            repeat: -1,
-            onUpdate: () => this.drawContainmentCore()
-        });
+        this.plantTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.plantTween = scene.tweens.add({
+                targets: this,
+                rotationAngle: Math.PI * 2,
+                duration: 6000,
+                repeat: -1,
+                onUpdate: () => this.drawContainmentCore()
+            });
+        }
 
         this.checkPlacement();
+        if (!this.shouldUseAnimatedVisuals()) {
+            this.waveRadius = this.isActive ? 14 : 5;
+            this.drawContainmentCore();
+        }
     }
 
     checkPlacement(): void {
@@ -38,7 +45,7 @@ export default class PowerPlant extends BaseBuilding {
         const resourceType = mapManager.getResourceAt(this.x, this.y);
         this.isActive = (resourceType === 'ENERGY');
 
-        if (this.isActive) {
+        if (this.isActive && this.shouldUseAnimatedVisuals()) {
             this.waveTween = this.scene.tweens.add({
                 targets: this,
                 waveRadius: 24,

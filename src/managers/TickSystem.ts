@@ -51,7 +51,7 @@ export default class TickSystem {
         const isFullTick = this.currentTick % 2 === 0;
 
         if (this.powerManager && isFullTick) {
-            this.powerManager.updatePowerGrid();
+            this.powerManager.updateIfDirty();
         }
         
         if (this.cableManager) {

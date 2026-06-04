@@ -3,6 +3,10 @@ import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
 import { getLanguage, isLanguage, setLanguage, t } from '../i18n';
 
+const DEFAULT_FPS_LIMIT = 60;
+const MIN_FPS_LIMIT = 30;
+const MAX_FPS_LIMIT = 240;
+
 export default class SettingsUI {
     constructor(
         private scene: MainScene,
@@ -135,15 +139,20 @@ export default class SettingsUI {
         const fpsButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-fps]'));
         fpsButtons.forEach(btn => this.uiManager.guardDomPointer(btn));
 
-        const savedFps = localStorage.getItem('gradium_fps_limit');
-        const initialFps = savedFps ? parseInt(savedFps, 10) : 240;
+        const savedFps = parseInt(localStorage.getItem('gradium_fps_limit') || String(DEFAULT_FPS_LIMIT), 10);
+        const initialFps = Number.isFinite(savedFps)
+            ? Math.max(MIN_FPS_LIMIT, Math.min(MAX_FPS_LIMIT, savedFps))
+            : DEFAULT_FPS_LIMIT;
         this.applyFpsLimit(initialFps, fpsButtons);
 
         fpsButtons.forEach(btn => {
             btn.onclick = event => {
                 event.preventDefault();
                 event.stopPropagation();
-                const fps = parseInt(btn.dataset.fps || '240', 10);
+                const requestedFps = parseInt(btn.dataset.fps || String(DEFAULT_FPS_LIMIT), 10);
+                const fps = Number.isFinite(requestedFps)
+                    ? Math.max(MIN_FPS_LIMIT, Math.min(MAX_FPS_LIMIT, requestedFps))
+                    : DEFAULT_FPS_LIMIT;
                 this.applyFpsLimit(fps, fpsButtons);
                 localStorage.setItem('gradium_fps_limit', String(fps));
             };

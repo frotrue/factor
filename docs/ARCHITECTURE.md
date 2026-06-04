@@ -35,7 +35,7 @@ flowchart TD
     C --> F["UI/Input/Event 초기화"]
     C --> G["MainScene.update()"]
     G --> H["TickSystem.update()"]
-    H --> I["PowerManager.updatePowerGrid()"]
+    H --> I["PowerManager.updateIfDirty()"]
     H --> J["CableManager.transferData()"]
     H --> K["Building.onTick()"]
     G --> L["WaveManager.update()"]
@@ -52,12 +52,14 @@ flowchart TD
 
 - 커서 위치와 그리드 갱신
 - `TickSystem.update(time)`로 고정 틱 처리
-- `WaveManager.update(delta * gameSpeed)`로 웨이브/적 처리. 튜토리얼 중에는 FIRST_WAVE 이전까지 타이머를 동결하고, FIRST_WAVE 단계에서 북쪽 gate mock wave를 시작합니다. 적 이동 target은 Core footprint center를 사용하고, next-wave briefing은 wave/difficulty 변경 시에만 발행하며, countdown 숫자는 `WAVE_UPDATE`로 갱신합니다.
+- `WaveManager.update(delta * gameSpeed)`로 웨이브/적 처리. 튜토리얼 중에는 FIRST_WAVE 이전까지 타이머를 동결하고, FIRST_WAVE 단계에서 북쪽 gate mock wave를 시작합니다. 적 이동 target은 Core footprint center를 사용하고, next-wave briefing은 wave/difficulty 변경 시에만 발행하며, countdown 숫자는 `WAVE_UPDATE`로 갱신합니다. 타워의 적 range query는 `WaveManager`의 spatial bucket index를 사용합니다.
 - `SaveManager.update(delta)`로 자동 저장
 - `UIManager.update()`로 HUD/패널 갱신
 - `CameraController.update()`로 카메라 이동
 - `CableManager.drawCables()`와 이펙트 갱신
 - dirty flag가 켜진 전력/방어 오버레이 재그리기
+
+커서 ghost와 tooltip은 `InputController`가 snapped tile/tool/rotation/state signature로 dirty 갱신합니다. 같은 타일에서 상태가 바뀌지 않으면 ghost graphics와 tooltip DOM 문자열을 매 프레임 다시 만들지 않습니다.
 
 ## 캔버스 그래픽 방향
 
@@ -65,9 +67,11 @@ flowchart TD
 
 그래픽 패치는 gameplay 수치와 분리되어야 합니다. `src/config.ts`의 `COLOR` 값은 빌드 버튼 swatch와 건물 렌더 색으로도 쓰이므로, 색 변경은 허용되지만 HP/속도/비용/해금 조건과 섞어 수정하지 않는 것이 안전합니다.
 
-`TickSystem` 내부에서는 매 틱마다 케이블 전송을 처리하고, 짝수 tick마다 전력망 갱신, AP 연결 갱신, 건물 `onTick()` 생산/가공을 수행합니다.
+`TickSystem` 내부에서는 매 틱마다 케이블 전송을 처리하고, 짝수 tick마다 AP 연결 갱신과 건물 `onTick()` 생산/가공을 수행합니다. 전력망은 건물 배치/삭제/파괴/연구 해금 등으로 dirty 처리된 경우에만 `PowerManager.updateIfDirty()`가 실제 rebuild를 수행합니다.
 
 전력망 범위를 제외한 웨이브 적 target, 경로 가이드 라인처럼 멀티타일 건물의 기준점이 필요한 계산은 `src/utils/geometry.ts`의 footprint center를 공유합니다. Core 같은 4x4 건물은 전력 범위는 건물 테두리(footprint edges)를 기준으로 뻗어나가며, 적 경로는 중심 좌표를 기준으로 맞춰집니다.
+
+`PerformanceStats`는 최근 frame samples, 주요 최적화 counter, entity count를 수집합니다. 런타임에서는 `scene.performanceStats.getSummary()`로 읽고, Playwright와 수동 디버깅에서는 `window.__GRADIUM_PERF__`로 접근합니다.
 
 ## 상태 관리 구조
 
@@ -75,7 +79,7 @@ flowchart TD
 
 | 상태 | 위치 |
 |---|---|
-| 건물 목록 | `BuildingManager.buildings: Map<string, BaseBuilding>` |
+| 건물 목록 | `BuildingManager.buildings: Map<string, BaseBuilding>`, 타입별 index |
 | 아이템 목록 | `ItemManager.items` |
 | 케이블/큐 | `CableManager.cables`, `CableManager.apConnections` |
 | 전력망 | `PowerManager.networks`, `buildingNetworkMap`, 각 건물 `hasPower` |
@@ -129,7 +133,7 @@ flowchart TD
 
 ## 저장/불러오기 흐름
 
-`SaveManager.saveGame()`은 캠페인 모드에서만 다음을 `SaveData` 형태로 모아 localStorage에 저장합니다. 튜토리얼 모드는 학습용 임시 시나리오라 일반 캠페인 저장 슬롯을 덮어쓰지 않습니다.
+`SaveManager.saveGame()`은 캠페인 모드에서만 다음을 `SaveData` 형태로 모아 localStorage에 저장합니다. 튜토리얼 모드는 학습용 임시 시나리오라 일반 캠페인 저장 슬롯을 덮어쓰지 않습니다. 자동 저장은 dirty gate를 거치며, 저장 이후 변경이 없고 wave/enemy/item/cable queue 같은 volatile state가 없으면 interval마다 전체 JSON 생성을 반복하지 않습니다. 필요한 자동 저장은 즉시 전체 snapshot을 만들지 않고 다음 macrotask로 예약한 뒤 buildings/items/cables/enemies/resource/terrain 배열 수집을 chunk 단위로 나눠 실행합니다.
 
 - wave 상태와 적 목록
 - Core HP/점수
@@ -157,6 +161,7 @@ flowchart TD
 - `TickSystem` -> `PowerManager`, `CableManager`, `BaseBuilding.onTick()`
 - `WaveManager` -> `waveSimulation`, `waveBriefingKey`, `geometry`, `BaseEnemy`
 - `BaseEnemy` -> `gridPath`, `enemyBuildingInteraction`, `BuildingManager`, `MapManager`
+- `PerformanceStats` -> `MainScene`과 주요 manager counter
 - `CableManager` -> `apRelay`, `AccessPoint`, 건물 버퍼
 - `UIManager` -> `progressionGates`, `waveSimulation`, `runResultSummary`, 하위 UI managers
 - `ResearchManager` -> `CONFIG.RESEARCH`, Lab job progress

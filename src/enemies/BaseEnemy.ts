@@ -8,6 +8,26 @@ import { selectEnemyBuildingTarget } from '../utils/enemyBuildingInteraction';
 import { findGridPath, type GridPoint } from '../utils/gridPath';
 import { getEnemyColor, VISUAL_THEME } from '../visuals/visualTheme';
 
+const ENEMY_PATH_DIRECTIONS = [
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+    { x: 1, y: -1 },
+    { x: -1, y: -1 }
+];
+const PATH_RECALC_INTERVAL_MS = 700;
+const INITIAL_PATH_STAGGER_MS = 700;
+const MAX_PATH_CACHE_ENTRIES = 512;
+const MAX_ANIMATED_ENEMIES = 120;
+
+type CachedPath = {
+    version: number;
+    path: GridPoint[];
+};
+
 export default class BaseEnemy {
     scene: Phaser.Scene;
     id: string;
@@ -29,10 +49,16 @@ export default class BaseEnemy {
     specialTimer: number;
     attackTimer: number;
     auraSpeedMultiplier: number;
+    private animatedStatusVisual: boolean;
     private _hpDirty: boolean = true;
     private _statusDrawn: boolean = false;
+    private static pathCache = new Map<string, CachedPath>();
+    private static pathCacheVersion = 0;
+    private static pathCacheEventsBound = false;
+    private static animatedEnemyVisuals = 0;
 
     constructor(scene: Phaser.Scene, type: string, x: number, y: number, hpMultiplier: number = 1, id: string, buildingManager: BuildingManager) {
+        BaseEnemy.bindPathCacheInvalidation();
         this.scene = scene;
         this.type = type;
         this.x = x;
@@ -47,10 +73,12 @@ export default class BaseEnemy {
         this.damage = config.DAMAGE;
         this.active = true;
         this.path = [];
-        this.pathTimer = 0;
+        this.pathTimer = BaseEnemy.getInitialPathStagger(id);
         this.specialTimer = 0;
         this.attackTimer = 0;
         this.auraSpeedMultiplier = 1;
+        this.animatedStatusVisual = BaseEnemy.animatedEnemyVisuals < MAX_ANIMATED_ENEMIES;
+        if (this.animatedStatusVisual) BaseEnemy.animatedEnemyVisuals++;
 
         const color = getEnemyColor(type);
         this.sprite = scene.add.circle(x, y, config.RADIUS, color);
@@ -79,6 +107,13 @@ export default class BaseEnemy {
     die(): void {
         if (!this.active) return;
         this.active = false;
+        if (this.animatedStatusVisual) {
+            BaseEnemy.animatedEnemyVisuals = Math.max(0, BaseEnemy.animatedEnemyVisuals - 1);
+            this.animatedStatusVisual = false;
+        }
+        this.scene.tweens.killTweensOf(this.sprite);
+        this.scene.tweens.killTweensOf(this.statusGraphics);
+        if (this.auraGraphics) this.scene.tweens.killTweensOf(this.auraGraphics);
         if (this.sprite && this.sprite.active) this.sprite.destroy();
         if (this.hpBar && this.hpBar.active) this.hpBar.destroy();
         if (this.statusGraphics && this.statusGraphics.active) this.statusGraphics.destroy();
@@ -187,6 +222,15 @@ export default class BaseEnemy {
     }
 
     createStatusVisuals(): void {
+        if (!this.animatedStatusVisual) {
+            if (this.type === 'OVERFITTED_MODEL') {
+                this.auraGraphics = this.scene.add.graphics();
+                this.auraGraphics.setDepth(24);
+            }
+            this.drawStatusVisualsOnce();
+            return;
+        }
+
         if (this.type === 'DDOS_BOT') {
             this.scene.tweens.add({
                 targets: this.sprite,
@@ -267,20 +311,33 @@ export default class BaseEnemy {
     }
 
     getMoveTarget(targetX: number, targetY: number): GridPoint {
+        if (this.path.length === 0 && this.pathTimer > 0) {
+            return { x: this.x, y: this.y };
+        }
+
         if (this.pathTimer <= 0 || this.path.length === 0) {
             this.path = this.findPath(targetX, targetY);
-            this.pathTimer = 700;
+            this.pathTimer = PATH_RECALC_INTERVAL_MS;
         }
         return this.path[0] || { x: this.x, y: this.y };
     }
 
     findPath(targetX: number, targetY: number): GridPoint[] {
         const gridSize = CONFIG.GRID_SIZE;
-        return findGridPath({
+        const cacheKey = BaseEnemy.getPathCacheKey(this.x, this.y, targetX, targetY, gridSize);
+        const cached = BaseEnemy.pathCache.get(cacheKey);
+        if (cached && cached.version === BaseEnemy.pathCacheVersion) {
+            (this.scene as IMainScene).performanceStats?.increment('pathCacheHits');
+            return cached.path.map(point => ({ ...point }));
+        }
+
+        (this.scene as IMainScene).performanceStats?.increment('pathCacheMisses');
+        const path = findGridPath({
             startWorld: { x: this.x, y: this.y },
             targetWorld: { x: targetX, y: targetY },
             gridSize,
-            directions: CONFIG.DIRECTIONS.map(d => ({ x: d.x, y: d.y })),
+            directions: ENEMY_PATH_DIRECTIONS,
+            preventDiagonalCornerCutting: true,
             isBlocked: (worldX, worldY, isTarget) => {
                 const worldKey = `${worldX},${worldY}`;
                 const blockingBuilding = this.buildingManager.get(worldKey) as BaseBuilding | null;
@@ -289,6 +346,49 @@ export default class BaseEnemy {
                 return Boolean(blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget);
             }
         });
+        BaseEnemy.cachePath(cacheKey, path);
+        return path.map(point => ({ ...point }));
+    }
+
+    private static getPathCacheKey(startX: number, startY: number, targetX: number, targetY: number, gridSize: number): string {
+        const sx = Math.floor(startX / gridSize);
+        const sy = Math.floor(startY / gridSize);
+        const tx = Math.floor(targetX / gridSize);
+        const ty = Math.floor(targetY / gridSize);
+        return `${sx},${sy}->${tx},${ty}`;
+    }
+
+    private static cachePath(key: string, path: GridPoint[]): void {
+        if (BaseEnemy.pathCache.size >= MAX_PATH_CACHE_ENTRIES) {
+            const oldestKey = BaseEnemy.pathCache.keys().next().value;
+            if (oldestKey) BaseEnemy.pathCache.delete(oldestKey);
+        }
+        BaseEnemy.pathCache.set(key, {
+            version: BaseEnemy.pathCacheVersion,
+            path: path.map(point => ({ ...point }))
+        });
+    }
+
+    private static getInitialPathStagger(id: string): number {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) {
+            hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+        }
+        return Math.abs(hash) % INITIAL_PATH_STAGGER_MS;
+    }
+
+    private static bindPathCacheInvalidation(): void {
+        if (BaseEnemy.pathCacheEventsBound) return;
+        BaseEnemy.pathCacheEventsBound = true;
+        const invalidate = () => BaseEnemy.invalidatePathCache();
+        EventBus.on('BUILDING_PLACED', invalidate, 'BaseEnemyPathCache');
+        EventBus.on('BUILDING_REMOVED', invalidate, 'BaseEnemyPathCache');
+        EventBus.on('BUILDING_DESTROYED', invalidate, 'BaseEnemyPathCache');
+    }
+
+    private static invalidatePathCache(): void {
+        BaseEnemy.pathCacheVersion++;
+        BaseEnemy.pathCache.clear();
     }
 
     tryInfectBuilding(): void {

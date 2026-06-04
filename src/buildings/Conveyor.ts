@@ -10,7 +10,7 @@ export default class Conveyor extends BaseBuilding {
     transferRate: number;
     conveyorGraphics: Phaser.GameObjects.Graphics;
     scrollOffset: number;
-    conveyorTween: Phaser.Tweens.Tween;
+    conveyorTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}, type: string = 'CONVEYOR') {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
@@ -22,13 +22,18 @@ export default class Conveyor extends BaseBuilding {
         this.conveyorGraphics.angle = CONFIG.DIRECTIONS[this.rotation]?.angle || 0;
 
         this.scrollOffset = 0;
-        this.conveyorTween = scene.tweens.add({
-            targets: this,
-            scrollOffset: 12,
-            duration: type === 'FAST_LINK' ? 400 : 800,
-            repeat: -1,
-            onUpdate: () => this.drawChevronArrows()
-        });
+        this.conveyorTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.conveyorTween = scene.tweens.add({
+                targets: this,
+                scrollOffset: 12,
+                duration: type === 'FAST_LINK' ? 400 : 800,
+                repeat: -1,
+                onUpdate: () => this.drawChevronArrows()
+            });
+        } else {
+            this.drawChevronArrows();
+        }
     }
 
     drawChevronArrows(): void {

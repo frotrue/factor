@@ -9,8 +9,15 @@ import NeuralTrainer from '../buildings/NeuralTrainer';
 import { getBuildingName, getCableName, getItemName, t, textForKey } from '../i18n';
 import { getSquareCoverageOffsets } from '../utils/powerPreview';
 import { VISUAL_THEME } from '../visuals/visualTheme';
+import EventBus from '../managers/EventBus';
+
+const TOOLTIP_REFRESH_INTERVAL_MS = 250;
 
 export default class InputController {
+    private lastGhostSignature = '';
+    private lastTooltipSignature = '';
+    private lastTooltipRefreshAt = Number.NEGATIVE_INFINITY;
+
     constructor(private scene: MainScene) {}
 
     setup(): void {
@@ -66,6 +73,11 @@ export default class InputController {
         scene.input.keyboard!.on('keydown-R', () => this.rotateCursor());
         scene.input.keyboard!.on('keydown-F2', () => scene.togglePowerGrid());
         scene.input.keyboard!.on('keydown-F1', () => scene.toggleDefenseRange());
+
+        EventBus.on('BUILDING_PLACED', () => this.invalidateCursorCache(), 'InputController');
+        EventBus.on('BUILDING_REMOVED', () => this.invalidateCursorCache(), 'InputController');
+        EventBus.on('BUILDING_DESTROYED', () => this.invalidateCursorCache(), 'InputController');
+        EventBus.on('RESEARCH_UNLOCKED', () => this.invalidateCursorCache(), 'InputController');
     }
 
     isPointerOverDomUI(pointer: Phaser.Input.Pointer): boolean {
@@ -117,6 +129,7 @@ export default class InputController {
     rotateCursor(): void {
         const { scene } = this;
         scene.currentRotation = (scene.currentRotation + 1) % 4;
+        this.invalidateCursorCache();
         scene.updateCursorGraphics();
     }
 
@@ -131,6 +144,7 @@ export default class InputController {
         }
         scene.uiManager.setMobileActionStatus(null);
         scene.uiManager.cancelMobileAction();
+        this.invalidateCursorCache();
     }
 
     updateCursorPosition(): void {
@@ -161,8 +175,17 @@ export default class InputController {
         }
 
         const existingBuilding = scene.buildingManager.get(key);
+        const ghostSignature = [
+            snappedX,
+            snappedY,
+            mode,
+            scene.currentRotation,
+            scene.cableState,
+            scene.cableStartKey || '',
+            existingBuilding?.type || ''
+        ].join('|');
 
-        if (mode !== 'REMOVE') {
+        if (mode !== 'REMOVE' && this.shouldRenderCursorGhost(ghostSignature)) {
             if (mode === 'BASIC' || mode === 'FIBER') {
                 const cConfig = CONFIG.CABLES[mode];
                 const isUnlocked = !cConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(cConfig.UNLOCK_REQUIRED);
@@ -195,6 +218,9 @@ export default class InputController {
                 }
             }
         }
+
+        const tooltipSignature = this.getTooltipSignature(snappedX, snappedY, mode, existingBuilding);
+        if (!this.shouldRenderTooltip(tooltipSignature)) return;
 
         if (existingBuilding) {
             const bConfig = CONFIG.BUILDINGS[existingBuilding.type];
@@ -287,6 +313,52 @@ export default class InputController {
                 scene.uiManager.hideTooltip();
             }
         }
+    }
+
+    private invalidateCursorCache(): void {
+        this.lastGhostSignature = '';
+        this.lastTooltipSignature = '';
+        this.lastTooltipRefreshAt = Number.NEGATIVE_INFINITY;
+    }
+
+    private shouldRenderCursorGhost(signature: string): boolean {
+        if (signature === this.lastGhostSignature) return false;
+        this.lastGhostSignature = signature;
+        return true;
+    }
+
+    private shouldRenderTooltip(signature: string): boolean {
+        const now = this.scene.time.now;
+        if (signature === this.lastTooltipSignature && now - this.lastTooltipRefreshAt < TOOLTIP_REFRESH_INTERVAL_MS) {
+            return false;
+        }
+        this.lastTooltipSignature = signature;
+        this.lastTooltipRefreshAt = now;
+        return true;
+    }
+
+    private getTooltipSignature(snappedX: number, snappedY: number, mode: string, existingBuilding: any): string {
+        if (!existingBuilding) {
+            const resource = this.scene.mapManager.getResourceAt(snappedX, snappedY) || '';
+            const terrain = this.scene.mapManager.getTerrainAt(snappedX, snappedY) || '';
+            return `${snappedX},${snappedY}|${mode}|${resource}|${terrain}`;
+        }
+
+        const network = this.scene.powerManager.getNetworkForBuilding(`${existingBuilding.x},${existingBuilding.y}`);
+        return [
+            snappedX,
+            snappedY,
+            mode,
+            existingBuilding.type,
+            existingBuilding.hasPower,
+            existingBuilding.hp,
+            existingBuilding.inputBuffer?.length ?? 0,
+            existingBuilding.outputBuffer?.length ?? 0,
+            network?.id ?? '',
+            network?.production ?? '',
+            network?.consumption ?? '',
+            Math.floor(this.scene.time.now / TOOLTIP_REFRESH_INTERVAL_MS)
+        ].join('|');
     }
 
     private drawPlacementRangePreview(type: string, width: number, height: number): void {

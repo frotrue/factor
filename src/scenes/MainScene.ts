@@ -20,6 +20,7 @@ import EffectsManager from '../managers/EffectsManager';
 import SoundManager from '../managers/SoundManager';
 import TutorialManager from '../managers/TutorialManager';
 import TrainingPlannerManager from '../managers/TrainingPlannerManager';
+import PerformanceStats from '../managers/PerformanceStats';
 import EventBus from '../managers/EventBus';
 import { DefenseModelState, GameMode } from '../types';
 import DefenseTower from '../buildings/DefenseTower';
@@ -55,6 +56,7 @@ export default class MainScene extends Phaser.Scene {
     soundManager!: SoundManager;
     tutorialManager?: TutorialManager;
     trainingPlanner!: TrainingPlannerManager;
+    performanceStats!: PerformanceStats;
     mode: GameMode = 'campaign';
     overlayController!: OverlayController;
     inputController!: InputController;
@@ -110,6 +112,8 @@ export default class MainScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor(VISUAL_THEME.world.background);
 
         this.mapManager = new MapManager();
+        this.performanceStats = new PerformanceStats(this);
+        (window as any).__GRADIUM_PERF__ = this.performanceStats;
         this.initializeDefenseModelStates();
         this.itemManager = new ItemManager(this);
         this.buildingManager = new BuildingManager(this);
@@ -238,13 +242,19 @@ export default class MainScene extends Phaser.Scene {
                 'MainScene',
                 'CableManager',
                 'Core',
+                'BaseEnemyPathCache',
+                'InputController',
                 'ItemManager',
+                'PowerManager',
                 'SaveManager',
                 'SoundManager',
                 'TutorialManager',
                 'UIManager',
                 'WaveManager'
             ].forEach(owner => EventBus.offAll(owner));
+            if ((window as any).__GRADIUM_PERF__ === this.performanceStats) {
+                delete (window as any).__GRADIUM_PERF__;
+            }
         });
     }
 
@@ -303,7 +313,7 @@ export default class MainScene extends Phaser.Scene {
 
     syncDefenseModelType(type: string): void {
         const state = this.getDefenseModelState(type);
-        this.buildingManager?.forEach(building => {
+        this.buildingManager?.getByType(type).forEach(building => {
             if (building instanceof DefenseTower && building.type === type) {
                 building.applyModelState(state);
             }
@@ -427,6 +437,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number): void {
+        this.performanceStats.recordFrame(delta);
         BaseBuilding.tickVisualFrame();
         this.updateCursorPosition();
         this.gridRenderer.draw();

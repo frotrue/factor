@@ -22,6 +22,16 @@ const NETWORK_COLORS = [
     0xf97316
 ];
 
+const POWER_NODE_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => {
+    const pConfig = CONFIG.BUILDINGS[type]?.POWER;
+    return pConfig && ((pConfig.PRODUCTION || 0) > 0 || (pConfig.RANGE || 0) > 0);
+});
+const POWER_CONSUMER_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => {
+    const pConfig = CONFIG.BUILDINGS[type]?.POWER;
+    return pConfig && (pConfig.CONSUMPTION || 0) > 0;
+});
+const POWER_RELEVANT_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => Boolean(CONFIG.BUILDINGS[type]?.POWER));
+
 export default class PowerManager {
     scene: Phaser.Scene;
     buildingManager: BuildingManager;
@@ -33,6 +43,7 @@ export default class PowerManager {
     nodes: PowerNodeInfo[];
     networks: PowerNetwork[];
     buildingNetworkMap: Map<string, PowerNetwork>;
+    private dirty: boolean;
 
     constructor(scene: Phaser.Scene, buildingManager: BuildingManager) {
         this.scene = scene;
@@ -45,9 +56,26 @@ export default class PowerManager {
         this.nodes = [];
         this.networks = [];
         this.buildingNetworkMap = new Map();
+        this.dirty = true;
+
+        EventBus.on('BUILDING_PLACED', () => this.markDirty(), 'PowerManager');
+        EventBus.on('BUILDING_REMOVED', () => this.markDirty(), 'PowerManager');
+        EventBus.on('BUILDING_DESTROYED', () => this.markDirty(), 'PowerManager');
+        EventBus.on('RESEARCH_UNLOCKED', () => this.markDirty(), 'PowerManager');
+    }
+
+    markDirty(): void {
+        this.dirty = true;
+    }
+
+    updateIfDirty(): void {
+        if (!this.dirty) return;
+        this.updatePowerGrid();
     }
 
     updatePowerGrid(): void {
+        (this.scene as any).performanceStats?.increment('powerRebuilds');
+        this.dirty = false;
         this.totalProduction = 0;
         this.totalConsumption = 0;
         this.availablePower = 0;
@@ -79,7 +107,7 @@ export default class PowerManager {
     collectPowerNodes(): PowerNode[] {
         const nodes: PowerNode[] = [];
 
-        this.buildingManager.forEach(building => {
+        this.buildingManager.getByTypes(POWER_NODE_TYPES).forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             if (!pConfig) return;
             if ((pConfig.PRODUCTION || 0) <= 0 && (pConfig.RANGE || 0) <= 0) return;
@@ -101,6 +129,12 @@ export default class PowerManager {
     buildNetworks(nodes: PowerNode[]): PowerNetwork[] {
         const networks: PowerNetwork[] = [];
         const visited = new Set<string>();
+        const spatialIndex = this.buildPowerNodeSpatialIndex(nodes);
+        const maxNodeRange = nodes.reduce((max, node) => Math.max(max, node.range), 0);
+        const maxNodeFootprint = nodes.reduce((max, node) => {
+            const config = CONFIG.BUILDINGS[node.building.type];
+            return Math.max(max, config?.WIDTH || 1, config?.HEIGHT || 1);
+        }, 1);
 
         nodes.forEach(node => {
             if (visited.has(node.key)) return;
@@ -131,8 +165,10 @@ export default class PowerManager {
                     this.poweredArea.add(tile);
                 });
 
-                for (let ci = 0; ci < nodes.length; ci++) {
-                    const candidate = nodes[ci];
+                const candidates = this.getNearbyPowerNodes(current, spatialIndex, maxNodeRange + maxNodeFootprint);
+                for (let ci = 0; ci < candidates.length; ci++) {
+                    const candidate = candidates[ci];
+                    if (candidate === current) continue;
                     if (visited.has(candidate.key)) continue;
                     if (!this.rangesOverlap(current, candidate)) continue;
                     visited.add(candidate.key);
@@ -147,7 +183,7 @@ export default class PowerManager {
     }
 
     assignConsumersToNetworks(): void {
-        this.buildingManager.forEach(building => {
+        this.buildingManager.getByTypes(POWER_CONSUMER_TYPES).forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             if (!pConfig || pConfig.CONSUMPTION <= 0) return;
 
@@ -170,7 +206,7 @@ export default class PowerManager {
     }
 
     applyPowerState(): void {
-        this.buildingManager.forEach(building => {
+        this.buildingManager.getByTypes(POWER_RELEVANT_TYPES).forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             if (!pConfig) return;
 
@@ -230,6 +266,47 @@ export default class PowerManager {
         const dy = Math.abs(a.y - b.y) / this.gridSize;
         return dx <= a.range + b.range + Math.max(aW, bW)
             && dy <= a.range + b.range + Math.max(aH, bH);
+    }
+
+    private buildPowerNodeSpatialIndex(nodes: PowerNode[]): Map<string, PowerNode[]> {
+        const index = new Map<string, PowerNode[]>();
+        nodes.forEach(node => {
+            const key = this.getPowerNodeBucketKey(node.x, node.y);
+            const bucket = index.get(key);
+            if (bucket) {
+                bucket.push(node);
+            } else {
+                index.set(key, [node]);
+            }
+        });
+        return index;
+    }
+
+    private getNearbyPowerNodes(node: PowerNode, index: Map<string, PowerNode[]>, tileRadius: number): PowerNode[] {
+        const candidates: PowerNode[] = [];
+        const seen = new Set<string>();
+        const originX = Math.floor(node.x / this.gridSize);
+        const originY = Math.floor(node.y / this.gridSize);
+        const radius = Math.ceil(tileRadius);
+
+        for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                const bucket = index.get(`${originX + dx},${originY + dy}`);
+                if (!bucket) continue;
+
+                for (const candidate of bucket) {
+                    if (seen.has(candidate.key)) continue;
+                    seen.add(candidate.key);
+                    candidates.push(candidate);
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    private getPowerNodeBucketKey(x: number, y: number): string {
+        return `${Math.floor(x / this.gridSize)},${Math.floor(y / this.gridSize)}`;
     }
 
     getNetworkForBuilding(key: string): PowerNetwork | null {

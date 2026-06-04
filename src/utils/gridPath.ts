@@ -6,6 +6,7 @@ export interface GridPoint {
 interface GridCoord {
     x: number;
     y: number;
+    cost?: number;
 }
 
 export interface GridPathOptions {
@@ -17,6 +18,7 @@ export interface GridPathOptions {
     maxVisited?: number;
     maxDistanceFromStart?: number;
     maxReturnedSteps?: number;
+    preventDiagonalCornerCutting?: boolean;
 }
 
 class MinHeap<T> {
@@ -68,7 +70,8 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
         isBlocked,
         maxVisited = 12000,
         maxDistanceFromStart = 80,
-        maxReturnedSteps = 8
+        maxReturnedSteps = 8,
+        preventDiagonalCornerCutting = false
     } = options;
     const start = { x: Math.floor(startWorld.x / gridSize), y: Math.floor(startWorld.y / gridSize) };
     const target = { x: Math.floor(targetWorld.x / gridSize), y: Math.floor(targetWorld.y / gridSize) };
@@ -78,7 +81,13 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
     const cameFrom = new Map<string, string>();
     const gScore = new Map<string, number>([[startKey, 0]]);
 
-    const heuristic = (point: { x: number; y: number }) => Math.abs(target.x - point.x) + Math.abs(target.y - point.y);
+    const hasDiagonalMovement = directions.some(direction => direction.x !== 0 && direction.y !== 0);
+    const heuristic = (point: { x: number; y: number }) => {
+        const dx = Math.abs(target.x - point.x);
+        const dy = Math.abs(target.y - point.y);
+        if (!hasDiagonalMovement) return dx + dy;
+        return Math.max(dx, dy) + (Math.SQRT2 - 1) * Math.min(dx, dy);
+    };
 
     const open = new MinHeap<{ x: number; y: number }>(
         (node) => (gScore.get(`${node.x},${node.y}`) ?? Infinity) + heuristic(node)
@@ -102,8 +111,20 @@ export function findGridPath(options: GridPathOptions): GridPoint[] {
             const worldY = next.y * gridSize;
             const isTarget = key === targetKey;
             if (isBlocked(worldX, worldY, isTarget)) continue;
+            if (
+                preventDiagonalCornerCutting
+                && dir.x !== 0
+                && dir.y !== 0
+                && (
+                    isBlocked((current.x + dir.x) * gridSize, current.y * gridSize, false)
+                    || isBlocked(current.x * gridSize, (current.y + dir.y) * gridSize, false)
+                )
+            ) {
+                continue;
+            }
 
-            const tentativeG = (gScore.get(currentKey) ?? Infinity) + 1;
+            const moveCost = dir.cost ?? (dir.x !== 0 && dir.y !== 0 ? Math.SQRT2 : 1);
+            const tentativeG = (gScore.get(currentKey) ?? Infinity) + moveCost;
             if (tentativeG >= (gScore.get(key) ?? Infinity)) continue;
 
             cameFrom.set(key, currentKey);

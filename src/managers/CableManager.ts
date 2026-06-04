@@ -12,6 +12,11 @@ import { getCableDistanceTiles, getTouchedCableTiles, isPointInsideFootprint } f
 
 const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT', 'SILICON']);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
+const WIRELESS_RELAY_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => type !== 'ACCESS_POINT');
+const MAX_ACTIVE_CABLE_PULSES = 120;
+const MAX_ACTIVE_AP_WAVES = 24;
+const MAX_POOLED_CIRCLES = 180;
+const MAX_POOLED_GRAPHICS = 80;
 
 export type CableBlockReason = 'same-endpoint' | 'duplicate' | 'too-far' | 'blocked' | 'missing-endpoint' | 'out-of-bounds';
 
@@ -38,7 +43,12 @@ export default class CableManager {
     apDirty: boolean;
     _lastThrottleState: boolean;
     _wirelessBuildingsCache: BaseBuilding[] | null;
+    _wirelessSpatialCache: Map<string, BaseBuilding[]>;
     _wirelessCacheDirty: boolean;
+    activeCablePulses: number;
+    activeAPWaves: number;
+    private circlePool: Phaser.GameObjects.Arc[];
+    private graphicsPool: Phaser.GameObjects.Graphics[];
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -50,10 +60,16 @@ export default class CableManager {
         this.apDirty = true;
         this._lastThrottleState = false;
         this._wirelessBuildingsCache = null;
+        this._wirelessSpatialCache = new Map();
         this._wirelessCacheDirty = true;
+        this.activeCablePulses = 0;
+        this.activeAPWaves = 0;
+        this.circlePool = [];
+        this.graphicsPool = [];
 
         EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
             this.handleBuildingRemoved(key);
+            this._wirelessCacheDirty = true;
         }, 'CableManager');
 
         EventBus.on('BUILDING_PLACED', () => {
@@ -404,24 +420,12 @@ export default class CableManager {
     }
 
     transferWirelessData(buildingManager: BuildingManager): void {
-        const accessPoints: AccessPoint[] = [];
-
         if (this._wirelessCacheDirty || !this._wirelessBuildingsCache) {
-            const buildings: BaseBuilding[] = [];
-            buildingManager.forEach(building => {
-                buildings.push(building);
-            });
-            this._wirelessBuildingsCache = buildings;
-            this._wirelessCacheDirty = false;
+            this.rebuildWirelessCache(buildingManager);
         }
 
-        const buildings = this._wirelessBuildingsCache;
-
-        for (const building of buildings) {
-            if (building instanceof AccessPoint && building.hasPower) {
-                accessPoints.push(building);
-            }
-        }
+        const accessPoints = buildingManager.getByType('ACCESS_POINT')
+            .filter((building): building is AccessPoint => building instanceof AccessPoint && building.hasPower);
 
         if (accessPoints.length === 0) return;
 
@@ -430,18 +434,12 @@ export default class CableManager {
         for (const ap of accessPoints) {
             ap.relaysThisTick = 0;
             const apRange = ap.range + rangeBonus;
-            const inRange = buildings.filter(building =>
-                building !== ap
-                && !(building instanceof AccessPoint)
-                && building.hasPower
-                && Math.abs(building.x - ap.x) / CONFIG.GRID_SIZE <= apRange
-                && Math.abs(building.y - ap.y) / CONFIG.GRID_SIZE <= apRange
-            );
-            const senders = inRange.filter(building => isAPAutoRelaySource(building, itemType => this.isDataItem(itemType)));
             let relayed = 0;
+            const inRange = this.getWirelessBuildingsInRange(ap, apRange);
 
-            for (const source of senders) {
+            for (const source of inRange) {
                 if (relayed >= ap.bandwidth) break;
+                if (!isAPAutoRelaySource(source, itemType => this.isDataItem(itemType))) continue;
 
                 const item = source.outputBuffer[0];
                 const target = selectAPRelayTarget(inRange, source, item) as BaseBuilding | undefined;
@@ -460,6 +458,52 @@ export default class CableManager {
         }
     }
 
+    private rebuildWirelessCache(buildingManager: BuildingManager): void {
+        const buildings = buildingManager.getByTypes(WIRELESS_RELAY_TYPES);
+        const spatial = new Map<string, BaseBuilding[]>();
+
+        for (const building of buildings) {
+            const bucketKey = this.getWirelessBucketKey(building.x, building.y);
+            const bucket = spatial.get(bucketKey);
+            if (bucket) {
+                bucket.push(building);
+            } else {
+                spatial.set(bucketKey, [building]);
+            }
+        }
+
+        this._wirelessBuildingsCache = buildings;
+        this._wirelessSpatialCache = spatial;
+        this._wirelessCacheDirty = false;
+    }
+
+    private getWirelessBuildingsInRange(ap: AccessPoint, apRange: number): BaseBuilding[] {
+        const result: BaseBuilding[] = [];
+        const apTileX = Math.floor(ap.x / CONFIG.GRID_SIZE);
+        const apTileY = Math.floor(ap.y / CONFIG.GRID_SIZE);
+        const tileRadius = Math.ceil(apRange);
+
+        for (let dx = -tileRadius; dx <= tileRadius; dx++) {
+            for (let dy = -tileRadius; dy <= tileRadius; dy++) {
+                const bucket = this._wirelessSpatialCache.get(`${apTileX + dx},${apTileY + dy}`);
+                if (!bucket) continue;
+
+                for (const building of bucket) {
+                    if (!building.hasPower) continue;
+                    if (Math.abs(building.x - ap.x) / CONFIG.GRID_SIZE > apRange) continue;
+                    if (Math.abs(building.y - ap.y) / CONFIG.GRID_SIZE > apRange) continue;
+                    result.push(building);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private getWirelessBucketKey(x: number, y: number): string {
+        return `${Math.floor(x / CONFIG.GRID_SIZE)},${Math.floor(y / CONFIG.GRID_SIZE)}`;
+    }
+
     getAvailableInputSpace(building: BaseBuilding): number {
         return getAvailableInputSpace(building);
     }
@@ -473,6 +517,12 @@ export default class CableManager {
     }
 
     createPulseAnimation(fromKey: string, toKey: string, itemType: string): void {
+        if (this.activeCablePulses >= MAX_ACTIVE_CABLE_PULSES) {
+            this.scene.performanceStats?.increment('cablePulseSkipped');
+            return;
+        }
+        this.activeCablePulses++;
+
         const center1 = this.getBuildingCenter(fromKey);
         const center2 = this.getBuildingCenter(toKey);
         const cx1 = center1.x;
@@ -481,12 +531,20 @@ export default class CableManager {
         const cy2 = center2.y;
 
         const color = getItemColor(itemType);
+        let released = false;
+        const releasePulseSlot = () => {
+            if (released) return;
+            released = true;
+            this.activeCablePulses = Math.max(0, this.activeCablePulses - 1);
+        };
 
-        const pulse = this.scene.add.circle(cx1, cy1, 4, color);
+        const pulse = this.acquireCircle(cx1, cy1, 4, color, 1);
         pulse.setDepth(16);
         pulse.setStrokeStyle(1, 0xffffff, 0.55);
-        const trail = this.scene.add.graphics();
+        const trail = this.acquireGraphics();
         trail.setDepth(15);
+        trail.setAlpha(1);
+        trail.clear();
         trail.lineStyle(5, color, 0.1);
         trail.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
         trail.lineStyle(1, color, 0.45);
@@ -499,7 +557,7 @@ export default class CableManager {
             duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
             ease: 'Linear',
             onComplete: () => {
-                pulse.destroy();
+                this.releaseCircle(pulse);
             }
         });
 
@@ -507,7 +565,7 @@ export default class CableManager {
         if (this.scene.bloomEnabled) {
             for (let i = 1; i <= 2; i++) {
                 const delay = i * 40;
-                const trailCircle = this.scene.add.circle(cx1, cy1, 4 - i, color, 0.5 / i);
+                const trailCircle = this.acquireCircle(cx1, cy1, 4 - i, color, 0.5 / i);
                 trailCircle.setDepth(15);
                 this.scene.tweens.add({
                     targets: trailCircle,
@@ -516,7 +574,7 @@ export default class CableManager {
                     duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
                     delay: delay,
                     ease: 'Linear',
-                    onComplete: () => trailCircle.destroy()
+                    onComplete: () => this.releaseCircle(trailCircle)
                 });
             }
         }
@@ -525,7 +583,10 @@ export default class CableManager {
             targets: trail,
             alpha: 0,
             duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
-            onComplete: () => trail.destroy()
+            onComplete: () => {
+                this.releaseGraphics(trail);
+                releasePulseSlot();
+            }
         });
     }
 
@@ -616,9 +677,15 @@ export default class CableManager {
 
     createAPWirelessWave(x: number, y: number, itemType: string): void {
         if (!this.scene.bloomEnabled) return;
+        if (this.activeAPWaves >= MAX_ACTIVE_AP_WAVES) {
+            this.scene.performanceStats?.increment('apWaveSkipped');
+            return;
+        }
+        this.activeAPWaves++;
+
         const color = getItemColor(itemType);
         const range = CONFIG.ACCESS_POINT.RANGE || 5;
-        const ring = this.scene.add.circle(x, y, 4);
+        const ring = this.acquireCircle(x, y, 4, color, 1);
         ring.setDepth(14);
         ring.setStrokeStyle(2, color, 0.72);
 
@@ -628,7 +695,58 @@ export default class CableManager {
             alpha: 0,
             duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS * 1.5,
             ease: 'Quad.easeOut',
-            onComplete: () => ring.destroy()
+            onComplete: () => {
+                this.releaseCircle(ring);
+                this.activeAPWaves = Math.max(0, this.activeAPWaves - 1);
+            }
         });
+    }
+
+    private acquireCircle(x: number, y: number, radius: number, color: number, alpha = 1): Phaser.GameObjects.Arc {
+        const circle = this.circlePool.pop() || this.scene.add.circle(x, y, radius, color, alpha);
+        circle.setActive(true);
+        circle.setVisible(true);
+        circle.setPosition(x, y);
+        circle.setRadius(radius);
+        circle.setFillStyle(color, alpha);
+        circle.setStrokeStyle();
+        circle.setAlpha(1);
+        circle.setScale(1, 1);
+        return circle;
+    }
+
+    private releaseCircle(circle: Phaser.GameObjects.Arc): void {
+        this.scene.tweens.killTweensOf(circle);
+        circle.setVisible(false);
+        circle.setActive(false);
+        circle.setAlpha(1);
+        circle.setScale(1, 1);
+        if (this.circlePool.length < MAX_POOLED_CIRCLES) {
+            this.circlePool.push(circle);
+        } else {
+            circle.destroy();
+        }
+    }
+
+    private acquireGraphics(): Phaser.GameObjects.Graphics {
+        const graphics = this.graphicsPool.pop() || this.scene.add.graphics();
+        graphics.setActive(true);
+        graphics.setVisible(true);
+        graphics.setAlpha(1);
+        graphics.clear();
+        return graphics;
+    }
+
+    private releaseGraphics(graphics: Phaser.GameObjects.Graphics): void {
+        this.scene.tweens.killTweensOf(graphics);
+        graphics.clear();
+        graphics.setVisible(false);
+        graphics.setActive(false);
+        graphics.setAlpha(1);
+        if (this.graphicsPool.length < MAX_POOLED_GRAPHICS) {
+            this.graphicsPool.push(graphics);
+        } else {
+            graphics.destroy();
+        }
     }
 }

@@ -15,6 +15,9 @@ interface InferenceLockMarker {
     label: Phaser.GameObjects.Text;
 }
 
+const POWER_CONSUMER_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => (CONFIG.BUILDINGS[type]?.POWER?.CONSUMPTION || 0) > 0);
+const BUFFER_BUILDING_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => (CONFIG.BUILDINGS[type]?.MAX_BUFFER || 0) > 0);
+
 export default class EffectsManager {
     private scene: MainScene;
     private outageMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
@@ -536,7 +539,18 @@ export default class EffectsManager {
         const stillHasOutage = new Set<BaseBuilding>();
         const stillHasBuffer = new Set<BaseBuilding>();
 
-        this.scene.buildingManager.forEach(building => {
+        const indexedLookup = this.scene.buildingManager.getByTypes?.bind(this.scene.buildingManager);
+        const candidates = new Set<BaseBuilding>();
+        if (indexedLookup) {
+            indexedLookup(POWER_CONSUMER_TYPES).forEach(building => candidates.add(building));
+            indexedLookup(BUFFER_BUILDING_TYPES).forEach(building => candidates.add(building));
+        } else {
+            this.scene.buildingManager.forEach(building => candidates.add(building));
+        }
+        this.outageMarkers.forEach((_marker, building) => candidates.add(building));
+        this.bufferMarkers.forEach((_marker, building) => candidates.add(building));
+
+        candidates.forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             const hasOutage = Boolean(pConfig && pConfig.CONSUMPTION > 0 && !building.hasPower);
 

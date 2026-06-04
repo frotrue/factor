@@ -9,7 +9,11 @@ declare global {
     }
 }
 
-const savedFps = parseInt(localStorage.getItem('gradium_fps_limit') || '240', 10);
+const DEFAULT_FPS_LIMIT = 60;
+const savedFps = parseInt(localStorage.getItem('gradium_fps_limit') || String(DEFAULT_FPS_LIMIT), 10);
+const fpsTarget = Number.isFinite(savedFps)
+    ? Math.max(30, Math.min(240, savedFps))
+    : DEFAULT_FPS_LIMIT;
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
@@ -20,7 +24,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: false,
     scene: [MainMenuScene, MainScene],
     fps: {
-        target: savedFps,
+        target: fpsTarget,
         forceSetTimeOut: false
     },
     scale: {

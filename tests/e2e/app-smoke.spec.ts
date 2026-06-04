@@ -399,19 +399,19 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     await expectBuildingCount(page, 'CONVEYOR', 1);
 
     await page.locator('#btn-storage').click();
-    const storagePoint = await getScreenPointForTile(page, -160, -32);
+    const storagePoint = await getScreenPointForTile(page, -224, -96);
     await page.mouse.click(storagePoint.x, storagePoint.y);
     await expectBuildingCount(page, 'STORAGE', 2);
 
     await page.getByRole('button', { name: '생산' }).click();
     await page.locator('#btn-weight_trainer').click();
-    const trainerPoint = await getScreenPointForTile(page, -96, -32);
+    const trainerPoint = await getScreenPointForTile(page, -160, -96);
     await page.mouse.click(trainerPoint.x, trainerPoint.y);
     await expectBuildingCount(page, 'WEIGHT_TRAINER', 1);
 
     await page.getByRole('button', { name: '방어' }).click();
     await page.locator('#btn-classifier').click();
-    const classifierPoint = await getScreenPointForTile(page, -32, -32);
+    const classifierPoint = await getScreenPointForTile(page, -128, -128);
     await page.mouse.click(classifierPoint.x, classifierPoint.y);
     await expectBuildingCount(page, 'CLASSIFIER', 1);
 

@@ -15,7 +15,7 @@ export default class DefenseTower extends BaseBuilding {
     lockedTarget: BaseEnemy | null;
     towerGraphics: Phaser.GameObjects.Graphics;
     animProgress: number;
-    towerTween: Phaser.Tweens.Tween;
+    towerTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}) {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
@@ -45,13 +45,18 @@ export default class DefenseTower extends BaseBuilding {
         this.container.add(this.towerGraphics);
 
         this.animProgress = 0;
-        this.towerTween = scene.tweens.add({
-            targets: this,
-            animProgress: 1.0,
-            duration: 2000,
-            repeat: -1,
-            onUpdate: () => this.drawTowerVisuals()
-        });
+        this.towerTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.towerTween = scene.tweens.add({
+                targets: this,
+                animProgress: 1.0,
+                duration: 2000,
+                repeat: -1,
+                onUpdate: () => this.drawTowerVisuals()
+            });
+        } else {
+            this.drawTowerVisuals();
+        }
     }
 
     drawTowerVisuals(): void {

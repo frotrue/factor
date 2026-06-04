@@ -23,6 +23,9 @@ import { getObjectiveState, shouldHideEarlyAdvancedSystem } from '../utils/progr
 import { createRunResultSummary } from '../utils/runResultSummary';
 import Core from '../buildings/Core';
 
+const TACTICAL_RENDER_INTERVAL_MS = 250;
+const SILICON_RENDER_INTERVAL_MS = 250;
+
 export default class UIManager {
     scene: MainScene;
     selectedBuildingType: string;
@@ -46,6 +49,10 @@ export default class UIManager {
     hotkeys: string[];
     lastItemCount: number;
     lastScore: number;
+    lastSiliconCount: number;
+    private tacticalDirty: boolean;
+    private lastTacticalRenderAt: number;
+    private lastSiliconRenderAt: number;
     activeResearchTab: 'RESEARCH' | 'DEFENSE';
     previousBuildSelection: string;
     buildableData: Record<string, any>;
@@ -88,6 +95,10 @@ export default class UIManager {
         this.hotkeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
         this.lastItemCount = -1;
         this.lastScore = -1;
+        this.lastSiliconCount = -1;
+        this.tacticalDirty = true;
+        this.lastTacticalRenderAt = Number.NEGATIVE_INFINITY;
+        this.lastSiliconRenderAt = Number.NEGATIVE_INFINITY;
         this.activeResearchTab = 'RESEARCH';
         this.previousBuildSelection = this.selectedBuildingType;
         this.mobileActionBar = null;
@@ -114,6 +125,7 @@ export default class UIManager {
                 this.lastScore = data.total;
                 this.scoreEl.innerText = String(data.total);
             }
+            this.markTacticalDirty();
         }, 'UIManager');
 
         EventBus.on('POWER_UPDATED', (data: PowerUpdateData) => {
@@ -131,12 +143,14 @@ export default class UIManager {
         EventBus.on('WAVE_STARTED', ({ wave }: { wave: number }) => {
             if (this.waveEl) this.waveEl.innerText = String(wave);
             if (this.waveTimerEl) this.waveTimerEl.innerText = t('hud.waveActive');
+            this.markTacticalDirty();
             this.logMessage(t('log.waveIncoming', { wave }), true);
         }, 'UIManager');
 
         EventBus.on('WAVE_BRIEFING_UPDATED', (briefing: WaveBriefing) => {
             this.currentWaveBriefing = briefing;
             this.renderWaveBriefing();
+            this.markTacticalDirty();
         }, 'UIManager');
 
         EventBus.on('WAVE_UPDATE', ({ timer }: { timer: number }) => {
@@ -145,8 +159,27 @@ export default class UIManager {
 
         EventBus.on('WAVE_ENDED', () => {
             this.createBuildingButtons();
-            this.renderTacticalPanels();
+            this.markTacticalDirty();
+            this.flushTacticalPanels(true);
             this.logMessage(textForKey('log.labAvailable'));
+        }, 'UIManager');
+
+        EventBus.on('BUILDING_PLACED', () => {
+            this.markTacticalDirty();
+        }, 'UIManager');
+
+        EventBus.on('BUILDING_REMOVED', () => {
+            this.markTacticalDirty();
+        }, 'UIManager');
+
+        EventBus.on('BUILDING_DESTROYED', () => {
+            this.markTacticalDirty();
+        }, 'UIManager');
+
+        EventBus.on('RESEARCH_UNLOCKED', () => {
+            this.createBuildingButtons();
+            this.markTacticalDirty();
+            this.flushTacticalPanels(true);
         }, 'UIManager');
 
         EventBus.on('GAME_OVER', () => {
@@ -185,6 +218,7 @@ export default class UIManager {
                 const btn = document.getElementById(`btn-speed-${s}`);
                 if (btn) btn.classList.toggle('active', s === speed);
             });
+            this.markTacticalDirty();
         }, 'UIManager');
 
         this.setupSettingsUI();
@@ -201,7 +235,29 @@ export default class UIManager {
             this.updateMobileBuildSummary();
             this.updateMobileControls();
             this.renderTacticalPanels();
+            this.tacticalDirty = false;
+            this.lastTacticalRenderAt = this.getUiTime();
         });
+    }
+
+    private getUiTime(): number {
+        return this.scene.time?.now ?? globalThis.performance?.now?.() ?? Date.now();
+    }
+
+    private markTacticalDirty(): void {
+        this.tacticalDirty = true;
+    }
+
+    private flushTacticalPanels(force = false): void {
+        if (!this.tacticalDirty && !force) return;
+
+        const now = this.getUiTime();
+        if (!force && now - this.lastTacticalRenderAt < TACTICAL_RENDER_INTERVAL_MS) return;
+
+        this.scene.performanceStats?.increment('uiTacticalRenders');
+        this.renderTacticalPanels();
+        this.tacticalDirty = false;
+        this.lastTacticalRenderAt = now;
     }
 
     private renderWaveBriefing(timer?: number): void {
@@ -232,7 +288,8 @@ export default class UIManager {
             const panel = document.getElementById(id);
             if (panel) panel.style.display = 'block';
         });
-        this.renderTacticalPanels();
+        this.markTacticalDirty();
+        this.flushTacticalPanels(true);
     }
 
     renderTacticalPanels(): void {
@@ -314,11 +371,7 @@ export default class UIManager {
     }
 
     private countBuildings(types: string[]): number {
-        let count = 0;
-        this.scene.buildingManager?.forEach(building => {
-            if (types.includes(building.type)) count++;
-        });
-        return count;
+        return this.scene.buildingManager?.countByTypes(types) || 0;
     }
 
     private renderCurrentObjective(): void {
@@ -328,10 +381,8 @@ export default class UIManager {
         const hasProcessor = this.countBuildings(['PROCESSOR', 'WEIGHT_TRAINER']) > 0;
         const hasDefense = this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']) > 0;
         const firstDefenseDone = this.hasFirstDefenseSuccess();
-        const modelLabs: ModelTrainingLab[] = [];
-        this.scene.buildingManager?.forEach(building => {
-            if (building instanceof ModelTrainingLab) modelLabs.push(building);
-        });
+        const modelLabs = (this.scene.buildingManager?.getByType('MODEL_TRAINING_LAB') || [])
+            .filter((building): building is ModelTrainingLab => building instanceof ModelTrainingLab);
         const state = getObjectiveState({
             hasDownloader,
             hasProcessor,
@@ -383,9 +434,13 @@ export default class UIManager {
 
     private findActiveModelTrainingLab(): ModelTrainingLab | null {
         let activeLab: ModelTrainingLab | null = null;
-        this.scene.buildingManager?.forEach(building => {
-            if (!activeLab && building instanceof ModelTrainingLab) activeLab = building;
-        });
+        const labs = this.scene.buildingManager?.getByType('MODEL_TRAINING_LAB') || [];
+        for (let i = 0; i < labs.length; i++) {
+            if (labs[i] instanceof ModelTrainingLab) {
+                activeLab = labs[i] as ModelTrainingLab;
+                break;
+            }
+        }
         return activeLab;
     }
 
@@ -688,22 +743,26 @@ export default class UIManager {
     }
 
     update(itemCount: number): void {
+        const now = this.getUiTime();
+
         if (this.packetsEl && this.lastItemCount !== itemCount) {
             this.lastItemCount = itemCount;
             this.packetsEl.innerText = String(itemCount);
         }
 
-        // Update silicon count from InventoryManager
-        if (this.siliconEl) {
+        if (this.siliconEl && now - this.lastSiliconRenderAt >= SILICON_RENDER_INTERVAL_MS) {
+            this.lastSiliconRenderAt = now;
             const mainScene = this.scene;
             if (mainScene.inventoryManager) {
                 const siliconCount = mainScene.inventoryManager.getResourceCount('SILICON');
-                this.siliconEl.innerText = String(siliconCount);
+                if (this.lastSiliconCount !== siliconCount) {
+                    this.lastSiliconCount = siliconCount;
+                    this.siliconEl.innerText = String(siliconCount);
+                }
             }
         }
 
-        this.renderCurrentObjective();
-        this.renderDefenseStatus();
+        this.flushTacticalPanels();
     }
 
     showTooltip(x: number, y: number, title: string, content: string): void {

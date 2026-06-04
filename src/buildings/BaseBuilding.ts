@@ -9,6 +9,7 @@ import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
  */
 export default class BaseBuilding {
     private static readonly bodyTextureKeys = new Set<string>();
+    private static readonly MAX_ANIMATED_BUILDINGS = 180;
 
     /** Shared frame counter for visual update throttling across all buildings */
     private static _visualFrameCount = 0;
@@ -17,6 +18,11 @@ export default class BaseBuilding {
     /** Returns true if this frame should skip visual updates (2 of 3 frames skipped) */
     protected shouldThrottleVisuals(): boolean {
         return BaseBuilding._visualFrameCount % 3 !== 0;
+    }
+
+    protected shouldUseAnimatedVisuals(): boolean {
+        const buildingCount = (this.scene as IMainScene).buildingManager?.getUniqueBuildings?.().length ?? 0;
+        return buildingCount < BaseBuilding.MAX_ANIMATED_BUILDINGS;
     }
 
     scene: Phaser.Scene;

@@ -46,6 +46,42 @@ describe('findGridPath', () => {
         expect(path).toHaveLength(1);
     });
 
+    it('uses diagonal steps when callers provide diagonal directions', () => {
+        const path = findGridPath({
+            startWorld: { x: 0, y: 0 },
+            targetWorld: { x: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE / 2, y: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE / 2 },
+            gridSize: CONFIG.GRID_SIZE,
+            directions: [
+                ...directions,
+                { x: 1, y: 1 },
+                { x: -1, y: 1 },
+                { x: 1, y: -1 },
+                { x: -1, y: -1 }
+            ],
+            isBlocked: () => false
+        });
+
+        expect(path[0]).toEqual({ x: CONFIG.GRID_SIZE * 1.5, y: CONFIG.GRID_SIZE * 1.5 });
+        expect(path[path.length - 1]).toEqual({ x: CONFIG.GRID_SIZE * 2.5, y: CONFIG.GRID_SIZE * 2.5 });
+    });
+
+    it('prevents diagonal corner cutting when orthogonal edges are blocked', () => {
+        const path = findGridPath({
+            startWorld: { x: 0, y: 0 },
+            targetWorld: { x: CONFIG.GRID_SIZE, y: CONFIG.GRID_SIZE },
+            gridSize: CONFIG.GRID_SIZE,
+            directions: [{ x: 1, y: 1 }],
+            maxDistanceFromStart: 2,
+            preventDiagonalCornerCutting: true,
+            isBlocked: (worldX, worldY, isTarget) => !isTarget && (
+                (worldX === CONFIG.GRID_SIZE && worldY === 0)
+                || (worldX === 0 && worldY === CONFIG.GRID_SIZE)
+            )
+        });
+
+        expect(path).toEqual([]);
+    });
+
     it('finds a north-port route through generated early lane blockers to the core center', () => {
         const mapManager = new MapManager();
         mapManager.addGuaranteedSpawnPatches();

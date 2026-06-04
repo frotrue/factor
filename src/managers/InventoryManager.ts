@@ -1,5 +1,6 @@
 import BuildingManager from './BuildingManager';
 import { BuildingCost } from '../types';
+import BaseBuilding from '../buildings/BaseBuilding';
 
 /**
  * 자원 재고 관리자.
@@ -16,10 +17,8 @@ export default class InventoryManager {
     /** 특정 자원의 보유량을 반환 (모든 Storage 합산) */
     getResourceCount(resourceType: string): number {
         let count = 0;
-        this.buildingManager.forEach(b => {
-            if (b.type === 'STORAGE') {
-                count += b.inputBuffer.filter(t => t === resourceType).length;
-            }
+        this.forEachStorage(b => {
+            count += b.inputBuffer.filter(t => t === resourceType).length;
         });
         return count;
     }
@@ -27,12 +26,10 @@ export default class InventoryManager {
     /** 모든 자원 보유량을 반환 */
     getAllResources(): Map<string, number> {
         const resources = new Map<string, number>();
-        this.buildingManager.forEach(b => {
-            if (b.type === 'STORAGE') {
-                b.inputBuffer.forEach(type => {
-                    resources.set(type, (resources.get(type) || 0) + 1);
-                });
-            }
+        this.forEachStorage(b => {
+            b.inputBuffer.forEach(type => {
+                resources.set(type, (resources.get(type) || 0) + 1);
+            });
         });
         return resources;
     }
@@ -51,8 +48,8 @@ export default class InventoryManager {
 
         for (const cost of costs) {
             let remaining = cost.amount;
-            this.buildingManager.forEach(b => {
-                if (b.type !== 'STORAGE' || remaining <= 0) return;
+            this.forEachStorage(b => {
+                if (remaining <= 0) return;
                 while (remaining > 0) {
                     const idx = b.inputBuffer.indexOf(cost.resource);
                     if (idx === -1) break;
@@ -68,10 +65,8 @@ export default class InventoryManager {
         if (amount <= 0) return true;
 
         let targetStorage: { inputBuffer: string[] } | null = null;
-        this.buildingManager.forEach(b => {
-            if (!targetStorage && b.type === 'STORAGE') {
-                targetStorage = b;
-            }
+        this.forEachStorage(b => {
+            if (!targetStorage) targetStorage = b;
         });
         if (!targetStorage) return false;
 
@@ -79,5 +74,9 @@ export default class InventoryManager {
             targetStorage.inputBuffer.push(resourceType);
         }
         return true;
+    }
+
+    private forEachStorage(callback: (building: BaseBuilding) => void): void {
+        this.buildingManager.getByType('STORAGE').forEach(callback);
     }
 }

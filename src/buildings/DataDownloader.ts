@@ -7,7 +7,7 @@ export default class DataDownloader extends BaseBuilding {
     productionRate: number;
     signalGraphics: Phaser.GameObjects.Graphics;
     waveRadius: number;
-    signalTween: Phaser.Tweens.Tween;
+    signalTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'DATA_DOWNLOADER', { ...config, color: CONFIG.BUILDINGS.DATA_DOWNLOADER.COLOR });
@@ -19,13 +19,19 @@ export default class DataDownloader extends BaseBuilding {
         this.container.add(this.signalGraphics);
         this.waveRadius = 2;
 
-        this.signalTween = scene.tweens.add({
-            targets: this,
-            waveRadius: 14,
-            duration: 1600,
-            repeat: -1,
-            onUpdate: () => this.drawSignalWaves()
-        });
+        this.signalTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.signalTween = scene.tweens.add({
+                targets: this,
+                waveRadius: 14,
+                duration: 1600,
+                repeat: -1,
+                onUpdate: () => this.drawSignalWaves()
+            });
+        } else {
+            this.waveRadius = 8;
+            this.drawSignalWaves();
+        }
     }
 
     drawAntenna(): void {

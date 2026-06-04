@@ -1,5 +1,5 @@
 import MainScene from '../scenes/MainScene';
-import { SaveData, SavedBuilding, SavedItem, SavedEnemy } from '../types';
+import { SaveData, SavedBuilding, SavedItem, SavedEnemy, SavedCable } from '../types';
 import EventBus from './EventBus';
 import Core from '../buildings/Core';
 import { CONFIG, CORE_KEY, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
@@ -13,27 +13,58 @@ export default class SaveManager {
     scene: MainScene;
     autoSaveInterval: number;
     autoSaveTimer: number;
+    private saveDirty: boolean;
+    private autoSavePending: boolean;
+    private autoSaveHandle: number | null;
+    private autoSaveHandleIsIdle: boolean;
+    private autoSaveToken: number;
 
     constructor(scene: MainScene) {
         this.scene = scene;
         this.autoSaveInterval = CONFIG.TIMING.AUTO_SAVE_INTERVAL_MS;
         this.autoSaveTimer = 0;
+        this.saveDirty = true;
+        this.autoSavePending = false;
+        this.autoSaveHandle = null;
+        this.autoSaveHandleIsIdle = false;
+        this.autoSaveToken = 0;
 
         EventBus.on('SAVE_REQUESTED', () => {
+            this.cancelScheduledAutoSave();
             if (this.saveGame()) {
                 this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.saved'));
             }
         }, 'SaveManager');
         EventBus.on('LOAD_REQUESTED', () => this.loadGame(), 'SaveManager');
+        [
+            'BUILDING_PLACED',
+            'BUILDING_REMOVED',
+            'BUILDING_DAMAGED',
+            'BUILDING_DESTROYED',
+            'CABLE_CONNECTED',
+            'CORE_DAMAGED',
+            'CORE_DATA_RECEIVED',
+            'ENEMY_KILLED',
+            'GAME_SPEED_CHANGED',
+            'MODEL_TRAINING_TARGET_SET',
+            'RESEARCH_UNLOCKED',
+            'WAVE_STARTED',
+            'WAVE_ENDED'
+        ].forEach(event => {
+            EventBus.on(event as any, () => this.markDirty(), 'SaveManager');
+        });
     }
 
     update(delta: number): void {
+        if (this.autoSavePending) return;
+
         this.autoSaveTimer += delta;
         if (this.autoSaveTimer >= this.autoSaveInterval) {
-            const saved = this.saveGame();
             this.autoSaveTimer = 0;
-            if (saved) {
-                this.scene.uiManager.logMessage('System: Auto-saved successfully.');
+            if (this.shouldAutoSave()) {
+                this.scheduleAutoSave();
+            } else {
+                this.scene.performanceStats?.increment('autosaveSkipped');
             }
         }
     }
@@ -43,68 +74,255 @@ export default class SaveManager {
             return false;
         }
 
-        const buildings: SavedBuilding[] = [];
-        this.scene.buildingManager.forEach(b => {
-            if (b.type === 'CORE') return;
-            let customState: any = undefined;
-            if ((b as any).getCustomState) {
-                customState = (b as any).getCustomState();
-            } else if (b.type === 'NEURAL_TRAINER') {
-                customState = { recipe: (b as any).recipe.OUTPUT };
+        const saveData = this.createSaveData(this.collectSavePayloadSync());
+
+        localStorage.setItem('gradium_save', JSON.stringify(saveData));
+        this.scene.performanceStats?.increment('saveWrites');
+        this.saveDirty = false;
+        return true;
+    }
+
+    markDirty(): void {
+        this.saveDirty = true;
+    }
+
+    private shouldAutoSave(): boolean {
+        if (this.saveDirty) return true;
+        if (this.scene.waveManager.waveActive || this.scene.waveManager.enemies.size > 0) return true;
+        if (this.scene.itemManager.getItems().length > 0) return true;
+
+        for (const cable of this.scene.cableManager.cables.values()) {
+            if (cable.queue.length > 0) return true;
+        }
+        return false;
+    }
+
+    private scheduleAutoSave(): void {
+        if (this.autoSavePending) return;
+        this.autoSavePending = true;
+        const token = ++this.autoSaveToken;
+
+        const runSave = async () => {
+            this.autoSaveHandle = null;
+            try {
+                const saved = await this.saveGameChunked(token);
+                if (token !== this.autoSaveToken) return;
+                this.autoSavePending = false;
+                if (saved) {
+                    this.scene.uiManager.logMessage('System: Auto-saved successfully.');
+                }
+            } catch (error) {
+                if (token === this.autoSaveToken) {
+                    this.autoSavePending = false;
+                }
+                console.error('Failed to auto-save', error);
             }
-            buildings.push({
-                x: b.x,
-                y: b.y,
-                type: b.type,
-                rotation: b.rotation,
-                inputBuffer: [...b.inputBuffer],
-                outputBuffer: [...b.outputBuffer],
-                hp: b.hp,
-                customState
-            });
+        };
+
+        this.autoSaveHandleIsIdle = false;
+        this.autoSaveHandle = window.setTimeout(runSave, 0);
+    }
+
+    private cancelScheduledAutoSave(): void {
+        this.autoSaveToken++;
+        if (this.autoSaveHandle === null) return;
+
+        if (this.autoSaveHandleIsIdle) {
+            (window as any).cancelIdleCallback?.(this.autoSaveHandle);
+        } else {
+            window.clearTimeout(this.autoSaveHandle);
+        }
+        this.autoSaveHandle = null;
+        this.autoSavePending = false;
+    }
+
+    private async saveGameChunked(token: number): Promise<boolean> {
+        if (this.scene.mode === 'tutorial') {
+            return false;
+        }
+
+        const payload = await this.collectSavePayloadChunked(token);
+        if (!payload || token !== this.autoSaveToken) return false;
+
+        const saveData = this.createSaveData(payload);
+        if (!await this.waitForIdle(token)) return false;
+
+        localStorage.setItem('gradium_save', JSON.stringify(saveData));
+        this.scene.performanceStats?.increment('saveWrites');
+        this.saveDirty = false;
+        return true;
+    }
+
+    private collectSavePayloadSync() {
+        const buildings: SavedBuilding[] = [];
+        this.scene.buildingManager.getUniqueBuildings().forEach(building => {
+            const saved = this.serializeBuilding(building);
+            if (saved) buildings.push(saved);
         });
 
-        const items: SavedItem[] = [];
-        this.scene.itemManager.getItems().forEach(item => {
-            items.push({
-                x: item.gridX,
-                y: item.gridY,
-                type: item.type
-            });
-        });
-
-        const cables = Array.from(this.scene.cableManager.cables.values()).map(c => ({
-            fromKey: c.fromKey,
-            toKey: c.toKey,
-            cableType: c.cableType,
-            queue: [...c.queue],
-            costPaid: c.costPaid
+        const items: SavedItem[] = this.scene.itemManager.getItems().map(item => ({
+            x: item.gridX,
+            y: item.gridY,
+            type: item.type
         }));
 
-        const enemies: SavedEnemy[] = [];
-        this.scene.waveManager.enemies.forEach(e => {
-            enemies.push({
-                id: e.id,
-                type: e.type,
-                x: e.x,
-                y: e.y,
-                hp: e.hp
-            });
-        });
+        const cables: SavedCable[] = Array.from(this.scene.cableManager.cables.values()).map(cable => ({
+            fromKey: cable.fromKey,
+            toKey: cable.toKey,
+            cableType: cable.cableType,
+            queue: [...cable.queue],
+            costPaid: cable.costPaid
+        }));
 
-        const resourceMapArray: { key: string; type: string }[] = [];
-        this.scene.mapManager.getResourceMap().forEach((type, key) => {
-            resourceMapArray.push({ key, type });
-        });
-        const terrainMapArray: { key: string; type: string }[] = [];
-        this.scene.mapManager.getTerrainMap().forEach((type, key) => {
-            terrainMapArray.push({ key, type });
-        });
+        const enemies: SavedEnemy[] = Array.from(this.scene.waveManager.enemies.values()).map(enemy => ({
+            id: enemy.id,
+            type: enemy.type,
+            x: enemy.x,
+            y: enemy.y,
+            hp: enemy.hp
+        }));
 
+        const resourceMap: { key: string; type: string }[] = [];
+        this.scene.mapManager.getResourceMap().forEach((type, key) => resourceMap.push({ key, type }));
+
+        const terrainMap: { key: string; type: string }[] = [];
+        this.scene.mapManager.getTerrainMap().forEach((type, key) => terrainMap.push({ key, type }));
+
+        return { buildings, items, cables, enemies, resourceMap, terrainMap };
+    }
+
+    private async collectSavePayloadChunked(token: number): Promise<ReturnType<SaveManager['collectSavePayloadSync']> | null> {
+        const buildings = await this.collectChunked(
+            this.scene.buildingManager.getUniqueBuildings(),
+            250,
+            building => this.serializeBuilding(building),
+            token
+        );
+        if (!buildings) return null;
+
+        const items = await this.collectChunked(
+            this.scene.itemManager.getItems(),
+            250,
+            item => ({ x: item.gridX, y: item.gridY, type: item.type }),
+            token
+        );
+        if (!items) return null;
+
+        const cables = await this.collectChunked(
+            this.scene.cableManager.cables.values(),
+            250,
+            cable => ({
+                fromKey: cable.fromKey,
+                toKey: cable.toKey,
+                cableType: cable.cableType,
+                queue: [...cable.queue],
+                costPaid: cable.costPaid
+            }),
+            token
+        );
+        if (!cables) return null;
+
+        const enemies = await this.collectChunked(
+            this.scene.waveManager.enemies.values(),
+            250,
+            enemy => ({
+                id: enemy.id,
+                type: enemy.type,
+                x: enemy.x,
+                y: enemy.y,
+                hp: enemy.hp
+            }),
+            token
+        );
+        if (!enemies) return null;
+
+        const resourceMap = await this.collectChunked(
+            this.scene.mapManager.getResourceMap().entries(),
+            2000,
+            ([key, type]) => ({ key, type }),
+            token
+        );
+        if (!resourceMap) return null;
+
+        const terrainMap = await this.collectChunked(
+            this.scene.mapManager.getTerrainMap().entries(),
+            2000,
+            ([key, type]) => ({ key, type }),
+            token
+        );
+        if (!terrainMap) return null;
+
+        return { buildings, items, cables, enemies, resourceMap, terrainMap };
+    }
+
+    private async collectChunked<T, U>(
+        source: Iterable<T>,
+        chunkSize: number,
+        mapItem: (item: T) => U | null,
+        token: number
+    ): Promise<U[] | null> {
+        const result: U[] = [];
+        let processed = 0;
+
+        for (const item of source) {
+            if (token !== this.autoSaveToken) return null;
+
+            const mapped = mapItem(item);
+            if (mapped) result.push(mapped);
+            processed++;
+
+            if (processed >= chunkSize) {
+                processed = 0;
+                this.scene.performanceStats?.increment('autosaveChunks');
+                if (!await this.waitForIdle(token)) return null;
+            }
+        }
+
+        return result;
+    }
+
+    private waitForIdle(token: number): Promise<boolean> {
+        if (token !== this.autoSaveToken) return Promise.resolve(false);
+
+        return new Promise(resolve => {
+            const complete = () => {
+                if (this.autoSaveHandle !== null) {
+                    this.autoSaveHandle = null;
+                }
+                resolve(token === this.autoSaveToken);
+            };
+            this.autoSaveHandleIsIdle = false;
+            this.autoSaveHandle = window.setTimeout(complete, 0);
+        });
+    }
+
+    private serializeBuilding(building: any): SavedBuilding | null {
+        if (building.type === 'CORE') return null;
+
+        let customState: any = undefined;
+        if (building.getCustomState) {
+            customState = building.getCustomState();
+        } else if (building.type === 'NEURAL_TRAINER') {
+            customState = { recipe: building.recipe.OUTPUT };
+        }
+
+        return {
+            x: building.x,
+            y: building.y,
+            type: building.type,
+            rotation: building.rotation,
+            inputBuffer: [...building.inputBuffer],
+            outputBuffer: [...building.outputBuffer],
+            hp: building.hp,
+            customState
+        };
+    }
+
+    private createSaveData(payload: ReturnType<SaveManager['collectSavePayloadSync']>): SaveData {
         const coreBuilding = this.scene.buildingManager.get(CORE_KEY) as Core | null;
         const audioSettings = this.scene.soundManager?.getSettings?.() ?? { masterVolume: 0.6, muted: false };
 
-        const saveData: SaveData = {
+        return {
             version: CURRENT_SAVE_VERSION,
             timestamp: Date.now(),
             wave: {
@@ -112,7 +330,7 @@ export default class SaveManager {
                 waveTimer: this.scene.waveManager.waveTimer,
                 enemiesSpawned: this.scene.waveManager.enemiesSpawned,
                 enemiesToSpawn: this.scene.waveManager.enemiesToSpawn,
-                enemies,
+                enemies: payload.enemies,
                 hpMultiplier: this.scene.waveManager.hpMultiplier,
                 enemyIdCounter: this.scene.waveManager.enemyIdCounter
             },
@@ -120,12 +338,12 @@ export default class SaveManager {
                 hp: coreBuilding ? coreBuilding.hp : 1000,
                 totalDataReceived: coreBuilding ? coreBuilding.totalDataReceived : 0
             },
-            buildings,
+            buildings: payload.buildings,
             defenseModelStates: this.scene.defenseModelStates,
             labJobProgress: this.scene.researchManager.getSavedJobProgress(),
             trainingPlanner: this.scene.trainingPlanner.getState(),
-            items,
-            cables,
+            items: payload.items,
+            cables: payload.cables,
             settings: {
                 gameSpeed: this.scene.gameSpeed,
                 showPowerGrid: this.scene.showPowerGrid,
@@ -141,17 +359,15 @@ export default class SaveManager {
                 mapPresetId: this.scene.mapManager.mapPresetId,
                 mapSeed: this.scene.mapManager.mapSeed ?? undefined
             },
-            resourceMap: resourceMapArray,
-            terrainMap: terrainMapArray,
+            resourceMap: payload.resourceMap,
+            terrainMap: payload.terrainMap,
             research: this.scene.researchManager.getUnlockedResearch()
         };
-
-        localStorage.setItem('gradium_save', JSON.stringify(saveData));
-        return true;
     }
 
     loadGame(): boolean {
         if (this.scene.mode === 'tutorial') return false;
+        this.cancelScheduledAutoSave();
 
         const saveString = localStorage.getItem('gradium_save');
         if (!saveString) return false;
@@ -161,7 +377,7 @@ export default class SaveManager {
 
             // Clean up existing state
             this.scene.buildingManager.forEach(b => b.destroy());
-            this.scene.buildingManager.buildings.clear();
+            this.scene.buildingManager.clear();
 
             this.scene.itemManager.getItems().forEach(item => item.sprite.destroy());
             this.scene.itemManager.items = [];

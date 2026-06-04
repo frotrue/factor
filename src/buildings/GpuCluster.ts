@@ -7,20 +7,25 @@ import { getCategoryColor } from '../visuals/visualTheme';
 export default class GpuCluster extends BaseBuilding {
     gpuGraphics: Phaser.GameObjects.Graphics;
     pulsePhase: number;
-    gpuTween: Phaser.Tweens.Tween;
+    gpuTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'GPU_CLUSTER', { ...config, color: CONFIG.BUILDINGS.GPU_CLUSTER.COLOR });
         this.gpuGraphics = scene.add.graphics();
         this.container.add(this.gpuGraphics);
         this.pulsePhase = 0;
-        this.gpuTween = scene.tweens.add({
-            targets: this,
-            pulsePhase: Math.PI * 2,
-            duration: 1800,
-            repeat: -1,
-            onUpdate: () => this.drawGpuCore()
-        });
+        this.gpuTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.gpuTween = scene.tweens.add({
+                targets: this,
+                pulsePhase: Math.PI * 2,
+                duration: 1800,
+                repeat: -1,
+                onUpdate: () => this.drawGpuCore()
+            });
+        } else {
+            this.drawGpuCore();
+        }
     }
 
     drawGpuCore(): void {

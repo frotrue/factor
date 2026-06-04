@@ -7,7 +7,7 @@ import { getCategoryColor } from '../visuals/visualTheme';
 export default class SolarPanel extends BaseBuilding {
     solarGraphics: Phaser.GameObjects.Graphics;
     glintOffset: number;
-    solarTween: Phaser.Tweens.Tween;
+    solarTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'SOLAR_PANEL', { ...config, color: CONFIG.BUILDINGS.SOLAR_PANEL.COLOR });
@@ -16,14 +16,20 @@ export default class SolarPanel extends BaseBuilding {
         this.container.add(this.solarGraphics);
 
         this.glintOffset = -24;
-        this.solarTween = scene.tweens.add({
-            targets: this,
-            glintOffset: 24,
-            duration: 2500,
-            repeat: -1,
-            repeatDelay: 1000,
-            onUpdate: () => this.drawSolarGrid()
-        });
+        this.solarTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.solarTween = scene.tweens.add({
+                targets: this,
+                glintOffset: 24,
+                duration: 2500,
+                repeat: -1,
+                repeatDelay: 1000,
+                onUpdate: () => this.drawSolarGrid()
+            });
+        } else {
+            this.glintOffset = 0;
+            this.drawSolarGrid();
+        }
     }
 
     drawSolarGrid(): void {

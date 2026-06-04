@@ -10,10 +10,12 @@ export default class BuildingManager {
     scene: IMainScene;
     buildings: Map<string, BaseBuilding>;
     private _uniqueCache: BaseBuilding[] | null = null;
+    private buildingsByType: Map<string, Set<BaseBuilding>>;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
         this.buildings = new Map();
+        this.buildingsByType = new Map();
     }
 
     place(x: number, y: number, type: string, rotation: number, config: BuildingOptions = {}): BaseBuilding | null {
@@ -50,6 +52,7 @@ export default class BuildingManager {
                 }
             }
             this._uniqueCache = null;
+            this.addToTypeIndex(building);
             EventBus.emit('BUILDING_PLACED', { key: `${x},${y}`, building, type });
         }
         return building;
@@ -85,6 +88,7 @@ export default class BuildingManager {
                 }
             }
             this._uniqueCache = null;
+            this.removeFromTypeIndex(building);
             building.destroy();
             const event = getBuildingLifecycleEvent(reason);
             if (event === 'BUILDING_DESTROYED') {
@@ -104,15 +108,62 @@ export default class BuildingManager {
     }
 
     forEach(callback: (building: BaseBuilding) => void): void {
+        const buildings = this.getUniqueBuildings();
+        for (let i = 0; i < buildings.length; i++) {
+            callback(buildings[i]);
+        }
+    }
+
+    getUniqueBuildings(): BaseBuilding[] {
         if (!this._uniqueCache) {
             this._uniqueCache = [...new Set(this.buildings.values())];
         }
-        for (let i = 0; i < this._uniqueCache.length; i++) {
-            callback(this._uniqueCache[i]);
-        }
+        return this._uniqueCache;
+    }
+
+    getByType(type: string): BaseBuilding[] {
+        return Array.from(this.buildingsByType.get(type) || []);
+    }
+
+    getByTypes(types: string[]): BaseBuilding[] {
+        const result: BaseBuilding[] = [];
+        types.forEach(type => {
+            const buildings = this.buildingsByType.get(type);
+            if (!buildings) return;
+            buildings.forEach(building => result.push(building));
+        });
+        return result;
+    }
+
+    countByTypes(types: string[]): number {
+        return types.reduce((total, type) => total + (this.buildingsByType.get(type)?.size || 0), 0);
+    }
+
+    clear(): void {
+        this.buildings.clear();
+        this.buildingsByType.clear();
+        this._uniqueCache = null;
     }
 
     getAll(): Map<string, BaseBuilding> {
         return this.buildings;
+    }
+
+    private addToTypeIndex(building: BaseBuilding): void {
+        let buildings = this.buildingsByType.get(building.type);
+        if (!buildings) {
+            buildings = new Set();
+            this.buildingsByType.set(building.type, buildings);
+        }
+        buildings.add(building);
+    }
+
+    private removeFromTypeIndex(building: BaseBuilding): void {
+        const buildings = this.buildingsByType.get(building.type);
+        if (!buildings) return;
+        buildings.delete(building);
+        if (buildings.size === 0) {
+            this.buildingsByType.delete(building.type);
+        }
     }
 }

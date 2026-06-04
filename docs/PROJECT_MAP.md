@@ -4,7 +4,7 @@
 
 ## 프로젝트 목적과 현재 게임 개요
 
-Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다.
+Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다. 대형 공장 성능 개선 구현 범위와 진행 상황은 [PERFORMANCE_IMPLEMENTATION_REPORT.md](./PERFORMANCE_IMPLEMENTATION_REPORT.md)에 정리되어 있습니다. 현재 1차 구현으로 기본 FPS target은 60으로 낮아졌고, UI objective/defense 패널과 웨이브 타이머 DOM 갱신은 매 프레임 작업에서 dirty/throttle 기반 작업으로 전환되었습니다.
 
 핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, Neural Operations Lab 작업으로 공장을 성장시키는 흐름입니다. Lab은 RAW_DATA/LABELED_DATA/WEIGHT_UPDATE를 각각 1/3/5 진행도로 소비해 방어 모델과 시스템 프로토콜 작업을 진행합니다. 방어 모델은 학습 시간을 거쳐 플레이어가 선택한 모드에 따라 정확도 또는 공격력 보너스를 올리며, 정확도 100% 이후에는 GPU Cluster를 Lab 옆에 붙여 학습 시간을 크게 줄일 수 있습니다. 현재 빌드는 난이도 선택, 건물 역할 중심 튜토리얼, 일반 캠페인과 분리된 작은 건물 학습용 튜토리얼 arena 맵, 큰 유한 캠페인 맵 bounds, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 거리/장애물 제한이 있는 케이블/AP/Repeater 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
 

@@ -9,7 +9,7 @@ export default class Unloader extends BaseBuilding {
     selectedType: string | null;
     unloaderGraphics: Phaser.GameObjects.Graphics;
     pistonProgress: number;
-    unloaderTween: Phaser.Tweens.Tween;
+    unloaderTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'UNLOADER', { ...config, color: CONFIG.BUILDINGS.UNLOADER.COLOR });
@@ -20,14 +20,19 @@ export default class Unloader extends BaseBuilding {
         this.unloaderGraphics.angle = CONFIG.DIRECTIONS[this.rotation]?.angle || 0;
 
         this.pistonProgress = 0.5;
-        this.unloaderTween = scene.tweens.add({
-            targets: this,
-            pistonProgress: 1.0,
-            duration: 600,
-            yoyo: true,
-            repeat: -1,
-            onUpdate: () => this.drawPiston()
-        });
+        this.unloaderTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.unloaderTween = scene.tweens.add({
+                targets: this,
+                pistonProgress: 1.0,
+                duration: 600,
+                yoyo: true,
+                repeat: -1,
+                onUpdate: () => this.drawPiston()
+            });
+        } else {
+            this.drawPiston();
+        }
     }
 
     drawPiston(): void {

@@ -16,6 +16,7 @@ import { TUTORIAL_STEP_DEFINITIONS } from '../utils/tutorialFlow';
 import type { IntrusionRoute } from '../utils/waveSimulation';
 
 const TUTORIAL_FIRST_WAVE_INDEX = TUTORIAL_STEP_DEFINITIONS.findIndex(step => step.id === 'FIRST_WAVE');
+const ENEMY_SPATIAL_BUCKET_SIZE = CONFIG.GRID_SIZE * 4;
 
 export default class WaveManager {
     scene: IMainScene;
@@ -35,6 +36,9 @@ export default class WaveManager {
     ddosRewardGranted: boolean;
     activeRoutes: IntrusionRoute[];
     lastBriefingKey: string | null;
+    private lastWaveTimerSecond: number;
+    private enemySpatialBuckets: Map<string, BaseEnemy[]>;
+    private enemySpatialDirty: boolean;
 
     constructor(scene: IMainScene, buildingManager: BuildingManager) {
         this.scene = scene;
@@ -55,8 +59,12 @@ export default class WaveManager {
         this.ddosRewardGranted = false;
         this.activeRoutes = selectActiveIntrusionRoutes(1, this.difficultyId);
         this.lastBriefingKey = null;
+        this.lastWaveTimerSecond = -1;
+        this.enemySpatialBuckets = new Map();
+        this.enemySpatialDirty = true;
         EventBus.on('ENEMY_KILLED', ({ id, type, rewardSilicon }: { id: string; type: string; rewardSilicon: number }) => {
             this.enemies.delete(id);
+            this.enemySpatialDirty = true;
             this.grantSiliconReward(rewardSilicon);
             if (type === 'DDOS_BOT') {
                 this.tryGrantDdosSwarmReward();
@@ -72,6 +80,8 @@ export default class WaveManager {
                 if (e.active) e.die();
             });
             this.enemies.clear();
+            this.enemySpatialBuckets.clear();
+            this.enemySpatialDirty = true;
         }, 'WaveManager');
     }
 
@@ -106,6 +116,7 @@ export default class WaveManager {
         this.enemiesSpawned = 0;
         this.spawnTimer = 0;
         this.ddosSwarmSpawned = false;
+        this.lastWaveTimerSecond = -1;
 
         const tm = this.scene.tutorialManager;
         const isTutorialFirstWave = tm && !tm.isCompleted() && tm.getSavedStep() === TUTORIAL_FIRST_WAVE_INDEX;
@@ -144,6 +155,7 @@ export default class WaveManager {
         this.waveTimer = this.getDifficulty().WAVE_COOLDOWN_MS;
         EventBus.emit('WAVE_ENDED', { wave: this.currentWave });
         this.emitNextWaveBriefing();
+        this.emitWaveTimerUpdate(true);
     }
 
     private emitNextWaveBriefing(): void {
@@ -152,6 +164,14 @@ export default class WaveManager {
         if (briefingKey === this.lastBriefingKey) return;
         this.lastBriefingKey = briefingKey;
         EventBus.emit('WAVE_BRIEFING_UPDATED', createWaveBriefing(nextWave, this.difficultyId));
+    }
+
+    private emitWaveTimerUpdate(force = false): void {
+        const timerSecond = Math.max(0, Math.ceil(this.waveTimer / 1000));
+        if (!force && timerSecond === this.lastWaveTimerSecond) return;
+
+        this.lastWaveTimerSecond = timerSecond;
+        EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
     }
 
     spawnEnemy(typeOverride?: string): void {
@@ -191,6 +211,7 @@ export default class WaveManager {
         }
 
         this.enemies.set(id, enemy);
+        this.enemySpatialDirty = true;
     }
 
     spawnDdosSwarm(): void {
@@ -212,7 +233,7 @@ export default class WaveManager {
             if (savedStep < TUTORIAL_FIRST_WAVE_INDEX) {
                 // Tutorial setup steps: freeze waveTimer until defense placement opens the first wave.
                 this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
-                EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+                this.emitWaveTimerUpdate();
 
                 // Still update existing enemies if any (unlikely in early tutorial)
                 this.applyBossAuras();
@@ -223,12 +244,7 @@ export default class WaveManager {
                 return;
             } else if (savedStep === TUTORIAL_FIRST_WAVE_INDEX) {
                 // FIRST_WAVE: trigger the tutorial mock wave after any defense is online.
-                let hasDefense = false;
-                this.buildingManager.forEach(building => {
-                    if (building.type === 'CLASSIFIER' || building.type === 'FIREWALL' || building.type === 'FILTER') {
-                        hasDefense = true;
-                    }
-                });
+                const hasDefense = this.buildingManager.countByTypes(['CLASSIFIER', 'FIREWALL', 'FILTER']) > 0;
 
                 if (!this.waveActive && hasDefense) {
                     // Trigger the tutorial mock wave immediately!
@@ -236,12 +252,12 @@ export default class WaveManager {
                 } else if (!this.waveActive) {
                     // Keep the timer frozen at initial delay until the defense is built.
                     this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
-                    EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+                    this.emitWaveTimerUpdate();
                     return;
                 }
             } else if (savedStep > TUTORIAL_FIRST_WAVE_INDEX) {
                 this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
-                EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+                this.emitWaveTimerUpdate();
                 return;
             }
         }
@@ -249,7 +265,7 @@ export default class WaveManager {
         if (!this.waveActive) {
             this.waveTimer -= delta;
             this.emitNextWaveBriefing();
-            EventBus.emit('WAVE_UPDATE', { timer: this.waveTimer });
+            this.emitWaveTimerUpdate();
             if (this.waveTimer <= 0) {
                 this.startWave();
             }
@@ -272,6 +288,7 @@ export default class WaveManager {
         this.enemies.forEach(enemy => {
             enemy.update(delta, coreTarget.x, coreTarget.y);
         });
+        this.enemySpatialDirty = true;
     }
 
     applyBossAuras(): void {
@@ -313,7 +330,7 @@ export default class WaveManager {
         const buildingManager = this.scene.buildingManager;
         let remaining = amount;
 
-        buildingManager.forEach(building => {
+        buildingManager.getByType('STORAGE').forEach(building => {
             if (remaining <= 0 || building.type !== 'STORAGE') return;
             while (remaining > 0 && building.canAcceptItem('SILICON')) {
                 building.acceptItem('SILICON');
@@ -339,17 +356,52 @@ export default class WaveManager {
     }
 
     getEnemiesInRange(x: number, y: number, range: number): BaseEnemy[] {
+        this.scene.performanceStats?.increment('enemyRangeQueries');
+        this.ensureEnemySpatialIndex();
+
         const inRange: BaseEnemy[] = [];
         const maxDist = range * CONFIG.GRID_SIZE;
         const maxDistSq = maxDist * maxDist;
+        const bucketRadius = Math.ceil(maxDist / ENEMY_SPATIAL_BUCKET_SIZE);
+        const centerBucketX = Math.floor(x / ENEMY_SPATIAL_BUCKET_SIZE);
+        const centerBucketY = Math.floor(y / ENEMY_SPATIAL_BUCKET_SIZE);
+
+        for (let bx = centerBucketX - bucketRadius; bx <= centerBucketX + bucketRadius; bx++) {
+            for (let by = centerBucketY - bucketRadius; by <= centerBucketY + bucketRadius; by++) {
+                const bucket = this.enemySpatialBuckets.get(`${bx},${by}`);
+                if (!bucket) continue;
+
+                for (const enemy of bucket) {
+                    if (!enemy.active) continue;
+                    const dx = x - enemy.x;
+                    const dy = y - enemy.y;
+                    if (dx * dx + dy * dy <= maxDistSq) {
+                        inRange.push(enemy);
+                    }
+                }
+            }
+        }
+        return inRange;
+    }
+
+    private ensureEnemySpatialIndex(): void {
+        if (!this.enemySpatialDirty) return;
+
+        this.enemySpatialBuckets.clear();
         this.enemies.forEach(enemy => {
             if (!enemy.active) return;
-            const dx = x - enemy.x;
-            const dy = y - enemy.y;
-            if (dx * dx + dy * dy <= maxDistSq) {
-                inRange.push(enemy);
+            const key = this.getEnemySpatialBucketKey(enemy.x, enemy.y);
+            const bucket = this.enemySpatialBuckets.get(key);
+            if (bucket) {
+                bucket.push(enemy);
+            } else {
+                this.enemySpatialBuckets.set(key, [enemy]);
             }
         });
-        return inRange;
+        this.enemySpatialDirty = false;
+    }
+
+    private getEnemySpatialBucketKey(x: number, y: number): string {
+        return `${Math.floor(x / ENEMY_SPATIAL_BUCKET_SIZE)},${Math.floor(y / ENEMY_SPATIAL_BUCKET_SIZE)}`;
     }
 }

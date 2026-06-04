@@ -8,7 +8,7 @@ export default class Miner extends BaseBuilding {
     resourceType: string | null;
     scanGraphics: Phaser.GameObjects.Graphics;
     scanY: number;
-    scanTween: Phaser.Tweens.Tween;
+    scanTween: Phaser.Tweens.Tween | null;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'MINER', { ...config, color: CONFIG.BUILDINGS.MINER.COLOR });
@@ -22,14 +22,20 @@ export default class Miner extends BaseBuilding {
         this.container.add(this.scanGraphics);
         this.scanY = -12;
 
-        this.scanTween = scene.tweens.add({
-            targets: this,
-            scanY: 12,
-            duration: 1800,
-            yoyo: true,
-            repeat: -1,
-            onUpdate: () => this.drawScanLine()
-        });
+        this.scanTween = null;
+        if (this.shouldUseAnimatedVisuals()) {
+            this.scanTween = scene.tweens.add({
+                targets: this,
+                scanY: 12,
+                duration: 1800,
+                yoyo: true,
+                repeat: -1,
+                onUpdate: () => this.drawScanLine()
+            });
+        } else {
+            this.scanY = 0;
+            this.drawScanLine();
+        }
     }
 
     drawResourceMode(): void {

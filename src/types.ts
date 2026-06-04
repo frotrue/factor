@@ -12,6 +12,7 @@ import type SaveManager from './managers/SaveManager';
 import type SoundManager from './managers/SoundManager';
 import type TickSystem from './managers/TickSystem';
 import type TrainingPlannerManager from './managers/TrainingPlannerManager';
+import type PerformanceStats from './managers/PerformanceStats';
 import type TutorialManager from './managers/TutorialManager';
 import type UIManager from './managers/UIManager';
 import type WaveManager from './managers/WaveManager';
@@ -420,6 +421,7 @@ export interface IMainScene extends Phaser.Scene {
     soundManager: SoundManager;
     tutorialManager?: TutorialManager;
     trainingPlanner: TrainingPlannerManager;
+    performanceStats: PerformanceStats;
     defenseModelStates: Record<string, DefenseModelState>;
     mode: GameMode;
     gameSpeed: number;
