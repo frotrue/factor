@@ -12,6 +12,19 @@ import type { TutorialAreaHint, TutorialGhostHint, TutorialStep } from '../utils
 import { t } from '../i18n';
 import EventBus from './EventBus';
 import { getItemColor } from '../visuals/visualTheme';
+import {
+    bindLegacyTutorialSkip,
+    ensureLegacyTutorialPanel,
+    hideLegacyTutorialPanel,
+    renderLegacyTutorialPanel,
+    showLegacyTutorialPanel,
+    startLegacyTutorialTypewriter,
+    updateLegacyTutorialProgress
+} from '../ui/legacyTutorialPanel';
+import {
+    createTutorialPanelDisplayPayload,
+    type TutorialPanelDisplayPayload
+} from '../ui/tutorialPanelDisplay';
 
 const STORAGE_COMPLETED = 'gradium_tutorial_completed';
 const STORAGE_STEP = 'gradium_tutorial_step';
@@ -138,23 +151,12 @@ const STORAGE_STEP = 'gradium_tutorial_step';
         }, 'TutorialManager');
 
         EventBus.on('TUTORIAL_RESET', () => this.reset(), 'TutorialManager');
+        EventBus.on('TUTORIAL_SKIP_REQUESTED', () => this.completeAll({ transitionToCampaign: true }), 'TutorialManager');
         window.addEventListener('languagechange', this.languageChangeHandler);
     }
 
     private ensurePanel(): HTMLElement {
-        let panel = document.getElementById('tutorial-panel');
-        if (!panel) {
-            panel = document.createElement('div');
-            panel.id = 'tutorial-panel';
-            panel.className = 'glass-panel tutorial-terminal-panel';
-        }
-        const rail = document.getElementById('hud-right-rail');
-        if (rail && panel.parentElement !== rail) {
-            rail.appendChild(panel);
-        } else if (!panel.parentElement) {
-            document.body.appendChild(panel);
-        }
-        return panel;
+        return ensureLegacyTutorialPanel();
     }
 
     private getActiveStep(): TutorialStep | undefined {
@@ -251,40 +253,41 @@ const STORAGE_STEP = 'gradium_tutorial_step';
     }
 
     private typeText(text: string, elementId: string): void {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-
-        let index = 0;
-        element.innerHTML = '';
-
-        if (this.typingInterval) clearInterval(this.typingInterval);
-
-        this.typingInterval = window.setInterval(() => {
-            if (index < text.length) {
-                element.innerHTML += text.charAt(index);
-                index++;
-                // Sound effect on every few typed characters
-                if (index % 4 === 0) {
-                    this.scene.soundManager?.play?.('shot');
-                }
-            } else {
-                clearInterval(this.typingInterval);
-            }
-        }, 22);
+        if (elementId !== 'tutorial-typewriter') return;
+        this.typingInterval = startLegacyTutorialTypewriter(
+            text,
+            this.typingInterval,
+            () => this.scene.soundManager?.play?.('shot')
+        );
     }
 
     private render(): void {
         if (this.completed) {
-            this.panel.style.display = 'none';
+            const display = createTutorialPanelDisplayPayload({
+                activeIndex: 0,
+                activeStep: null,
+                completeCount: 0,
+                completed: this.completed,
+                steps: this.steps
+            });
+            hideLegacyTutorialPanel(this.panel);
+            this.publishPanelSnapshot(display);
             return;
         }
 
         const activeIndex = this.steps.findIndex(step => !step.completed);
         const activeStep = this.steps[activeIndex] ?? this.steps[this.steps.length - 1];
         const completeCount = this.steps.filter(step => step.completed).length;
+        const display = createTutorialPanelDisplayPayload({
+            activeIndex,
+            activeStep,
+            completeCount,
+            completed: this.completed,
+            steps: this.steps
+        });
+        this.publishPanelSnapshot(display);
 
-        this.panel.style.display = 'block';
-        this.panel.dataset.activeStep = activeStep.id;
+        showLegacyTutorialPanel(this.panel, display.legacyPanel.activeStepId);
 
         if (this.lastRenderedStepId !== activeStep.id) {
             this.lastRenderedStepId = activeStep.id;
@@ -293,44 +296,33 @@ const STORAGE_STEP = 'gradium_tutorial_step';
             this.waveEndedForStep = false;
             this.modelTargetSetForStep = false;
 
-            this.panel.innerHTML = `
-                <div class="tutorial-header">
-                    <div>
-                        <div class="tutorial-kicker">${t('tutorial.kicker', { current: completeCount, total: this.steps.length })}</div>
-                        <div class="tutorial-title">[G.R.A.D.I.U.M. OS AI Assistant]</div>
-                    </div>
-                    <button id="btn-skip-tutorial" class="tutorial-skip">${t('tutorial.skip')}</button>
-                </div>
-                <div id="tutorial-typewriter" class="tutorial-detail typing-text" style="font-family:'Share Tech Mono', monospace; font-size: 11px; line-height: 1.4; min-height: 55px; color: #a5f3fc; text-shadow: 0 0 5px rgba(165, 243, 252, 0.4);"></div>
-                <div class="tutorial-steps">
-                    ${this.steps.map((step, index) => `
-                        <div class="tutorial-step ${step.completed ? 'complete' : index === activeIndex ? 'active' : ''}" data-step-id="${step.id}" style="font-family:'Share Tech Mono', monospace; font-size:10px;">
-                            <span class="tutorial-check">${step.completed ? t('tutorial.ok') : index + 1}</span>
-                            <span>${step.title}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+            renderLegacyTutorialPanel(
+                this.panel,
+                display.legacyPanel.steps,
+                display.legacyPanel.activeIndex,
+                display.legacyPanel.completeCount,
+                () => this.completeAll({ transitionToCampaign: true })
+            );
 
             // Sync UIManager building buttons whenever active step locks change
             this.scene.uiManager?.createBuildingButtons?.();
 
             // Run retro console terminal typing simulation
-            this.typeText(activeStep.detail, 'tutorial-typewriter');
+            this.typeText(display.legacyPanel.detail, 'tutorial-typewriter');
         } else {
-            const stepElements = this.panel.querySelectorAll('.tutorial-step');
-            stepElements.forEach((el, index) => {
-                const step = this.steps[index];
-                el.className = `tutorial-step ${step.completed ? 'complete' : index === activeIndex ? 'active' : ''}`;
-                const checkEl = el.querySelector('.tutorial-check');
-                if (checkEl) checkEl.textContent = step.completed ? t('tutorial.ok') : String(index + 1);
-            });
-            const kickerEl = this.panel.querySelector('.tutorial-kicker');
-            if (kickerEl) kickerEl.textContent = t('tutorial.kicker', { current: completeCount, total: this.steps.length });
+            updateLegacyTutorialProgress(
+                this.panel,
+                display.legacyPanel.steps,
+                display.legacyPanel.activeIndex,
+                display.legacyPanel.completeCount
+            );
         }
 
-        const skip = document.getElementById('btn-skip-tutorial');
-        if (skip) skip.onclick = () => this.completeAll({ transitionToCampaign: true });
+        bindLegacyTutorialSkip(() => this.completeAll({ transitionToCampaign: true }));
+    }
+
+    private publishPanelSnapshot(display: TutorialPanelDisplayPayload): void {
+        EventBus.emit('TUTORIAL_PANEL_UPDATED', display.snapshot);
     }
 
     private drawGuideHighlights(): void {

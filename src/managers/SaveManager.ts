@@ -3,7 +3,7 @@ import { SaveData, SavedBuilding, SavedItem, SavedEnemy, SavedCable } from '../t
 import EventBus from './EventBus';
 import Core from '../buildings/Core';
 import { CONFIG, CORE_KEY, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
-import { getLanguage, setLanguage } from '../i18n';
+import { getLanguage, setLanguage, t } from '../i18n';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
 import { getRestoredEnemyHp } from '../utils/enemyRestore';
@@ -32,7 +32,7 @@ export default class SaveManager {
         EventBus.on('SAVE_REQUESTED', () => {
             this.cancelScheduledAutoSave();
             if (this.saveGame()) {
-                this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.saved'));
+                this.scene.uiManager.logMessage(t('log.saved'));
             }
         }, 'SaveManager');
         EventBus.on('LOAD_REQUESTED', () => this.loadGame(), 'SaveManager');
@@ -550,11 +550,11 @@ export default class SaveManager {
             this.scene.powerManager.updatePowerGrid();
             this.scene.powerGridDirty = true;
             this.scene.defenseRangeDirty = true;
-            this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.loaded'));
+            this.scene.uiManager.logMessage(t('log.loaded'));
             return true;
         } catch (e) {
             console.error('Failed to load save', e);
-            this.scene.uiManager.logMessage(this.scene.uiManager.getText('log.corrupted'), true);
+            this.scene.uiManager.logMessage(t('log.corrupted'), true);
             return false;
         }
     }

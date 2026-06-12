@@ -1,27 +1,109 @@
-import { CONFIG, CORE_KEY } from '../config';
+import { CORE_KEY } from '../config';
 import EventBus from './EventBus';
-import { CoreDataEvent, PowerUpdateData } from '../types';
+import {
+    BuildConsoleSnapshot,
+    CoreDataEvent,
+    PowerUpdateData
+} from '../types';
 import type MainScene from '../scenes/MainScene';
 import ModelTrainingLab from '../buildings/ModelTrainingLab';
 import TrainingLabUI from './TrainingLabUI';
-import ResearchUI from './ResearchUI';
 import SettingsUI from './SettingsUI';
 import MobileUIManager from './MobileUIManager';
 import {
     getBuildingName,
-    getCableName,
-    getItemName,
-    t,
-    textForKey,
-    translateStaticDom,
-    type TranslationKey
+    translateStaticDom
 } from '../i18n';
 import type { WaveBriefing } from '../utils/waveSimulation';
 import { createWaveBriefing } from '../utils/waveSimulation';
 import type { WaveResultSummary } from '../utils/waveResultSummary';
-import { getObjectiveState, shouldHideEarlyAdvancedSystem } from '../utils/progressionGates';
+import { getObjectiveState } from '../utils/progressionGates';
 import { createRunResultSummary } from '../utils/runResultSummary';
 import Core from '../buildings/Core';
+import {
+    ensureLegacyHudDom,
+    hideLegacyModalFallbacks,
+    syncLegacyHudShellShadow as syncLegacyHudShellShadowDom,
+    updateLegacySpeedButtons
+} from '../ui/legacyHudDom';
+import {
+    renderLegacyBuildConsole,
+    updateLegacyBuildSelection,
+    updateLegacySelectedToolPanel
+} from '../ui/legacyBuildConsole';
+import {
+    getLegacyTacticalPanelRefs,
+    showLegacyTacticalPanels,
+    updateLegacyDefensePanel,
+    updateLegacyObjectivePanel,
+    updateLegacyPowerStatus,
+    updateLegacyWavePanel,
+} from '../ui/legacyTacticalPanels';
+import {
+    appendLegacyActivityLogEntry,
+    hideLegacyTooltipSurfaces,
+    showLegacyDesktopTooltip,
+    showLegacyMobileTooltip,
+    showLegacyWaveResultCard
+} from '../ui/legacyNotifications';
+import {
+    bindLegacyGameOverRestart,
+    showLegacyGameOverScreen,
+    updateLegacyGameOverStats
+} from '../ui/legacyGameOver';
+import {
+    getLegacyTopHudRefs,
+    updateLegacyPackets,
+    updateLegacyPower,
+    updateLegacyScore,
+    updateLegacySilicon,
+    updateLegacyWave,
+    updateLegacyWaveTimer,
+    type LegacyTopHudRefs
+} from '../ui/legacyTopHud';
+import {
+    isMobileLayoutActive,
+    isShortLandscapeLayout,
+    restoreGameCanvasFocus
+} from '../ui/domEnvironment';
+import {
+    createBuildConsoleDisplayPayload,
+    createBuildConsoleDisplayState
+} from '../ui/buildConsoleSnapshot';
+import {
+    createWaveResultDisplayPayload
+} from '../ui/waveResultDisplay';
+import {
+    createActivityLogDisplayPayload,
+    createClosedTooltipDisplayPayload,
+    createDesktopTooltipDisplayPayload,
+    createLabAvailableLogMessage,
+    createMobileTooltipDisplayPayload,
+    createTrainingLabMissingLogMessage,
+    createWaveIncomingLogMessage
+} from '../ui/notificationDisplay';
+import type { ActivityLogEntrySnapshot } from '../types';
+import {
+    createGameOverDisplayPayload
+} from '../ui/gameOverDisplay';
+import {
+    createLegacyDefenseStatusDisplay,
+    createLegacyObjectiveDisplay,
+    createLegacyPowerStatusDisplay,
+    createLegacyWavePanelDisplay,
+    createTacticalPanelDisplayPayload,
+    type LegacyDefenseStatusDisplay,
+    type LegacyObjectiveDisplay,
+    type LegacyPowerStatusDisplay,
+    type LegacyWavePanelDisplay
+} from '../ui/tacticalPanelDisplay';
+import {
+    createPacketsHudDisplayPayload,
+    createPowerHudDisplayPayload,
+    createScoreHudDisplayPayload,
+    createSiliconHudDisplayPayload,
+    createWaveStartedHudDisplayPayload
+} from '../ui/topHudDisplay';
 
 const TACTICAL_RENDER_INTERVAL_MS = 250;
 const SILICON_RENDER_INTERVAL_MS = 250;
@@ -32,20 +114,7 @@ export default class UIManager {
     buttons: Record<string, HTMLButtonElement>;
     activeCategory: string;
     currentTabBuildings: string[];
-    scoreEl: HTMLElement | null;
-    packetsEl: HTMLElement | null;
-    powerEl: HTMLElement | null;
-    waveEl: HTMLElement | null;
-    waveTimerEl: HTMLElement | null;
-    siliconEl: HTMLElement | null;
-    objectiveTitleEl: HTMLElement | null;
-    objectiveDetailEl: HTMLElement | null;
-    waveTitleEl: HTMLElement | null;
-    waveDetailEl: HTMLElement | null;
-    waveRecommendationEl: HTMLElement | null;
-    defenseTitleEl: HTMLElement | null;
-    defenseDetailEl: HTMLElement | null;
-    powerStatusChipEl: HTMLElement | null;
+    topHudRefs: LegacyTopHudRefs;
     hotkeys: string[];
     lastItemCount: number;
     lastScore: number;
@@ -53,21 +122,16 @@ export default class UIManager {
     private tacticalDirty: boolean;
     private lastTacticalRenderAt: number;
     private lastSiliconRenderAt: number;
-    activeResearchTab: 'RESEARCH' | 'DEFENSE';
     previousBuildSelection: string;
     buildableData: Record<string, any>;
-    mobileActionBar: HTMLElement | null;
-    mobileInfoSheet: HTMLElement | null;
-    mobileBuildSummary: HTMLElement | null;
-    mobileCableMenu: HTMLElement | null;
     mobileActionStatus: string | null;
-    activeTrainingLab: ModelTrainingLab | null;
     currentWaveBriefing: WaveBriefing | null;
     lastPowerData: PowerUpdateData | null;
     trainingLabUI: TrainingLabUI;
-    researchUI: ResearchUI;
     settingsUI: SettingsUI;
     mobileUI: MobileUIManager;
+    private activityLogEntries: ActivityLogEntrySnapshot[];
+    private activityLogNextId: number;
 
     constructor(scene: MainScene) {
         this.scene = scene;
@@ -77,20 +141,8 @@ export default class UIManager {
         this.currentTabBuildings = [];
         this.buildableData = {};
 
-        this.scoreEl = document.getElementById('hud-score');
-        this.packetsEl = document.getElementById('hud-packets');
-        this.powerEl = document.getElementById('hud-power');
-        this.waveEl = document.getElementById('hud-wave');
-        this.waveTimerEl = document.getElementById('hud-wave-timer');
-        this.siliconEl = document.getElementById('hud-silicon');
-        this.objectiveTitleEl = document.getElementById('current-objective-title');
-        this.objectiveDetailEl = document.getElementById('current-objective-detail');
-        this.waveTitleEl = document.getElementById('next-wave-title');
-        this.waveDetailEl = document.getElementById('next-wave-detail');
-        this.waveRecommendationEl = document.getElementById('next-wave-recommendation');
-        this.defenseTitleEl = document.getElementById('defense-status-title');
-        this.defenseDetailEl = document.getElementById('defense-status-detail');
-        this.powerStatusChipEl = document.getElementById('power-status-chip');
+        this.ensureLegacyHudShell();
+        this.topHudRefs = getLegacyTopHudRefs();
 
         this.hotkeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
         this.lastItemCount = -1;
@@ -99,52 +151,56 @@ export default class UIManager {
         this.tacticalDirty = true;
         this.lastTacticalRenderAt = Number.NEGATIVE_INFINITY;
         this.lastSiliconRenderAt = Number.NEGATIVE_INFINITY;
-        this.activeResearchTab = 'RESEARCH';
         this.previousBuildSelection = this.selectedBuildingType;
-        this.mobileActionBar = null;
-        this.mobileInfoSheet = null;
-        this.mobileBuildSummary = null;
-        this.mobileCableMenu = null;
         this.mobileActionStatus = null;
-        this.activeTrainingLab = null;
         this.currentWaveBriefing = createWaveBriefing(scene.waveManager.currentWave + 1, scene.difficultyId);
         this.lastPowerData = null;
         this.trainingLabUI = new TrainingLabUI(scene, this);
-        this.researchUI = new ResearchUI(scene, this);
         this.settingsUI = new SettingsUI(scene, this);
         this.mobileUI = new MobileUIManager(scene, this);
+        this.activityLogEntries = [];
+        this.activityLogNextId = 1;
 
         // Note: createBuildingButtons is now called by MainScene after ResearchManager is initialized
+        this.syncLegacyHudShellShadow();
         this.setupEvents();
         this.showTacticalPanels();
     }
 
+    private ensureLegacyHudShell(): void {
+        ensureLegacyHudDom();
+    }
+
+    syncLegacyHudShellShadow(): void {
+        syncLegacyHudShellShadowDom(isMobileLayoutActive(), isShortLandscapeLayout());
+    }
+
     setupEvents(): void {
         EventBus.on('CORE_DATA_RECEIVED', (data: CoreDataEvent) => {
-            if (this.scoreEl && this.lastScore !== data.total) {
+            const display = createScoreHudDisplayPayload(data.total);
+            if (this.lastScore !== data.total) {
                 this.lastScore = data.total;
-                this.scoreEl.innerText = String(data.total);
+                updateLegacyScore(this.topHudRefs, display.legacyValue);
             }
+            EventBus.emit('HUD_STATE_UPDATED', display.snapshot);
             this.markTacticalDirty();
         }, 'UIManager');
 
         EventBus.on('POWER_UPDATED', (data: PowerUpdateData) => {
             this.lastPowerData = data;
-            if (this.powerEl) {
-                const isDeficit = data.isBlackout || data.net < 0;
-                const networkText = data.networks ? ` | ${data.networks.length} grids` : '';
-                this.powerEl.innerText = `${data.production} / ${data.consumption} W${networkText}`;
-                this.powerEl.style.color = isDeficit ? '#ef4444' : '#fde047';
-                this.powerEl.style.textShadow = isDeficit ? '0 0 10px #ef4444' : '0 0 10px #fde047';
-            }
+            const display = createPowerHudDisplayPayload(data);
+            updateLegacyPower(this.topHudRefs, display.legacyPower);
+            EventBus.emit('HUD_STATE_UPDATED', display.snapshot);
             this.renderPowerStatus();
         }, 'UIManager');
 
         EventBus.on('WAVE_STARTED', ({ wave }: { wave: number }) => {
-            if (this.waveEl) this.waveEl.innerText = String(wave);
-            if (this.waveTimerEl) this.waveTimerEl.innerText = t('hud.waveActive');
+            const display = createWaveStartedHudDisplayPayload(wave);
+            updateLegacyWave(this.topHudRefs, display.legacyWave);
+            updateLegacyWaveTimer(this.topHudRefs, display.legacyWaveTimer);
+            EventBus.emit('HUD_STATE_UPDATED', display.snapshot);
             this.markTacticalDirty();
-            this.logMessage(t('log.waveIncoming', { wave }), true);
+            this.logMessage(createWaveIncomingLogMessage(wave), true);
         }, 'UIManager');
 
         EventBus.on('WAVE_BRIEFING_UPDATED', (briefing: WaveBriefing) => {
@@ -161,7 +217,7 @@ export default class UIManager {
             this.createBuildingButtons();
             this.markTacticalDirty();
             this.flushTacticalPanels(true);
-            this.logMessage(textForKey('log.labAvailable'));
+            this.logMessage(createLabAvailableLogMessage());
         }, 'UIManager');
 
         EventBus.on('BUILDING_PLACED', () => {
@@ -183,14 +239,15 @@ export default class UIManager {
         }, 'UIManager');
 
         EventBus.on('GAME_OVER', () => {
-            const gameOverScreen = document.getElementById('game-over-screen');
-            if (gameOverScreen) gameOverScreen.style.display = 'flex';
+            showLegacyGameOverScreen();
             this.renderGameOverStats();
-
-            const btnRestart = document.getElementById('btn-restart');
-            if (btnRestart) {
-                btnRestart.onclick = () => window.location.reload();
-            }
+            bindLegacyGameOverRestart(() => window.location.reload());
+        }, 'UIManager');
+        EventBus.on('GAME_OVER_ACTION_REQUESTED', () => {
+            window.location.reload();
+        }, 'UIManager');
+        EventBus.on('TOOLTIP_CLOSE_REQUESTED', () => {
+            this.hideTooltip();
         }, 'UIManager');
 
         this.scene.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
@@ -203,35 +260,42 @@ export default class UIManager {
             } else if (key === 'Delete' || key === 'Backspace' || key === '0') {
                 this.selectBuilding('REMOVE');
             } else if (key === 'Escape') {
-                const modalSettings = document.getElementById('settings-modal');
-                const modalResearch = document.getElementById('research-modal');
-                const modalTrainingLab = document.getElementById('training-lab-modal');
-                if (modalSettings) modalSettings.style.display = 'none';
-                if (modalResearch) modalResearch.style.display = 'none';
-                if (modalTrainingLab) modalTrainingLab.style.display = 'none';
+                hideLegacyModalFallbacks();
+                EventBus.emit('SETTINGS_MODAL_OPEN_CHANGED', { open: false });
+                EventBus.emit('TRAINING_LAB_OPEN_CHANGED', { open: false });
                 this.restoreCanvasFocus();
             }
         });
 
         EventBus.on('GAME_SPEED_CHANGED', ({ speed }: { speed: number }) => {
-            [1, 2, 3].forEach(s => {
-                const btn = document.getElementById(`btn-speed-${s}`);
-                if (btn) btn.classList.toggle('active', s === speed);
-            });
+            updateLegacySpeedButtons(speed);
             this.markTacticalDirty();
         }, 'UIManager');
 
-        this.setupSettingsUI();
-        this.setupResearchUI();
-        this.setupMobileUI();
-        this.setupTrainingLabUI();
+        EventBus.on('BUILD_CATEGORY_SELECT_REQUESTED', ({ category }: { category: string }) => {
+            if (category === this.activeCategory) return;
+            this.activeCategory = category;
+            this.createBuildingButtons();
+        }, 'UIManager');
+
+        EventBus.on('BUILD_TOOL_SELECT_REQUESTED', ({ type }: { type: string }) => {
+            this.selectBuilding(type);
+        }, 'UIManager');
+        EventBus.on('TRAINING_LAB_OPEN_REQUESTED', ({ tab }: { tab?: 'DEFENSE' | 'SYSTEM' }) => {
+            this.openFirstTrainingLab(tab);
+        }, 'UIManager');
+        EventBus.on('RESEARCH_OPENED', () => {
+            this.openFirstTrainingLab('SYSTEM');
+        }, 'UIManager');
+
+        this.settingsUI.setup();
+        this.mobileUI.setup();
+        this.trainingLabUI.setup();
         translateStaticDom();
         window.addEventListener('languagechange', () => {
             translateStaticDom();
             this.createBuildingButtons();
-            this.renderResearchTree();
-            this.setupMobileUI();
-            this.updateSelectedToolPanel();
+            this.mobileUI.setup();
             this.updateMobileBuildSummary();
             this.updateMobileControls();
             this.renderTacticalPanels();
@@ -248,6 +312,10 @@ export default class UIManager {
         this.tacticalDirty = true;
     }
 
+    private getLegacyTacticalPanelRefs() {
+        return getLegacyTacticalPanelRefs(this.topHudRefs.waveTimerEl);
+    }
+
     private flushTacticalPanels(force = false): void {
         if (!this.tacticalDirty && !force) return;
 
@@ -260,84 +328,51 @@ export default class UIManager {
         this.lastTacticalRenderAt = now;
     }
 
-    private renderWaveBriefing(timer?: number): void {
-        if (!this.waveTimerEl) return;
-        if (!this.currentWaveBriefing) {
-            if (typeof timer === 'number') this.waveTimerEl.innerText = `${Math.ceil(timer / 1000)}s`;
-            return;
-        }
-
-        const countdown = typeof timer === 'number' ? `${Math.max(0, Math.ceil(timer / 1000))}s` : null;
-        const routeText = this.currentWaveBriefing.routeNames.join(' + ');
-        const specialText = this.currentWaveBriefing.special ? ` | ${this.currentWaveBriefing.special}` : '';
-        this.waveTimerEl.innerText = countdown || t('hud.waveActive');
-
-        if (this.waveTitleEl) {
-            this.waveTitleEl.innerText = `Wave ${this.currentWaveBriefing.wave}`;
-        }
-        if (this.waveDetailEl) {
-            this.waveDetailEl.innerText = `${routeText} | ${this.currentWaveBriefing.threat}${specialText}`;
-        }
-        if (this.waveRecommendationEl) {
-            this.waveRecommendationEl.innerText = this.currentWaveBriefing.recommendedDefense;
-        }
+    private renderWaveBriefing(timer?: number): LegacyWavePanelDisplay | null {
+        const display = createLegacyWavePanelDisplay(this.currentWaveBriefing, timer);
+        if (!display) return null;
+        updateLegacyWavePanel(this.getLegacyTacticalPanelRefs(), display);
+        return display;
     }
 
     showTacticalPanels(): void {
-        ['mission-panel', 'threat-panel', 'systems-panel'].forEach(id => {
-            const panel = document.getElementById(id);
-            if (panel) panel.style.display = 'block';
-        });
+        showLegacyTacticalPanels();
         this.markTacticalDirty();
         this.flushTacticalPanels(true);
     }
 
     renderTacticalPanels(): void {
-        this.renderCurrentObjective();
-        this.renderWaveBriefing();
-        this.renderDefenseStatus();
-        this.renderPowerStatus();
-        this.researchUI.updateResearchButtonVisibility();
+        const objective = this.renderCurrentObjective();
+        const wave = this.renderWaveBriefing();
+        const defense = this.renderDefenseStatus();
+        const powerStatus = this.renderPowerStatus();
+        this.publishTacticalPanelDisplay(objective, wave, defense, powerStatus);
+    }
+
+    private publishTacticalPanelDisplay(
+        objective: LegacyObjectiveDisplay,
+        wave: LegacyWavePanelDisplay | null,
+        defense: LegacyDefenseStatusDisplay,
+        powerStatus: LegacyPowerStatusDisplay
+    ): void {
+        const display = createTacticalPanelDisplayPayload({
+            objective,
+            wave,
+            defense,
+            powerStatus,
+            briefing: this.currentWaveBriefing
+        });
+        EventBus.emit('TACTICAL_PANELS_UPDATED', display.snapshot);
     }
 
     showWaveResultSummary(summary: WaveResultSummary): void {
-        const container = document.getElementById('notification-container');
-        if (!container) {
-            this.logMessage(t('waveSummary.log', {
-                wave: summary.wave,
-                data: summary.dataProcessed,
-                integrity: summary.coreHpPercent
-            }));
-            return;
-        }
-
-        const card = document.createElement('div');
-        card.className = 'wave-result-card glass-panel';
-        card.innerHTML = `
-            <div class="wave-result-kicker">${t('waveSummary.kicker')}</div>
-            <div class="wave-result-title">${t('waveSummary.title', { wave: summary.wave })}</div>
-            <div class="wave-result-grid">
-                <span>${t('waveSummary.destroyed', { count: summary.enemiesDestroyed })}</span>
-                <span>${t('waveSummary.data', { amount: summary.dataProcessed })}</span>
-                <span>${t('waveSummary.integrity', { percent: summary.coreHpPercent, damage: summary.coreDamage })}</span>
-                <span>${t('waveSummary.buildings', { destroyed: summary.buildingsDestroyed, damaged: summary.buildingsDamaged })}</span>
-            </div>
-        `;
-        container.appendChild(card);
-        this.logMessage(t('waveSummary.log', {
-            wave: summary.wave,
-            data: summary.dataProcessed,
-            integrity: summary.coreHpPercent
-        }));
-
-        setTimeout(() => {
-            if (card.parentNode === container) container.removeChild(card);
-        }, 7000);
+        const display = createWaveResultDisplayPayload(summary);
+        EventBus.emit('WAVE_RESULT_UPDATED', display.snapshot);
+        showLegacyWaveResultCard(display.legacyContent);
+        this.logMessage(display.logMessage);
     }
 
     private renderGameOverStats(): void {
-        const statsEl = document.getElementById('game-over-stats');
-        if (!statsEl) return;
         const core = this.scene.buildingManager.get(CORE_KEY);
         const coreBuilding = core instanceof Core ? core : null;
         const summary = createRunResultSummary({
@@ -350,18 +385,9 @@ export default class UIManager {
             getModelName: getBuildingName
         });
 
-        statsEl.innerHTML = `
-            <div>${textForKey('gameOver.stat.wave', { wave: summary.wave })}</div>
-            <div>${textForKey('gameOver.stat.core', { percent: summary.coreHpPercent })}</div>
-            <div>${textForKey('gameOver.stat.data', { amount: summary.totalDataReceived })}</div>
-            <div>${textForKey('gameOver.stat.research', { count: summary.unlockedResearchCount })}</div>
-            <div>${textForKey('gameOver.stat.model', {
-                name: summary.bestModelName,
-                confidence: summary.bestModelAccuracy,
-                damage: summary.bestModelDamageBonus,
-                version: summary.bestModelVersion
-            })}</div>
-        `;
+        const display = createGameOverDisplayPayload(summary);
+        EventBus.emit('GAME_OVER_UPDATED', display.snapshot);
+        updateLegacyGameOverStats(display.legacyStatLines);
     }
 
     hasFirstDefenseSuccess(): boolean {
@@ -374,9 +400,7 @@ export default class UIManager {
         return this.scene.buildingManager?.countByTypes(types) || 0;
     }
 
-    private renderCurrentObjective(): void {
-        if (!this.objectiveTitleEl || !this.objectiveDetailEl) return;
-
+    private renderCurrentObjective(): LegacyObjectiveDisplay {
         const hasDownloader = this.countBuildings(['DATA_DOWNLOADER']) > 0;
         const hasProcessor = this.countBuildings(['PROCESSOR', 'WEIGHT_TRAINER']) > 0;
         const hasDefense = this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']) > 0;
@@ -393,43 +417,40 @@ export default class UIManager {
             hasModelTrainingLab: modelLabs.length > 0,
             hasModelTrainingTarget: modelLabs.some(lab => Boolean(lab.targetType))
         });
+        const display = createLegacyObjectiveDisplay(state);
 
-        this.objectiveTitleEl.innerText = textForKey(state.titleKey);
-        this.objectiveDetailEl.innerText = textForKey(state.detailKey);
+        updateLegacyObjectivePanel(
+            this.getLegacyTacticalPanelRefs(),
+            display.title,
+            display.detail
+        );
+        return display;
     }
 
-    private renderDefenseStatus(): void {
-        if (!this.defenseTitleEl || !this.defenseDetailEl) return;
-
+    private renderDefenseStatus(): LegacyDefenseStatusDisplay {
         const defenseTypes = ['CLASSIFIER', 'FILTER', 'FIREWALL'];
         const counts = defenseTypes.map(type => ({
-            type,
             name: getBuildingName(type),
             count: this.countBuildings([type]),
             state: this.scene.getDefenseModelState(type)
         }));
-        const total = counts.reduce((sum, entry) => sum + entry.count, 0);
 
-        if (total === 0) {
-            this.defenseTitleEl.innerText = textForKey('defenseStatus.empty.title');
-            this.defenseDetailEl.innerText = textForKey('defenseStatus.empty.detail');
-            return;
-        }
-
-        this.defenseTitleEl.innerText = textForKey('defenseStatus.ready.title', { count: total });
-        const lines = counts
-            .filter(entry => entry.count > 0)
-            .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelAccuracy)}% | DMG +${Math.round(entry.state.damageBonus)}%`);
         const activeLab = this.findActiveModelTrainingLab();
-        if (activeLab?.targetType) {
-            const state = this.scene.getDefenseModelState(activeLab.targetType);
-            lines.push(textForKey('defenseStatus.training', {
-                name: getBuildingName(activeLab.targetType),
-                confidence: Math.round(state.modelAccuracy),
-                version: state.modelVersion
-            }));
-        }
-        this.defenseDetailEl.innerText = lines.join('\n');
+        const display = createLegacyDefenseStatusDisplay(
+            counts,
+            activeLab?.targetType
+                ? {
+                    name: getBuildingName(activeLab.targetType),
+                    state: this.scene.getDefenseModelState(activeLab.targetType)
+                }
+                : null
+        );
+        updateLegacyDefensePanel(
+            this.getLegacyTacticalPanelRefs(),
+            display.title,
+            display.detail
+        );
+        return display;
     }
 
     private findActiveModelTrainingLab(): ModelTrainingLab | null {
@@ -444,23 +465,10 @@ export default class UIManager {
         return activeLab;
     }
 
-    private renderPowerStatus(): void {
-        if (!this.powerStatusChipEl) return;
-        const data = this.lastPowerData;
-        this.powerStatusChipEl.classList.remove('panel-chip-danger', 'panel-chip-warning');
-
-        if (!data) {
-            this.powerStatusChipEl.innerText = textForKey('powerStatus.core');
-            this.powerStatusChipEl.classList.add('panel-chip-warning');
-            return;
-        }
-
-        if (data.isBlackout || data.net < 0) {
-            this.powerStatusChipEl.innerText = textForKey('powerStatus.blackout', { net: data.net });
-            this.powerStatusChipEl.classList.add('panel-chip-danger');
-        } else {
-            this.powerStatusChipEl.innerText = textForKey('powerStatus.stable', { net: data.net });
-        }
+    private renderPowerStatus(): LegacyPowerStatusDisplay {
+        const display = createLegacyPowerStatusDisplay(this.lastPowerData);
+        updateLegacyPowerStatus(this.getLegacyTacticalPanelRefs(), display.text, display.tone);
+        return display;
     }
 
     guardDomPointer(element: HTMLElement | null): void {
@@ -473,192 +481,44 @@ export default class UIManager {
         });
     }
 
-    setupMobileUI(): void {
-        this.mobileUI.setup();
-    }
-
-    renderMobileCableMenu(): void {
-        this.mobileUI.renderCableMenu();
-    }
-
-    openMobileCableMenu(): void {
-        this.mobileUI.openCableMenu();
-    }
-
-    setupResearchUI(): void {
-        this.researchUI.setup();
-    }
-
-    renderResearchTree(): void {
-        this.researchUI.render();
-    }
-    getResearchEffectSummary(researchId: string): string {
-        return this.researchUI.getEffectSummary(researchId);
-    }
-
-    setupSettingsUI(): void {
-        this.settingsUI.setup();
-    }
-
     createBuildingButtons(): void {
-        const overlay = document.getElementById('ui-overlay');
-        const tabsContainer = document.getElementById('ui-tabs');
-        if (!overlay || !tabsContainer) return;
-        this.guardDomPointer(overlay);
-        this.guardDomPointer(tabsContainer);
-
-        // Render Tabs
-        tabsContainer.innerHTML = '';
-        const categories = [
-            { id: 'EXTRACTION', name: '추출' },
-            { id: 'LOGISTICS', name: '물류' },
-            { id: 'PRODUCTION', name: '생산' },
-            { id: 'POWER', name: '전력' },
-            { id: 'DEFENSE', name: '방어' }
-        ];
-
-        categories.forEach(cat => {
-            cat.name = textForKey(`category.${cat.id}`);
-            const tabBtn = document.createElement('button');
-            tabBtn.className = `tab-btn ${this.activeCategory === cat.id ? 'active' : ''}`;
-            tabBtn.innerText = cat.name;
-            this.guardDomPointer(tabBtn);
-            tabBtn.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.activeCategory = cat.id;
+        const allowed = this.scene.tutorialManager && !this.scene.tutorialManager.isCompleted()
+            ? this.scene.tutorialManager.getAllowedBuildings()
+            : null;
+        const displayState = createBuildConsoleDisplayState({
+            activeCategory: this.activeCategory,
+            hasFirstDefenseSuccess: this.hasFirstDefenseSuccess(),
+            isGpuUnlocked: this.scene.isGpuUnlocked(),
+            isResearchUnlocked: researchId => Boolean(this.scene.researchManager?.isUnlocked(researchId))
+        });
+        const renderResult = renderLegacyBuildConsole({
+            activeCategory: this.activeCategory,
+            allowedBuildings: allowed,
+            guardDomPointer: element => this.guardDomPointer(element),
+            hasFirstDefenseSuccess: this.hasFirstDefenseSuccess(),
+            hotkeys: this.hotkeys,
+            isGpuUnlocked: this.scene.isGpuUnlocked(),
+            isResearchUnlocked: researchId => Boolean(this.scene.researchManager?.isUnlocked(researchId)),
+            onCategorySelect: category => {
+                this.activeCategory = category;
                 this.createBuildingButtons();
-            };
-            tabsContainer.appendChild(tabBtn);
+            },
+            onToolSelect: type => this.selectBuilding(type),
+            selectedBuildingType: this.selectedBuildingType
         });
 
-        overlay.innerHTML = '';
-        this.buttons = {};
-        this.currentTabBuildings = [];
-        this.buildableData = {};
+        this.buttons = renderResult?.buttons ?? this.buttons;
+        this.currentTabBuildings = renderResult?.currentTabBuildings ?? displayState.currentTabBuildings;
+        this.buildableData = renderResult?.buildableData ?? displayState.buildableData;
 
-        let index = 0;
-        const mainScene = this.scene;
-        const rm = mainScene.researchManager;
-        const tm = mainScene.tutorialManager;
-        const allowed = tm && !tm.isCompleted() ? tm.getAllowedBuildings() : null;
-
-        const buildables: Record<string, any> = { ...CONFIG.BUILDINGS };
-        if (CONFIG.CABLES) {
-            Object.entries(CONFIG.CABLES).forEach(([k, v]) => {
-                buildables[k] = {
-                    ...v,
-                    CATEGORY: 'LOGISTICS',
-                    COST: v.COST_PER_TILE ? [{ resource: 'SILICON', amount: v.COST_PER_TILE }] : []
-                };
-            });
-        }
-
-        Object.entries(buildables).forEach(([key, data]) => {
-            this.buildableData[key] = data;
-            if (shouldHideEarlyAdvancedSystem(key, this.hasFirstDefenseSuccess())) {
-                return;
-            }
-            if (key === 'GPU_CLUSTER' && !this.scene.isGpuUnlocked()) {
-                return;
-            }
-
-            // Check Category
-            if (data.CATEGORY !== this.activeCategory && data.CATEGORY !== 'ALL') {
-                return;
-            }
-
-            // Check Unlock Required
-            if (data.UNLOCK_REQUIRED && rm && !rm.isUnlocked(data.UNLOCK_REQUIRED)) {
-                return;
-            }
-
-            this.currentTabBuildings.push(key);
-
-            const isLocked = allowed !== null && !allowed.includes(key);
-
-            const btn = document.createElement('button');
-            btn.id = `btn-${key.toLowerCase()}`;
-            btn.className = 'build-btn';
-            btn.type = 'button';
-            if (key === this.selectedBuildingType) btn.classList.add('active');
-            if (isLocked) {
-                btn.classList.add('build-btn-locked');
-                btn.style.opacity = '0.22';
-                btn.style.cursor = 'not-allowed';
-                btn.disabled = true;
-            }
-
-            const icon = document.createElement('div');
-            icon.className = 'build-swatch icon';
-            icon.style.background = `#${data.COLOR.toString(16).padStart(6, '0')}`;
-
-            if (index < this.hotkeys.length) {
-                const hotkeyLabel = document.createElement('div');
-                hotkeyLabel.className = 'hotkey-label';
-                hotkeyLabel.innerText = this.hotkeys[index];
-                btn.appendChild(hotkeyLabel);
-            }
-
-            btn.appendChild(icon);
-
-            const label = document.createElement('span');
-            label.className = 'build-label';
-            label.innerText = CONFIG.BUILDINGS[key] ? getBuildingName(key) : getCableName(key);
-            btn.appendChild(label);
-
-            // Show cost if defined
-            const costLabel = document.createElement('span');
-            costLabel.className = 'build-cost';
-            if (data.COST && data.COST.length > 0) {
-                costLabel.innerText = data.COST.map((c: any) => `${c.amount} ${getItemName(c.resource)}`).join(', ');
-            } else {
-                costLabel.innerText = textForKey('action.noCost');
-            }
-            btn.appendChild(costLabel);
-
-            this.guardDomPointer(btn);
-            btn.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.selectBuilding(key);
-            };
-            overlay.appendChild(btn);
-            this.buttons[key] = btn;
-            index++;
-        });
-
-        // Remove button is always available at index 0 (key '0')
-        const isRemoveLocked = allowed !== null && !allowed.includes('REMOVE');
-        const removeBtn = document.createElement('button');
-        removeBtn.id = 'btn-remove';
-        removeBtn.className = 'build-btn';
-        removeBtn.type = 'button';
-        if (this.selectedBuildingType === 'REMOVE') removeBtn.classList.add('active');
-        if (isRemoveLocked) {
-            removeBtn.classList.add('build-btn-locked');
-            removeBtn.style.opacity = '0.22';
-            removeBtn.style.cursor = 'not-allowed';
-            removeBtn.disabled = true;
-        }
-        removeBtn.innerHTML = `
-            <div class="hotkey-label">0</div>
-            <div class="build-swatch icon" style="background:#2b3038; border:1px solid #ff6676"></div>
-            <span class="build-label">${textForKey('action.remove')}</span>
-            <span class="build-cost">${textForKey('action.removeMode')}</span>
-        `;
-        this.guardDomPointer(removeBtn);
-        removeBtn.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            this.selectBuilding('REMOVE');
-        };
-        overlay.appendChild(removeBtn);
-        this.buttons['REMOVE'] = removeBtn;
-
-        this.updateSelectedToolPanel();
         this.updateMobileBuildSummary();
         this.updateMobileControls();
+        const categories = (renderResult?.categories ?? displayState.categories).map(cat => ({
+            id: cat.id,
+            label: cat.label,
+            active: cat.active
+        }));
+        this.publishBuildConsoleDisplay(categories);
     }
 
     selectBuilding(type: string): void {
@@ -666,52 +526,29 @@ export default class UIManager {
             this.previousBuildSelection = type;
         }
         this.selectedBuildingType = type;
-        Object.entries(this.buttons).forEach(([key, btn]) => {
-            btn.classList.toggle('active', key === type);
-        });
-        this.mobileCableMenu?.classList.remove('open');
-        this.updateSelectedToolPanel();
+        updateLegacyBuildSelection(this.buttons, type);
+        this.mobileUI.closeCableMenu();
         this.updateMobileBuildSummary();
         this.updateMobileControls();
+        this.publishBuildConsoleDisplay();
         EventBus.emit('BUILDING_SELECTED', { type });
     }
 
-    private getBuildableData(type: string): any {
-        if (type === 'REMOVE') return null;
-        return this.buildableData[type] || CONFIG.BUILDINGS[type] || CONFIG.CABLES[type];
-    }
-
-    private getSelectedToolName(): string {
-        if (this.selectedBuildingType === 'REMOVE') return textForKey('action.removeMode');
-        if (CONFIG.BUILDINGS[this.selectedBuildingType]) return getBuildingName(this.selectedBuildingType);
-        if (CONFIG.CABLES[this.selectedBuildingType]) return getCableName(this.selectedBuildingType);
-        return this.selectedBuildingType;
-    }
-
-    private getSelectedToolCost(): string {
-        if (this.selectedBuildingType === 'REMOVE') return textForKey('action.noCost');
-        const data = this.getBuildableData(this.selectedBuildingType);
-        if (!data) return '';
-        if (data.COST && data.COST.length > 0) {
-            return data.COST.map((c: any) => `${c.amount} ${getItemName(c.resource)}`).join(', ');
-        }
-        if (data.COST_PER_TILE) {
-            return textForKey('action.costPerTile', { amount: data.COST_PER_TILE });
-        }
-        return textForKey('action.noCost');
-    }
-
-    private updateSelectedToolPanel(): void {
-        const nameEl = document.getElementById('selected-tool-name');
-        const costEl = document.getElementById('selected-tool-cost');
-        const hintEl = document.getElementById('selected-tool-hint');
-        if (nameEl) nameEl.innerText = this.getSelectedToolName();
-        if (costEl) costEl.innerText = this.getSelectedToolCost();
-        if (hintEl) {
-            hintEl.innerText = this.selectedBuildingType === 'REMOVE'
-                ? textForKey('build.removeHint')
-                : textForKey('build.defaultHint');
-        }
+    private publishBuildConsoleDisplay(categories?: BuildConsoleSnapshot['categories']): void {
+        const display = createBuildConsoleDisplayPayload({
+            activeCategory: this.activeCategory,
+            buildableData: this.buildableData,
+            categories,
+            currentTabBuildings: this.currentTabBuildings,
+            hotkeys: this.hotkeys,
+            selectedBuildingType: this.selectedBuildingType
+        });
+        updateLegacySelectedToolPanel(
+            display.legacySelectedTool.name,
+            display.legacySelectedTool.cost,
+            display.legacySelectedTool.hint
+        );
+        EventBus.emit('BUILD_CONSOLE_UPDATED', display.snapshot);
     }
 
     cancelMobileAction(): void {
@@ -726,12 +563,19 @@ export default class UIManager {
         this.mobileUI.updateControls();
     }
 
-    setupTrainingLabUI(): void {
-        this.trainingLabUI.setup();
-    }
-
     openTrainingLab(lab: ModelTrainingLab): void {
         this.trainingLabUI.open(lab);
+    }
+
+    private openFirstTrainingLab(tab: 'DEFENSE' | 'SYSTEM' = 'DEFENSE'): void {
+        const lab = (this.scene.buildingManager?.getByType('MODEL_TRAINING_LAB') || [])
+            .find(building => building instanceof ModelTrainingLab) as ModelTrainingLab | undefined;
+        if (!lab) {
+            this.logMessage(createTrainingLabMissingLogMessage());
+            return;
+        }
+        this.trainingLabUI.setActiveTab(tab);
+        this.openTrainingLab(lab);
     }
 
     renderTrainingLab(): void {
@@ -745,19 +589,23 @@ export default class UIManager {
     update(itemCount: number): void {
         const now = this.getUiTime();
 
-        if (this.packetsEl && this.lastItemCount !== itemCount) {
+        if (this.lastItemCount !== itemCount) {
             this.lastItemCount = itemCount;
-            this.packetsEl.innerText = String(itemCount);
+            const display = createPacketsHudDisplayPayload(itemCount);
+            updateLegacyPackets(this.topHudRefs, display.legacyValue);
+            EventBus.emit('HUD_STATE_UPDATED', display.snapshot);
         }
 
-        if (this.siliconEl && now - this.lastSiliconRenderAt >= SILICON_RENDER_INTERVAL_MS) {
+        if (now - this.lastSiliconRenderAt >= SILICON_RENDER_INTERVAL_MS) {
             this.lastSiliconRenderAt = now;
             const mainScene = this.scene;
             if (mainScene.inventoryManager) {
                 const siliconCount = mainScene.inventoryManager.getResourceCount('SILICON');
                 if (this.lastSiliconCount !== siliconCount) {
                     this.lastSiliconCount = siliconCount;
-                    this.siliconEl.innerText = String(siliconCount);
+                    const display = createSiliconHudDisplayPayload(siliconCount);
+                    updateLegacySilicon(this.topHudRefs, display.legacyValue);
+                    EventBus.emit('HUD_STATE_UPDATED', display.snapshot);
                 }
             }
         }
@@ -766,132 +614,48 @@ export default class UIManager {
     }
 
     showTooltip(x: number, y: number, title: string, content: string): void {
-        if (document.body.classList.contains('mobile-layout')) {
-            const tooltip = document.getElementById('tooltip');
-            if (tooltip) tooltip.style.display = 'none';
-            if (this.mobileInfoSheet) {
-                this.mobileInfoSheet.style.display = 'block';
-                this.mobileInfoSheet.innerHTML = this.formatMobileInfo(title, content);
-            }
+        if (isMobileLayoutActive()) {
+            const display = createMobileTooltipDisplayPayload(title, content);
+            EventBus.emit('TOOLTIP_UPDATED', display.snapshot);
+            showLegacyMobileTooltip(display.legacyMobileHtml);
             return;
         }
 
-        const tooltip = document.getElementById('tooltip');
-        if (!tooltip) return;
-        tooltip.style.display = 'block';
-        tooltip.innerHTML = `<div class="tooltip-title">${title}</div><div>${content}</div>`;
-        tooltip.style.left = '0px';
-        tooltip.style.top = '0px';
-
-        const rect = tooltip.getBoundingClientRect();
-        const margin = 12;
-        const offset = 15;
-        let left = x + offset;
-        let top = y + offset;
-        const bottomUi = document.getElementById('bottom-ui-container')?.getBoundingClientRect();
-
-        if (left + rect.width > window.innerWidth - margin) {
-            left = x - rect.width - offset;
-        }
-        if (top + rect.height > window.innerHeight - margin) {
-            top = y - rect.height - offset;
-        }
-        if (bottomUi && top + rect.height > bottomUi.top - margin && y < bottomUi.top) {
-            top = bottomUi.top - rect.height - margin;
-        }
-
-        tooltip.style.left = `${Math.max(margin, Math.min(left, window.innerWidth - rect.width - margin))}px`;
-        tooltip.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - rect.height - margin))}px`;
+        const display = createDesktopTooltipDisplayPayload(x, y, title, content);
+        EventBus.emit('TOOLTIP_UPDATED', display.snapshot);
+        showLegacyDesktopTooltip(
+            display.legacyDesktop.x,
+            display.legacyDesktop.y,
+            display.legacyDesktop.title,
+            display.legacyDesktop.content
+        );
     }
 
     hideTooltip(): void {
-        const tooltip = document.getElementById('tooltip');
-        if (tooltip) tooltip.style.display = 'none';
-        if (this.mobileInfoSheet) this.mobileInfoSheet.style.display = 'none';
+        const display = createClosedTooltipDisplayPayload();
+        if (display.legacyHidden) hideLegacyTooltipSurfaces();
+        EventBus.emit('TOOLTIP_UPDATED', display.snapshot);
     }
 
     restoreCanvasFocus(): void {
-        const canvas = document.querySelector<HTMLCanvasElement>('#game-container canvas');
-        if (!canvas) return;
-        if (canvas.tabIndex < 0) canvas.tabIndex = 0;
-        requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
-    }
-
-    formatMobileInfo(title: string, content: string): string {
-        const lines = content.split('\n').filter(Boolean);
-        const tags: string[] = [];
-        const details: string[] = [];
-        const findLine = (...labels: string[]) => lines.find(line => labels.some(label => line.startsWith(`${label}:`)));
-
-        const powerLine = findLine('Power', textForKey('tooltip.power'));
-        if (powerLine) {
-            tags.push(powerLine.includes('OK') || powerLine.includes(textForKey('tooltip.powerOk')) ? 'POWER OK' : 'NO POWER');
-        }
-
-        const inputLine = findLine('Input Buffer', textForKey('tooltip.inputBuffer'));
-        const outputLine = findLine('Output Buffer', textForKey('tooltip.outputBuffer'));
-        const defenseBufferLine = lines.find(line => line.startsWith('Buffer:'));
-        const statusLine = findLine('Status', textForKey('tooltip.status'));
-        const ammoLine = lines.find(line => line.startsWith('Ammo:'));
-        const recipeLine = findLine('Recipe', textForKey('tooltip.recipe'));
-        const networkLine = findLine('Network Power', textForKey('tooltip.networkPower'));
-
-        if (statusLine?.includes('Processing') || statusLine?.includes(textForKey('tooltip.processing'))) tags.push('PROCESSING');
-        if (inputLine) {
-            details.push(inputLine);
-            const match = inputLine.match(/(\d+)\s*\/\s*(\d+)/);
-            if (match && match[1] === match[2]) tags.push('INPUT FULL');
-        }
-        if (outputLine) {
-            details.push(outputLine);
-            const match = outputLine.match(/(\d+)\s*\/\s*(\d+)/);
-            if (match && match[1] === match[2]) tags.push('OUTPUT FULL');
-        }
-        if (defenseBufferLine) {
-            details.push(defenseBufferLine);
-            const match = defenseBufferLine.match(/(\d+)\s*\/\s*(\d+)/);
-            if (ammoLine && match && Number(match[1]) === 0 && !ammoLine.includes('None')) tags.push('NO AMMO');
-        }
-        if (networkLine) details.push(networkLine);
-        if (recipeLine) details.push(recipeLine);
-
-        const tagHtml = tags.length
-            ? `<div class="mobile-status-tags">${tags.map(tag => `<span>${tag}</span>`).join('')}</div>`
-            : '';
-        const detailHtml = details.slice(0, 3).map(line => `<div>${line}</div>`).join('');
-
-        return `<div class="tooltip-title">${title}</div>${tagHtml}<div>${detailHtml || lines[0] || ''}</div>`;
+        restoreGameCanvasFocus();
     }
 
     logMessage(message: string, isAlert: boolean = false): void {
-        const logContainer = document.getElementById('activity-log');
-        if (!logContainer) return;
+        const display = createActivityLogDisplayPayload(
+            this.activityLogEntries,
+            this.activityLogNextId,
+            message,
+            isAlert
+        );
+        this.activityLogEntries = display.snapshot.entries;
+        this.activityLogNextId = display.nextId;
+        EventBus.emit('ACTIVITY_LOG_UPDATED', display.snapshot);
 
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        if (isAlert) {
-            entry.style.borderLeftColor = '#ff4444';
-            entry.style.color = '#ffaaaa';
-        }
-        entry.innerText = `> ${message}`;
-        logContainer.appendChild(entry);
-
-        setTimeout(() => {
-            if (entry.parentNode === logContainer) {
-                logContainer.removeChild(entry);
-            }
-        }, 5000);
+        appendLegacyActivityLogEntry(display.legacyEntry.message, display.legacyEntry.isAlert);
     }
 
     getSelectedBuildingType(): string {
         return this.selectedBuildingType;
-    }
-
-    getText(key: TranslationKey, values: Record<string, string | number> = {}): string {
-        return t(key, values);
-    }
-
-    getDynamicText(key: string, values: Record<string, string | number> = {}): string {
-        return textForKey(key, values);
     }
 }

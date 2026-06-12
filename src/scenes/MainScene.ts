@@ -37,6 +37,12 @@ import {
     isGpuUnlocked,
     normalizeDefenseModelState
 } from '../utils/modelTrainingProgress';
+import {
+    clearMobileLayoutClass,
+    createMobileLayoutMediaQuery,
+    isMobileLayoutMatched,
+    setMobileLayoutClass
+} from '../ui/domEnvironment';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -96,14 +102,16 @@ export default class MainScene extends Phaser.Scene {
         buildingsDamaged: Set<string>;
         buildingsDestroyed: Set<string>;
     } | null = null;
+    private loadSaveOnStart: boolean = false;
 
     constructor() {
         super('MainScene');
     }
 
-    init(data: { difficulty?: string; mode?: GameMode } = {}): void {
+    init(data: { difficulty?: string; mode?: GameMode; loadSave?: boolean } = {}): void {
         this.difficultyId = CONFIG.DIFFICULTY[data.difficulty || 'NORMAL'] ? data.difficulty! : 'NORMAL';
         this.mode = data.mode === 'tutorial' ? 'tutorial' : 'campaign';
+        this.loadSaveOnStart = this.mode === 'campaign' && Boolean(data.loadSave);
     }
 
     create(): void {
@@ -162,6 +170,9 @@ export default class MainScene extends Phaser.Scene {
             this.tutorialManager = new TutorialManager(this);
         }
         this.uiManager.createBuildingButtons();
+        if (this.loadSaveOnStart) {
+            this.saveManager.loadGame();
+        }
     }
 
     setupEvents(): void {
@@ -237,7 +248,7 @@ export default class MainScene extends Phaser.Scene {
                 this.mobileMediaQuery.removeEventListener('change', this.mobileLayoutHandler);
                 window.removeEventListener('resize', this.mobileLayoutHandler);
             }
-            document.body.classList.remove('mobile-layout');
+            clearMobileLayoutClass();
             [
                 'MainScene',
                 'CableManager',
@@ -321,7 +332,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     setupMobileLayoutDetection(): void {
-        this.mobileMediaQuery = window.matchMedia('(pointer: coarse), (max-width: 768px), (max-height: 480px)');
+        this.mobileMediaQuery = createMobileLayoutMediaQuery();
         this.mobileLayoutHandler = () => this.updateMobileLayoutState();
         this.mobileMediaQuery.addEventListener('change', this.mobileLayoutHandler);
         window.addEventListener('resize', this.mobileLayoutHandler);
@@ -329,10 +340,11 @@ export default class MainScene extends Phaser.Scene {
     }
 
     updateMobileLayoutState(): void {
-        const matches = Boolean(this.mobileMediaQuery?.matches || window.innerWidth <= 768 || window.innerHeight <= 480);
+        const matches = isMobileLayoutMatched(this.mobileMediaQuery);
         const wasMobile = this.isMobileLayout;
         this.isMobileLayout = matches;
-        document.body.classList.toggle('mobile-layout', matches);
+        setMobileLayoutClass(matches);
+        this.uiManager?.syncLegacyHudShellShadow();
 
         if (this.cameraController) {
             const currentZoom = this.cameras.main.zoom || CONFIG.CAMERA.DEFAULT_ZOOM;

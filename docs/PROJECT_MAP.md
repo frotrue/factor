@@ -10,7 +10,7 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
 
 ## 주요 기술 스택
 
-- 런타임: Phaser 3
+- 런타임: Phaser 3, DOM HUD overlay용 Preact
 - 언어: TypeScript, 일부 DOM HTML/CSS
 - 번들러: Vite
 - 유닛 테스트: Vitest
@@ -21,7 +21,7 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
 
 | 경로 | 역할 |
 |---|---|
-| `src/main.ts` | Phaser 게임 인스턴스 생성, 전역 테스트 훅 노출 |
+| `src/main.ts` | Phaser 게임 인스턴스 생성, 전역 테스트 훅 노출, Preact HUD root 마운트 |
 | `src/scenes/` | 메뉴와 실제 게임 Scene |
 | `src/managers/` | 건물, 전력, 웨이브, 저장, UI, 맵, 아이템, 케이블 등 런타임 하위 시스템 |
 | `src/buildings/` | 건물 기반 클래스와 건물별 동작 |
@@ -29,20 +29,21 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
 | `src/controllers/` | 입력과 오버레이 그리기 로직 분리 |
 | `src/visuals/` | 캔버스 그래픽 패치용 팔레트와 의미 색상 |
 | `src/utils/` | 순수 로직/시뮬레이션/요약/마이그레이션/게이트 함수 |
-| `src/styles/` | DOM UI와 모바일 레이아웃 CSS |
-| `public/assets/buildings/` | 미사용 건물 텍스처 PNG 보관 |
+| `src/styles/` | 얇은 전역 CSS, legacy DOM fallback/mobile compatibility CSS, Preact UI 디자인 토큰 |
+| `src/ui/` | 점진 이전 중인 Preact DOM HUD overlay와 legacy DOM compat helpers. 현재는 signals bridge, MainMenu overlay with snapshot-localized aria label, i18n tutorial/save status strip with polite live updates, described labeled difficulty group, keyboard shortcuts, stable test IDs, focusable start/continue/difficulty controls and `aria-pressed` difficulty state, 상단 TopBar with snapshot-localized labels, keyboard-focusable settings/research/Lab shortcuts and StatCard list/item label-value contract plus data-scan value feedback, 우측 RightRail with snapshot-localized labels, keyboard-focusable collapsible labeled tactical regions, stable panel/body/toggle test IDs and WaveBriefing threat progressbar/routes, interactive BuildConsole with snapshot-localized labels, available building PNG icons, swatch fallback, config-derived live tool preview with described tool buttons, keyboard-focusable category/tool controls, tab-to-tool-panel linkage, stable Preact test IDs, command strip and scroll hint, SettingsModal with snapshot-localized labels, title/note-linked accessible dialog surface, ModalOverlay shell IDs, keyboard-focusable tab/action controls, tab-to-panel linkage, grouped segmented controls with pressed state, labeled audio range and muted/bloom pressed state, animated/ESC-aware ModalOverlay shell and tutorial reset request, TrainingLabModal non-modal dialog side panel with snapshot-localized labels, keyboard-focusable auto/tab controls with pressed/selected state, tablist/tab-to-panel semantics, grouped reward controls with pressed state, row-labeled data/work progressbar semantics, progress row tones, job/reward requests and close request, GameOverScreen mirror with snapshot-localized labels, modal dialog semantics, integrity/model progressbar value text, stat card list semantics and keyboard-focusable actions, WaveResultCard mirror with snapshot-localized labels, title/integrity described status linkage, integrity progressbar value text, stat chip list semantics, recent result timeline list semantics and focusable close, ActivityLog mirror with snapshot-localized labels, keyboard-focusable alert/history filters with pressed/expanded state, live role log region and article entries, viewport-clamped Tooltip mirror with title/body linkage and snapshot-localized close/test IDs, TutorialPanel mirror with snapshot-localized labels, role progressbar value text, role list/listitem step semantics, current step `aria-current`, stable test IDs, current objective focus and detail typewriter, MobileActionBar/MobileBuildSummary mirror with snapshot-localized labels, focusable actions, aria-pressed/expanded/haspopup cable state, menuitemradio cable options, stable test IDs, larger touch targets and labeled/described live bottom-sheet summary, shared GlassPanel tactical bevel/scanline shell, Button/StatCard/ProgressBar가 기존 DOM HUD와 공존. `mainMenuDisplay.ts`는 menu aria/title/difficulty/tutorial/save/key-hint labels를 legacy fallback 입력과 Preact snapshot 공통 display payload로 변환을, `legacyMainMenuFallback.ts`는 invisible Phaser menu hit-target fallback을, `topHudDisplay.ts`는 TopBar labels, resource/power/wave top HUD 표시 payload와 resource/power/wave-start/wave-timer 공통 display payload/snapshot helper를, `buildConsoleSnapshot.ts`는 BuildConsole labels, item/selected-tool view-model과 selected-tool legacy panel/Preact snapshot 공통 display payload 조립을, `tacticalPanelDisplay.ts`는 RightRail labels, objective/WaveBriefing/timer/power/defense status 표시 payload와 common display payload/snapshot 변환을, `settingsDisplay.ts`는 SettingsUI current state와 localized labels를 legacy settings input/open state와 Preact snapshot 공통 display payload로 변환하고 FPS/volume UI 입력값 정규화를, `trainingLabDisplay.ts`는 Training Lab localized labels, overview/planner/duration, Defense/System row view-model 조립과 legacy shell/Preact snapshot 공통 display payload 변환을, `tutorialPanelDisplay.ts`는 Tutorial active step/progress와 localized labels를 legacy panel 입력과 Preact snapshot 공통 display payload로 변환을, `mobileActionDisplay.ts`는 selected tool/action/cable-menu state, aria/menu labels를 legacy active/summary와 Preact MobileAction snapshot 공통 display payload로 변환을, `waveResultDisplay.ts`는 WaveResult labels/snapshot/card/log 공통 display payload 변환을, `gameOverDisplay.ts`는 GameOver labels/snapshot/stat line 공통 display payload 변환을, `notificationDisplay.ts`는 tooltip open/close/activity snapshot, tooltip close label, desktop/mobile tooltip legacy mirror input, tooltip close hidden marker, activity log localized labels/legacy entry와 표시 문구 조립을, `legacyHudDom.ts`는 static HTML에서 제거된 compatibility roots를 런타임 생성하고 shell shadow/modal/speed button fallback sync를, `legacyTopHud.ts`는 `#hud-score`/`#hud-power`/`#hud-wave`/`#hud-wave-timer`/`#hud-packets`/`#hud-silicon` fallback mirror를, `legacyTacticalPanels.ts`는 mission/threat/systems fallback refs/update를, `legacyBuildConsole.ts`는 `#ui-tabs`/`#ui-overlay`/selected tool fallback render와 build button active state sync를, `legacySettings.ts`는 `#settings-modal` refs/guard/open shadow/input active sync를, `legacyTrainingLab.ts`는 `#training-lab-modal` 생성/open shadow/shell/row render를, `legacyTutorialPanel.ts`는 `#tutorial-panel` 생성/render/typewriter/skip/shadow fallback sync를, `legacyMobileControls.ts`는 `#mobile-action-*`/`#mobile-cable-menu`/`#mobile-build-summary` fallback 생성, active/shadow/menu/summary sync를, `legacyGameOver.ts`는 `#game-over-screen`/`#btn-restart`/`#game-over-stats` hidden shadow fallback lifecycle을, `legacyNotifications.ts`는 wave/log/tooltip hidden shadow fallback lifecycle을, `domEnvironment.ts`는 mobile layout/short-landscape/canvas focus DOM environment helper를 담당한다. E2E smoke now clicks/checks selected Preact surfaces directly while preserving legacy DOM fallback selectors |
+| `public/assets/buildings/` | Preact BuildConsole에서 사용할 수 있는 건물 텍스처 PNG와 legacy variant 보관 |
 | `tests/e2e/` | Playwright smoke 및 조작 테스트 |
 | `docs/` | 설계, QA, 로드맵, 코드베이스 지도 문서 |
 
 ## 핵심 실행 흐름
 
 1. `src/main.ts`가 `MainMenuScene`, `MainScene`을 Phaser 게임에 등록합니다.
-2. `MainMenuScene`이 난이도 선택 후 `MainScene`을 시작합니다.
-3. `MainScene.create()`가 매니저를 생성하고, Scene 시작 데이터의 `mode`에 따라 작은 튜토리얼 arena 맵 또는 캠페인 랜덤 맵을 생성한 뒤 Core와 시작 Storage 배치, UI/입력/이벤트를 초기화합니다.
+2. `MainMenuScene`이 난이도 선택 또는 저장 슬롯 이어하기 요청 후 `MainScene`을 시작합니다.
+3. `MainScene.create()`가 매니저를 생성하고, Scene 시작 데이터의 `mode`에 따라 작은 튜토리얼 arena 맵 또는 캠페인 랜덤 맵을 생성한 뒤 Core와 시작 Storage 배치, UI/입력/이벤트를 초기화합니다. `loadSave` 시작 플래그가 있으면 초기화 후 기존 `SaveManager.loadGame()`으로 캠페인 저장을 복원합니다.
 4. 매 프레임 `MainScene.update()`가 커서, 그리드, 틱, 웨이브, 저장, UI, 카메라, 케이블, 이펙트, 오버레이를 갱신합니다.
 5. `TickSystem`은 고정 틱으로 전력망, AP/케이블 데이터 전송, 건물 `onTick()` 생산/가공을 처리합니다.
 6. `WaveManager`는 프레임 delta 기반으로 웨이브 카운트다운, 적 스폰, 적 업데이트, 웨이브 종료를 처리합니다.
-7. DOM UI는 `index.html`의 `#game-hud-shell` 아래에서 상단 상태바, 우측 정보 레일, 하단 빌드 콘솔로 나뉘며 `UIManager`와 하위 `SettingsUI`, `TrainingLabUI`, `MobileUIManager`가 관리합니다. `ResearchUI`는 레거시 연구 모달을 숨기는 호환 no-op입니다.
+7. `index.html`은 Phaser mount, `#preact-hud`, 빈 `#game-hud-shell`만 제공합니다. `UIManager.ensureLegacyHudShell()`은 `src/ui/legacyHudDom.ts`를 호출해 `#game-hud-shell` 아래에 호환용 상단 상태바, 우측 정보 레일, 하단 빌드 콘솔 DOM IDs를 런타임 생성하고, settings/game-over/tooltip/activity/notification fallback roots도 생성합니다. 하위 `SettingsUI`, `TrainingLabUI`, `MobileUIManager`가 나머지 fallback UI를 관리합니다. 별도 레거시 research modal/stub은 제거되었고 research shortcut은 Training Lab SYSTEM 탭 request로 연결됩니다. `#preact-hud`는 Phaser canvas 및 기존 DOM HUD와 공존하는 새 Preact overlay root이며, `MainMenuScene`/`UIManager`/`SettingsUI`/`TrainingLabUI`/`TutorialManager`/`MobileUIManager`가 발행하는 menu/HUD/tactical/build/settings/lab/game-over/wave-result/activity-log/tooltip/tutorial/mobile-action snapshot과 EventBus 데이터를 signals bridge가 받아 MainMenu overlay, TopBar, RightRail, BuildConsole, SettingsModal, TrainingLabModal side panel, GameOverScreen, WaveResultCard, ActivityLog, Tooltip, TutorialPanel, MobileActionBar/MobileBuildSummary를 갱신합니다. 데스크톱에서는 legacy `#top-hud`, `#hud-right-rail`, `#bottom-ui-container`, `#build-console`이 hidden shadow fallback이고 Preact TopBar/RightRail/BuildConsole이 실제 표면입니다. Mobile portrait에서도 Preact BuildConsole과 MobileActionBar/MobileBuildSummary가 실제 표면이며 legacy bottom/action DOM은 shadow fallback입니다. Short landscape에서는 세로 공간 때문에 legacy compact fallback이 계속 보입니다. TopBar shortcuts, SettingsModal controls, TrainingLabModal auto/job/reward controls, TutorialPanel skip은 기존 manager 경로로 request만 보냅니다. SettingsModal tutorial reset도 legacy tutorial restart 동작을 재사용하며, legacy `#settings-modal`, `#training-lab-modal`, `#game-over-screen`, `#game-over-stats`, `.wave-result-card`, `.log-entry`, `#tooltip`, `#mobile-info-sheet`, `#tutorial-panel`은 open 중 hidden shadow fallback으로 sync됩니다. Legacy shell shadow/modal/speed button/gameplay display sync는 `src/ui/legacyHudDom.ts`, Top HUD legacy stat mirror는 `src/ui/legacyTopHud.ts`, RightRail labels/tactical legacy/Preact display payload 변환은 `src/ui/tacticalPanelDisplay.ts`, settings legacy refs/guard/open/input sync는 `src/ui/legacySettings.ts`, BuildConsole labels/selected tool legacy/Preact display payload 변환은 `src/ui/buildConsoleSnapshot.ts`, Settings labels/input legacy/Preact display payload 변환은 `src/ui/settingsDisplay.ts`, Training Lab legacy modal shell/row render는 `src/ui/legacyTrainingLab.ts`, Training Lab snapshot 변환은 `src/ui/trainingLabDisplay.ts`, Tutorial labels/panel legacy/Preact display payload 변환은 `src/ui/tutorialPanelDisplay.ts`, mobile legacy action/cable/build-summary sync는 `src/ui/legacyMobileControls.ts`, mobile action labels/snapshot 변환은 `src/ui/mobileActionDisplay.ts`, mobile layout/short-landscape/canvas focus environment는 `src/ui/domEnvironment.ts`, game-over legacy DOM open/restart/stats 반영은 `src/ui/legacyGameOver.ts`가 담당하고 run summary 계산은 `UIManager`, game-over 표시 payload 변환은 `src/ui/gameOverDisplay.ts`가 담당합니다. RightRail collapse는 Preact local UI state이며 threat meter/routes는 existing `WaveBriefing` 메타를 표시합니다. BuildConsole preview는 config 메타를 표시할 뿐 실제 선택/건설 상태는 기존 `UIManager` request 경로가 처리합니다.
 
 튜토리얼 흐름은 `CORE -> RESOURCE -> POWER -> MINER -> STORAGE -> DOWNLOADER -> CABLE -> PROCESSOR -> TRAINER -> DEFENSE -> FIRST_WAVE -> MODEL_LAB`입니다. 고정 튜토리얼 맵의 실제 Silicon 패치를 먼저 보여주고, PowerNode로 그 패치에 전력을 연결한 뒤 Miner 생산을 확인합니다. 각 단계는 배치만이 아니라 Silicon/RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 생산, 전력 온라인, 웨이브 종료, 모델 대상 선택 같은 상태 변화로 완료됩니다. 완료 또는 스킵 시 튜토리얼 진행 상태만 완료로 저장하고, 튜토리얼 공장을 이어받지 않는 새 캠페인 랜덤 맵으로 전환합니다. 튜토리얼 실행 중에는 일반 캠페인 저장 슬롯을 자동 저장하지 않습니다.
 
@@ -54,7 +55,7 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
 - 밸런스/설정 단일 원천: `src/config.ts`
 - 타입 계약: `src/types.ts`
 - DOM 뼈대: `index.html`
-- 전역 스타일: `src/styles/main.css`
+- 전역 스타일: `src/styles/main.css`, legacy fallback 스타일: `src/styles/legacy-ui.css`
 
 ## 중요한 설정 파일
 
@@ -102,7 +103,8 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 | `src/visuals/visualTheme.ts` | 인게임 그래픽 톤, 건물 카테고리/아이템/적/오버레이 색의 단일 팔레트 |
 | `src/scenes/MainScene.ts` | 매니저 조립, 이벤트 연결, 런타임 상태 추가 지점 |
 | `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔, 툴팁, 게임오버 등 DOM UI 중심 |
-| `src/styles/main.css` | PC 인게임 HUD shell, 모달/튜토리얼/모바일 회귀 레이아웃과 시각 상태 |
+| `src/styles/main.css` | body/canvas 기본 전역 스타일 |
+| `src/styles/legacy-ui.css` | PC 인게임 legacy HUD shell, 모달/튜토리얼/모바일 회귀 레이아웃과 시각 상태 |
 | `src/managers/WaveManager.ts` + `src/utils/waveSimulation.ts` + `src/utils/waveBriefingKey.ts` | 웨이브 압박, 브리핑, 난이도 조정 |
 | `src/buildings/*` | 새 건물/건물별 생산/방어/물류 동작 |
 | `src/managers/GridRenderer.ts`, `src/buildings/BaseBuilding.ts`, `src/enemies/BaseEnemy.ts` | 월드 그리드, 건물 프레임, 적 실루엣의 핵심 캔버스 그래픽. `GridRenderer`는 보이는 타일을 매 프레임 직접 재그리지 않고 청크 텍스처 캐시를 우선 사용하며, `BaseBuilding`은 공통 정적 바디를 타입/크기/색상별 텍스처로 재사용 |
@@ -118,7 +120,7 @@ Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.
 - `src/managers/PowerManager.ts`: 전력망은 건물 `hasPower`를 직접 바꾸므로 생산/케이블/방어 전체에 영향이 큽니다.
 - `src/managers/CableManager.ts`: 케이블 큐, 거리 비용, 최대 길이, BLOCKER 충돌, Repeater 경유, AP 자동 릴레이, 연구 보너스, 저장 큐 복원과 연결됩니다.
 - `src/enemies/BaseEnemy.ts`: 이동/건물 공격/코어 피해/특수 적 효과가 한 파일에 모여 있어 밸런스 변경의 파급이 큽니다. 경로 계산은 `src/utils/gridPath.ts`, target/범위 중심은 `src/utils/geometry.ts` 테스트로 먼저 고정하세요.
-- `index.html`과 `src/styles/main.css`: Playwright가 DOM id와 텍스트 일부에 의존합니다. id 변경 시 E2E를 같이 수정하세요.
+- `index.html`, `src/styles/main.css`, `src/styles/legacy-ui.css`: Playwright가 DOM id와 텍스트 일부에 의존합니다. id 변경 시 E2E를 같이 수정하세요.
 
 ## 현재 문서화 기준의 불확실성
 

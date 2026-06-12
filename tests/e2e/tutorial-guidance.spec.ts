@@ -12,8 +12,26 @@ async function startGame(page: Page): Promise<void> {
     });
 
     const isCompact = viewport.width < 600 || viewport.height < 520;
-    await page.mouse.click(viewport.width / 2, viewport.height / 2 + (isCompact ? 112 : 120));
-    await expect(page.locator('#top-hud')).toBeVisible();
+    const preactStart = page.locator('#preact-main-menu-start');
+    if (await preactStart.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await preactStart.click();
+    } else {
+        await page.mouse.click(viewport.width / 2, viewport.height / 2 + (isCompact ? 112 : 120));
+    }
+    if (viewport.width > 980 && viewport.height > 520) {
+        await expect(page.locator('#top-hud')).toBeAttached();
+        await expect(page.locator('#top-hud')).toBeHidden();
+        await expect(page.locator('#top-hud')).toHaveAttribute('data-preact-shadow', 'true');
+    } else {
+        await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
+        await expect(page.locator('#top-hud')).toBeVisible();
+    }
+    await expect(page.getByTestId('preact-top-bar')).toBeVisible();
+    if (viewport.width > 1180) {
+        await expect(page.getByTestId('preact-tutorial-panel')).toBeVisible();
+    } else {
+        await expect(page.getByTestId('preact-tutorial-panel')).toBeAttached();
+    }
     await page.waitForFunction(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         return Boolean(scene?.tutorialManager && scene?.buildingManager && scene?.mapManager);

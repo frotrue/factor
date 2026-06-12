@@ -1,4 +1,20 @@
-import { PowerUpdateData, CoreDataEvent } from '../types';
+import {
+    PowerUpdateData,
+    CoreDataEvent,
+    HudSnapshot,
+    TacticalPanelSnapshot,
+    BuildConsoleSnapshot,
+    SettingsModalSnapshot,
+    TrainingLabSnapshot,
+    GameOverSnapshot,
+    WaveResultSnapshot,
+    ActivityLogSnapshot,
+    TooltipSnapshot,
+    TutorialPanelSnapshot,
+    MobileActionSnapshot,
+    MainMenuSnapshot,
+    TrainingRewardPreference
+} from '../types';
 import type { WaveBriefing } from '../utils/waveSimulation';
 
 export interface EventMap {
@@ -22,10 +38,48 @@ export interface EventMap {
     'LOAD_REQUESTED': void;
     'RESEARCH_UNLOCKED': { id: string };
     'RESEARCH_OPENED': void;
+    'SETTINGS_OPEN_REQUESTED': void;
+    'TRAINING_LAB_OPEN_REQUESTED': { tab?: 'DEFENSE' | 'SYSTEM' };
+    'LAB_JOB_PROGRESS': { id: string; progress: number; required: number };
     'MODEL_TRAINING_TARGET_SET': { targetType: string | null };
     'TUTORIAL_RESET': void;
     'AUDIO_SETTINGS_CHANGED': { masterVolume: number; muted: boolean };
     'BLOOM_SETTINGS_CHANGED': { enabled: boolean };
+    'HUD_STATE_UPDATED': HudSnapshot;
+    'TACTICAL_PANELS_UPDATED': TacticalPanelSnapshot;
+    'BUILD_CONSOLE_UPDATED': BuildConsoleSnapshot;
+    'BUILD_CATEGORY_SELECT_REQUESTED': { category: string };
+    'BUILD_TOOL_SELECT_REQUESTED': { type: string };
+    'SETTINGS_MODAL_UPDATED': SettingsModalSnapshot;
+    'SETTINGS_MODAL_OPEN_CHANGED': { open: boolean };
+    'SETTINGS_CLOSE_REQUESTED': void;
+    'SETTINGS_SPEED_REQUESTED': { speed: number };
+    'SETTINGS_FPS_REQUESTED': { fps: number };
+    'SETTINGS_AUDIO_REQUESTED': { volume: number; muted: boolean };
+    'SETTINGS_BLOOM_REQUESTED': { enabled: boolean };
+    'SETTINGS_LANGUAGE_REQUESTED': { language: string };
+    'SETTINGS_RESET_TUTORIAL_REQUESTED': void;
+    'TRAINING_LAB_UPDATED': TrainingLabSnapshot;
+    'TRAINING_LAB_OPEN_CHANGED': { open: boolean };
+    'TRAINING_LAB_CLOSE_REQUESTED': void;
+    'TRAINING_LAB_TAB_REQUESTED': { tab: 'DEFENSE' | 'SYSTEM' };
+    'TRAINING_LAB_AUTO_REQUESTED': { enabled: boolean };
+    'TRAINING_LAB_JOB_SELECT_REQUESTED': { kind: 'DEFENSE' | 'SYSTEM'; id: string };
+    'TRAINING_LAB_REWARD_REQUESTED': { type: string; reward: TrainingRewardPreference };
+    'GAME_OVER_UPDATED': GameOverSnapshot;
+    'GAME_OVER_ACTION_REQUESTED': { action: 'restart' | 'main-menu' };
+    'WAVE_RESULT_UPDATED': WaveResultSnapshot;
+    'WAVE_RESULT_CLOSE_REQUESTED': void;
+    'ACTIVITY_LOG_UPDATED': ActivityLogSnapshot;
+    'TOOLTIP_UPDATED': TooltipSnapshot;
+    'TOOLTIP_CLOSE_REQUESTED': void;
+    'TUTORIAL_PANEL_UPDATED': TutorialPanelSnapshot;
+    'TUTORIAL_SKIP_REQUESTED': void;
+    'MOBILE_ACTION_UPDATED': MobileActionSnapshot;
+    'MOBILE_ACTION_REQUESTED': { id: string };
+    'MAIN_MENU_UPDATED': MainMenuSnapshot;
+    'MAIN_MENU_DIFFICULTY_REQUESTED': { id: string };
+    'MAIN_MENU_START_REQUESTED': { loadSave?: boolean };
 }
 
 type EventCallback<T = any> = (data: T) => void;

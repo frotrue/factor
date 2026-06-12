@@ -90,7 +90,6 @@ export default class InputController {
             '#ui-tabs',
             '#top-actions',
             '#settings-modal',
-            '#research-modal',
             '#training-lab-modal',
             '#game-over-screen',
             '#mobile-action-bar',

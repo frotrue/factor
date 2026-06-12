@@ -3,11 +3,28 @@ import type MainScene from '../scenes/MainScene';
 import type UIManager from './UIManager';
 import { CONFIG } from '../config';
 import { getBuildingName, textForKey } from '../i18n';
-import { getNextTrainingRewardKind } from '../utils/modelTrainingProgress';
+import EventBus from './EventBus';
+import {
+    ensureLegacyTrainingLabModal,
+    renderLegacyTrainingLabDefenseRows,
+    renderLegacyTrainingLabShell,
+    renderLegacyTrainingLabSystemRows,
+    setLegacyTrainingLabOpen
+} from '../ui/legacyTrainingLab';
+import {
+    createTrainingLabDefenseRowSnapshots,
+    createTrainingLabDefenseRows,
+    createTrainingLabDisplayPayload,
+    createTrainingLabShellDisplay,
+    createTrainingLabSystemRowSnapshots,
+    createTrainingLabSystemRows
+} from '../ui/trainingLabDisplay';
+import type { TrainingLabRowSnapshot } from '../types';
 
 export default class TrainingLabUI {
     private activeTrainingLab: ModelTrainingLab | null = null;
     private activeTab: 'DEFENSE' | 'SYSTEM' = 'DEFENSE';
+    private modal: HTMLElement | null = null;
 
     constructor(
         private scene: MainScene,
@@ -15,244 +32,172 @@ export default class TrainingLabUI {
     ) {}
 
     setup(): void {
-        let modal = document.getElementById('training-lab-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'training-lab-modal';
-            modal.className = 'glass-panel';
-            document.body.appendChild(modal);
-        }
+        this.modal = ensureLegacyTrainingLabModal(element => this.uiManager.guardDomPointer(element));
+        EventBus.on('TRAINING_LAB_TAB_REQUESTED', ({ tab }) => {
+            this.activeTab = tab;
+            this.render();
+        }, 'TrainingLabUI');
+        EventBus.on('TRAINING_LAB_CLOSE_REQUESTED', () => {
+            this.close();
+        }, 'TrainingLabUI');
+        EventBus.on('TRAINING_LAB_AUTO_REQUESTED', ({ enabled }) => {
+            this.scene.trainingPlanner.setAutoEnabled(enabled);
+            this.render();
+        }, 'TrainingLabUI');
+        EventBus.on('TRAINING_LAB_JOB_SELECT_REQUESTED', ({ kind, id }) => {
+            if (kind === 'DEFENSE') {
+                this.selectDefenseJob(id);
+            } else {
+                this.selectSystemJob(id);
+            }
+        }, 'TrainingLabUI');
+        EventBus.on('TRAINING_LAB_REWARD_REQUESTED', ({ type, reward }) => {
+            this.setDefenseReward(type, reward);
+        }, 'TrainingLabUI');
+    }
 
-        this.uiManager.guardDomPointer(modal);
+    setActiveTab(tab: 'DEFENSE' | 'SYSTEM'): void {
+        this.activeTab = tab;
+        this.render();
     }
 
     open(lab: ModelTrainingLab): void {
         this.activeTrainingLab = lab;
-        const modal = document.getElementById('training-lab-modal');
-        if (!modal) return;
-        modal.style.display = 'block';
+        setLegacyTrainingLabOpen(this.modal, true);
         this.render();
     }
 
     render(): void {
         const lab = this.activeTrainingLab;
-        const modal = document.getElementById('training-lab-modal');
-        if (!lab || !modal) return;
+        const modal = this.modal;
+        if (!lab) return;
 
         const summary = lab.getSummary();
-        const gpuUnlocked = this.scene.isGpuUnlocked();
-        modal.innerHTML = '';
-
-        const header = document.createElement('div');
-        header.className = 'training-lab-header';
-        header.innerHTML = `
-            <div>
-                <div class="training-lab-kicker">${textForKey('trainingLab.kicker')}</div>
-                <h2>${textForKey('trainingLab.title')}</h2>
-            </div>
-        `;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.id = 'btn-close-training-lab';
-        closeBtn.className = 'training-lab-close';
-        closeBtn.type = 'button';
-        closeBtn.textContent = textForKey('trainingLab.close');
-        this.uiManager.guardDomPointer(closeBtn);
-        closeBtn.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            modal.style.display = 'none';
-            this.uiManager.restoreCanvasFocus();
-        };
-        header.appendChild(closeBtn);
-        modal.appendChild(header);
-
-        const overview = document.createElement('div');
-        overview.className = 'training-lab-buffer';
-        const speedPercent = Math.round((1 - summary.speedMultiplier) * 100);
-        overview.textContent = gpuUnlocked
-            ? textForKey('trainingLab.gpuStatus', {
-                active: summary.activeGpuCount,
-                adjacent: summary.adjacentGpuCount,
-                reduction: speedPercent
-            })
-            : textForKey('trainingLab.gpuLocked');
-        modal.appendChild(overview);
-
         const planner = this.scene.trainingPlanner;
-        const autoPanel = document.createElement('div');
-        autoPanel.className = 'training-lab-buffer training-auto-panel';
-        const modeLabel = planner.autoEnabled && planner.mode === 'AUTO_DECIDE'
-            ? textForKey('trainingLab.autoMode')
-            : textForKey('trainingLab.manualMode');
-        autoPanel.innerHTML = `
-            <span>${modeLabel}: ${planner.getJobLabel()}</span>
-            <span class="training-target-effect">${planner.lastDecisionReason ?? textForKey('trainingLab.manualReason')}</span>
-        `;
-        const autoBtn = document.createElement('button');
-        autoBtn.type = 'button';
-        autoBtn.className = `training-reward-btn ${planner.autoEnabled && planner.mode === 'AUTO_DECIDE' ? 'active' : ''}`;
-        autoBtn.textContent = planner.autoEnabled && planner.mode === 'AUTO_DECIDE'
-            ? textForKey('trainingLab.autoOn')
-            : textForKey('trainingLab.autoOff');
-        this.uiManager.guardDomPointer(autoBtn);
-        autoBtn.onclick = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            planner.setAutoEnabled(!(planner.autoEnabled && planner.mode === 'AUTO_DECIDE'));
-            this.render();
-        };
-        autoPanel.appendChild(autoBtn);
-        modal.appendChild(autoPanel);
-
-        const list = document.createElement('div');
-        list.id = 'training-target-list';
-        list.className = 'training-target-list';
-        modal.appendChild(list);
-
-        const tabs = document.createElement('div');
-        tabs.className = 'training-target-list';
-        tabs.style.gridTemplateColumns = '1fr 1fr';
-        [
-            { id: 'DEFENSE' as const, label: textForKey('trainingLab.tab.defense') },
-            { id: 'SYSTEM' as const, label: textForKey('trainingLab.tab.system') }
-        ].forEach(tab => {
-            const tabBtn = document.createElement('button');
-            tabBtn.className = `training-target-row ${this.activeTab === tab.id ? 'active' : ''}`;
-            tabBtn.type = 'button';
-            tabBtn.textContent = tab.label;
-            this.uiManager.guardDomPointer(tabBtn);
-            tabBtn.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.activeTab = tab.id;
-                this.render();
-            };
-            tabs.appendChild(tabBtn);
+        const display = createTrainingLabShellDisplay({
+            gpuUnlocked: this.scene.isGpuUnlocked(),
+            planner,
+            summary
         });
-        modal.insertBefore(tabs, list);
-
-        if (this.activeTab === 'DEFENSE') {
-            this.renderDefenseJobs(list, lab);
-        } else {
-            this.renderSystemJobs(list, lab);
-        }
-
-        const footer = document.createElement('div');
-        footer.className = 'training-lab-buffer';
-        footer.textContent = textForKey('trainingLab.duration', {
-            base: CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS,
-            current: planner.getEstimatedDurationTicks()
-        });
-        modal.appendChild(footer);
-    }
-
-    private renderDefenseJobs(list: HTMLElement, lab: ModelTrainingLab): void {
-        CONFIG.MODEL_TRAINING.TARGET_TYPES.forEach(type => {
-            const state = this.scene.getDefenseModelState(type);
-            const selected = this.scene.trainingPlanner.activeJobId === lab.getDefenseJobId(type);
-            const trainingPercent = state.isTraining
-                ? Math.min(100, Math.round((state.trainingProgressTicks / state.trainingDurationTicks) * 100))
-                : 0;
-            const dataPercent = Math.min(100, Math.round((state.accumulatedTrainingData / state.currentRequirement) * 100));
-            const nextReward = getNextTrainingRewardKind(state) === 'accuracy'
-                ? textForKey('trainingLab.nextAccuracy', { amount: CONFIG.MODEL_TRAINING.ACCURACY_GAIN })
-                : textForKey('trainingLab.nextDamage', { amount: CONFIG.MODEL_TRAINING.DAMAGE_GAIN });
-            const row = document.createElement('div');
-            row.className = `training-target-row ${selected ? 'active' : ''}`;
-            row.tabIndex = 0;
-            row.role = 'button';
-            row.innerHTML = `
-                <span class="training-target-name">${getBuildingName(type)}</span>
-                <span class="training-target-stat">${textForKey('trainingLab.accuracy')}: ${Math.round(state.modelAccuracy)}% | ${textForKey('trainingLab.damage')}: +${Math.round(state.damageBonus)}%</span>
-                <span class="training-target-effect">${nextReward}</span>
-                <span class="training-reward-toggle" role="group" aria-label="${textForKey('trainingLab.rewardMode')}">
-                    <span class="training-target-effect">${textForKey('trainingLab.rewardMode')}</span>
-                    <button type="button" class="training-reward-btn ${state.trainingRewardPreference === 'accuracy' ? 'active' : ''}" data-reward="accuracy">${textForKey('trainingLab.rewardAccuracy')}</button>
-                    <button type="button" class="training-reward-btn ${state.trainingRewardPreference === 'damage' ? 'active' : ''}" data-reward="damage">${textForKey('trainingLab.rewardDamage')}</button>
-                </span>
-                <span class="training-target-effect">${textForKey('trainingLab.dataProgress', { current: Math.floor(state.accumulatedTrainingData), required: state.currentRequirement })}</span>
-                <span class="training-progress-track"><span style="width:${dataPercent}%"></span></span>
-                <span class="training-target-effect">${state.isTraining ? textForKey('trainingLab.trainingProgress', { progress: trainingPercent }) : textForKey('trainingLab.waiting')}</span>
-                <span class="training-progress-track training-progress-work"><span style="width:${trainingPercent}%"></span></span>
-            `;
-            this.uiManager.guardDomPointer(row);
-            row.querySelectorAll<HTMLButtonElement>('.training-reward-btn').forEach(btn => {
-                this.uiManager.guardDomPointer(btn);
-                btn.onclick = event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const reward = btn.dataset.reward === 'damage' ? 'damage' : 'accuracy';
-                    lab.setTrainingRewardPreference(type, reward);
-                    this.uiManager.logMessage(textForKey('trainingLab.rewardSet', {
-                        name: getBuildingName(type),
-                        reward: reward === 'accuracy'
-                            ? textForKey('trainingLab.rewardAccuracy')
-                            : textForKey('trainingLab.rewardDamage')
-                    }));
+        const list = modal
+            ? renderLegacyTrainingLabShell(modal, {
+                activeTab: this.activeTab,
+                autoActive: display.autoActive,
+                autoModeText: display.plannerStatusText,
+                autoToggleText: display.autoToggleText,
+                durationText: display.durationText,
+                guardDomPointer: element => this.uiManager.guardDomPointer(element),
+                onAutoToggle: () => {
+                    planner.setAutoEnabled(!display.autoActive);
                     this.render();
-                };
-            });
-            row.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                lab.setTarget(type);
-                this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
-                this.render();
-            };
-            row.onkeydown = event => {
-                if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return;
-                event.preventDefault();
-                lab.setTarget(type);
-                this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
-                this.render();
-            };
-            list.appendChild(row);
-        });
+                },
+                onClose: () => this.close(),
+                onTabSelect: tab => {
+                    this.activeTab = tab;
+                    this.render();
+                },
+                overviewText: display.overviewText,
+                plannerReasonText: display.plannerReasonText
+            })
+            : null;
+
+        let rows: TrainingLabRowSnapshot[];
+        if (this.activeTab === 'DEFENSE') {
+            rows = this.renderDefenseJobs(list, lab);
+        } else {
+            rows = this.renderSystemJobs(list);
+        }
+        this.publishDisplayPayload({
+            activeTab: this.activeTab,
+            open: true,
+            rows
+        }, display);
     }
 
-    private renderSystemJobs(list: HTMLElement, lab: ModelTrainingLab): void {
-        Object.values(CONFIG.RESEARCH).forEach(node => {
-            const progress = this.scene.researchManager.getJobProgress(node.ID);
-            const available = this.scene.researchManager.isJobAvailable(node.ID);
-            const selected = this.scene.trainingPlanner.activeJobId === node.ID;
-            const percent = Math.min(100, Math.round((progress.progress / node.COST) * 100));
-            const trainingPercent = progress.isTraining
-                ? Math.min(100, Math.round(((progress.trainingProgressTicks ?? 0) / (progress.trainingDurationTicks ?? 1)) * 100))
-                : 0;
-
-            const row = document.createElement('button');
-            row.className = `training-target-row ${selected ? 'active' : ''}`;
-            row.type = 'button';
-            row.disabled = !available && !progress.completed;
-
-            let statusText = '';
-            if (progress.completed) {
-                statusText = textForKey('trainingLab.completed');
-            } else if (progress.isTraining) {
-                statusText = `Researching: ${trainingPercent}%`;
-            } else {
-                statusText = available ? textForKey('trainingLab.waiting') : textForKey('research.action.locked');
-            }
-
-            row.innerHTML = `
-                <span class="training-target-name">${textForKey(`research.${node.ID}.name`)}</span>
-                <span class="training-target-stat">${progress.completed ? textForKey('trainingLab.completed') : textForKey('trainingLab.systemProgress', { current: Math.floor(progress.progress), required: node.COST })}</span>
-                <span class="training-target-effect">${textForKey(`research.${node.ID}.description`)}</span>
-                <span class="training-progress-track"><span style="width:${percent}%"></span></span>
-                <span class="training-target-effect">${statusText}</span>
-                <span class="training-progress-track training-progress-work"><span style="width:${trainingPercent}%"></span></span>
-            `;
-            this.uiManager.guardDomPointer(row);
-            row.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (!available && !progress.completed) return;
-                lab.setSystemJob(node.ID);
-                this.uiManager.logMessage(textForKey('trainingLab.jobSet', { name: textForKey(`research.${node.ID}.name`) }));
-                this.render();
-            };
-            list.appendChild(row);
+    private publishDisplayPayload({
+        activeTab,
+        open,
+        rows
+    }: {
+        activeTab: 'DEFENSE' | 'SYSTEM';
+        open: boolean;
+        rows: TrainingLabRowSnapshot[];
+    }, shell: ReturnType<typeof createTrainingLabShellDisplay>): void {
+        const payload = createTrainingLabDisplayPayload({
+            activeTab,
+            open,
+            rows,
+            shell
         });
+        EventBus.emit('TRAINING_LAB_UPDATED', payload.snapshot);
+    }
+
+    private renderDefenseJobs(list: HTMLElement | null, lab: ModelTrainingLab): TrainingLabRowSnapshot[] {
+        const rows = createTrainingLabDefenseRows({
+            activeJobId: this.scene.trainingPlanner.activeJobId,
+            getDefenseJobId: type => lab.getDefenseJobId(type),
+            getDefenseModelState: type => this.scene.getDefenseModelState(type)
+        });
+        if (list) {
+            renderLegacyTrainingLabDefenseRows(list, rows, {
+                guardDomPointer: element => this.uiManager.guardDomPointer(element),
+                onRewardSelect: (id, reward) => this.setDefenseReward(id, reward),
+                onSelect: id => this.selectDefenseJob(id)
+            });
+        }
+        return createTrainingLabDefenseRowSnapshots(rows);
+    }
+
+    private renderSystemJobs(list: HTMLElement | null): TrainingLabRowSnapshot[] {
+        const rows = createTrainingLabSystemRows({
+            activeJobId: this.scene.trainingPlanner.activeJobId,
+            getJobProgress: id => this.scene.researchManager.getJobProgress(id),
+            isJobAvailable: id => this.scene.researchManager.isJobAvailable(id)
+        });
+        if (list) {
+            renderLegacyTrainingLabSystemRows(list, rows, {
+                guardDomPointer: element => this.uiManager.guardDomPointer(element),
+                onSelect: id => this.selectSystemJob(id)
+            });
+        }
+        return createTrainingLabSystemRowSnapshots(rows);
+    }
+
+    private selectDefenseJob(type: string): void {
+        const lab = this.activeTrainingLab;
+        if (!lab || !CONFIG.MODEL_TRAINING.TARGET_TYPES.includes(type as any)) return;
+        lab.setTarget(type);
+        this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
+        this.render();
+    }
+
+    private selectSystemJob(id: string): void {
+        const lab = this.activeTrainingLab;
+        if (!lab || !CONFIG.RESEARCH[id]) return;
+        const progress = this.scene.researchManager.getJobProgress(id);
+        const available = this.scene.researchManager.isJobAvailable(id);
+        if (!available && !progress.completed) return;
+        lab.setSystemJob(id);
+        this.uiManager.logMessage(textForKey('trainingLab.jobSet', { name: textForKey(`research.${id}.name`) }));
+        this.render();
+    }
+
+    private setDefenseReward(type: string, reward: 'accuracy' | 'damage'): void {
+        const lab = this.activeTrainingLab;
+        if (!lab || !CONFIG.MODEL_TRAINING.TARGET_TYPES.includes(type as any)) return;
+        lab.setTrainingRewardPreference(type, reward);
+        this.uiManager.logMessage(textForKey('trainingLab.rewardSet', {
+            name: getBuildingName(type),
+            reward: reward === 'accuracy'
+                ? textForKey('trainingLab.rewardAccuracy')
+                : textForKey('trainingLab.rewardDamage')
+        }));
+        this.render();
+    }
+
+    private close(): void {
+        setLegacyTrainingLabOpen(this.modal, false);
+        EventBus.emit('TRAINING_LAB_OPEN_CHANGED', { open: false });
+        this.uiManager.restoreCanvasFocus();
     }
 }

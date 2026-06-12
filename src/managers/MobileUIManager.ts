@@ -1,122 +1,105 @@
 import { CONFIG } from '../config';
 import type MainScene from '../scenes/MainScene';
+import EventBus from './EventBus';
 import type UIManager from './UIManager';
-import { getBuildingName, getCableName, getItemName, t } from '../i18n';
+import {
+    ensureLegacyMobileRefs,
+    renderLegacyMobileActions,
+    renderLegacyMobileCableMenu,
+    setLegacyMobileCableMenuOpen,
+    syncLegacyMobileShadowState,
+    updateLegacyMobileActionState,
+    updateLegacyMobileBuildSummary,
+    type LegacyMobileRefs
+} from '../ui/legacyMobileControls';
+import { isMobileLayoutActive, isShortLandscapeLayout } from '../ui/domEnvironment';
+import {
+    createMobileActionActiveMap,
+    createMobileActionDisplayPayload,
+    createMobileActionItems,
+    createMobileCableOptions,
+    type MobileActionDisplayPayload,
+    type MobileActionActiveMap,
+    type MobileActionId
+} from '../ui/mobileActionDisplay';
 
 export default class MobileUIManager {
+    private legacyRefs: LegacyMobileRefs | null = null;
+    private cableMenuOpen: boolean = false;
+
     constructor(
         private scene: MainScene,
         private uiManager: UIManager
     ) {}
 
     setup(): void {
-        this.uiManager.mobileActionBar = document.getElementById('mobile-action-bar');
-        if (!this.uiManager.mobileActionBar) {
-            this.uiManager.mobileActionBar = document.createElement('div');
-            this.uiManager.mobileActionBar.id = 'mobile-action-bar';
-            document.body.appendChild(this.uiManager.mobileActionBar);
-        }
-        this.uiManager.guardDomPointer(this.uiManager.mobileActionBar);
+        EventBus.off('MOBILE_ACTION_REQUESTED', 'MobileUIManager');
+        EventBus.on('MOBILE_ACTION_REQUESTED', ({ id }) => this.handleAction(id), 'MobileUIManager');
 
-        this.uiManager.mobileCableMenu = document.getElementById('mobile-cable-menu');
-        if (!this.uiManager.mobileCableMenu) {
-            this.uiManager.mobileCableMenu = document.createElement('div');
-            this.uiManager.mobileCableMenu.id = 'mobile-cable-menu';
-            this.uiManager.mobileCableMenu.className = 'glass-panel';
-            this.uiManager.mobileActionBar.appendChild(this.uiManager.mobileCableMenu);
-        }
-        this.uiManager.guardDomPointer(this.uiManager.mobileCableMenu);
+        this.legacyRefs = ensureLegacyMobileRefs(element => this.uiManager.guardDomPointer(element));
+        this.setCableMenuOpen(false);
 
-        const actions = [
-            { id: 'rotate', label: t('action.rotate'), handler: () => this.scene.rotateCursor() },
-            { id: 'remove', label: t('action.remove'), handler: () => this.uiManager.selectBuilding('REMOVE') },
-            { id: 'cable', label: t('action.cable'), handler: () => this.openCableMenu() },
-            { id: 'cancel', label: t('action.cancel'), handler: () => this.scene.cancelCurrentAction() },
-            { id: 'defense', label: t('action.defense'), handler: () => this.scene.toggleDefenseRange() },
-            { id: 'power', label: t('action.power'), handler: () => this.scene.togglePowerGrid() }
-        ];
-
-        this.uiManager.mobileActionBar.innerHTML = '';
-        this.uiManager.mobileActionBar.appendChild(this.uiManager.mobileCableMenu);
-        actions.forEach(action => {
-            const btn = document.createElement('button');
-            btn.id = `mobile-action-${action.id}`;
-            btn.className = 'mobile-action-btn';
-            btn.type = 'button';
-            btn.textContent = action.label;
-            btn.setAttribute('aria-label', action.label);
-            btn.addEventListener('pointerdown', event => {
-                event.preventDefault();
-                event.stopPropagation();
-            });
-            btn.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                action.handler();
-            };
-            this.uiManager.mobileActionBar!.appendChild(btn);
-        });
-
-        this.uiManager.mobileInfoSheet = document.getElementById('mobile-info-sheet');
-        if (!this.uiManager.mobileInfoSheet) {
-            this.uiManager.mobileInfoSheet = document.createElement('div');
-            this.uiManager.mobileInfoSheet.id = 'mobile-info-sheet';
-            this.uiManager.mobileInfoSheet.className = 'glass-panel';
-            document.body.appendChild(this.uiManager.mobileInfoSheet);
-        }
-        this.uiManager.guardDomPointer(this.uiManager.mobileInfoSheet);
-
-        this.uiManager.mobileBuildSummary = document.getElementById('mobile-build-summary');
-        if (!this.uiManager.mobileBuildSummary) {
-            this.uiManager.mobileBuildSummary = document.createElement('div');
-            this.uiManager.mobileBuildSummary.id = 'mobile-build-summary';
-            this.uiManager.mobileBuildSummary.className = 'glass-panel';
-            document.body.appendChild(this.uiManager.mobileBuildSummary);
-        }
-        this.uiManager.guardDomPointer(this.uiManager.mobileBuildSummary);
+        renderLegacyMobileActions(this.legacyRefs, createMobileActionItems(this.getActiveMap()).map(action => ({
+            id: action.id,
+            label: action.label,
+            onPress: () => this.handleAction(action.id as MobileActionId)
+        })));
 
         this.renderCableMenu();
         this.updateControls();
         this.updateBuildSummary();
+        this.updateLegacyShadowState();
+    }
+
+    closeCableMenu(): void {
+        this.setCableMenuOpen(false);
+    }
+
+    private handleAction(id: string): void {
+        if (id.startsWith('cable:')) {
+            this.setCableMenuOpen(false);
+            this.uiManager.selectBuilding(id.slice('cable:'.length));
+        } else if (id === 'rotate') {
+            this.scene.rotateCursor();
+        } else if (id === 'remove') {
+            this.uiManager.selectBuilding('REMOVE');
+        } else if (id === 'cable') {
+            this.openCableMenu();
+        } else if (id === 'cancel') {
+            this.scene.cancelCurrentAction();
+        } else if (id === 'defense') {
+            this.scene.toggleDefenseRange();
+        } else if (id === 'power') {
+            this.scene.togglePowerGrid();
+        }
     }
 
     renderCableMenu(): void {
-        if (!this.uiManager.mobileCableMenu) return;
+        if (!this.legacyRefs) return;
 
-        this.uiManager.mobileCableMenu.innerHTML = '';
-        (['BASIC', 'FIBER'] as const).forEach(type => {
-            const cConfig = CONFIG.CABLES[type];
-            const btn = document.createElement('button');
-            btn.className = 'mobile-cable-option';
-            btn.type = 'button';
-            btn.textContent = getCableName(type);
-            btn.setAttribute('aria-label', getCableName(type));
-            btn.addEventListener('pointerdown', event => {
-                event.preventDefault();
-                event.stopPropagation();
-            });
-            btn.onclick = event => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.uiManager.mobileCableMenu!.classList.remove('open');
-                this.uiManager.selectBuilding(type);
-            };
-            this.uiManager.mobileCableMenu!.appendChild(btn);
-        });
+        renderLegacyMobileCableMenu(this.legacyRefs, createMobileCableOptions(this.uiManager.selectedBuildingType).map(option => ({
+            label: option.label,
+            onPress: () => {
+                this.setCableMenuOpen(false);
+                this.uiManager.selectBuilding(option.id);
+            }
+        })));
     }
 
     openCableMenu(): void {
         const fiberUnlocked = !CONFIG.CABLES.FIBER.UNLOCK_REQUIRED || this.scene.researchManager?.isUnlocked(CONFIG.CABLES.FIBER.UNLOCK_REQUIRED);
         if (!fiberUnlocked) {
             this.uiManager.selectBuilding('BASIC');
+            this.publishSnapshot();
             return;
         }
 
-        this.uiManager.mobileCableMenu?.classList.toggle('open');
+        this.setCableMenuOpen(!this.cableMenuOpen);
+        this.publishSnapshot();
     }
 
     cancelAction(): void {
-        this.uiManager.mobileCableMenu?.classList.remove('open');
+        this.setCableMenuOpen(false);
         this.uiManager.mobileActionStatus = null;
         if (this.uiManager.selectedBuildingType === 'REMOVE' || this.uiManager.selectedBuildingType === 'BASIC' || this.uiManager.selectedBuildingType === 'FIBER') {
             this.uiManager.selectBuilding(this.uiManager.previousBuildSelection || 'DATA_DOWNLOADER');
@@ -124,6 +107,7 @@ export default class MobileUIManager {
             this.updateBuildSummary();
             this.updateControls();
         }
+        this.publishSnapshot();
     }
 
     setActionStatus(status: string | null): void {
@@ -132,39 +116,54 @@ export default class MobileUIManager {
         this.updateControls();
     }
 
-    updateControls(): void {
-        const activeMap: Record<string, boolean> = {
-            remove: this.uiManager.selectedBuildingType === 'REMOVE',
-            cable: this.uiManager.selectedBuildingType === 'BASIC' || this.uiManager.selectedBuildingType === 'FIBER',
-            defense: Boolean(this.scene.showDefenseRange),
-            power: Boolean(this.scene.showPowerGrid)
-        };
+    private updateLegacyShadowState(): void {
+        syncLegacyMobileShadowState(
+            this.legacyRefs,
+            isMobileLayoutActive(),
+            isShortLandscapeLayout()
+        );
+    }
 
-        Object.entries(activeMap).forEach(([id, active]) => {
-            const btn = document.getElementById(`mobile-action-${id}`);
-            if (btn) btn.classList.toggle('active', active);
-        });
+    private setCableMenuOpen(open: boolean): void {
+        this.cableMenuOpen = open;
+        setLegacyMobileCableMenuOpen(this.legacyRefs, open);
+    }
+
+    updateControls(): void {
+        const display = this.createDisplayPayload();
+        updateLegacyMobileActionState(display.legacyActiveMap);
+        this.publishSnapshot(display);
     }
 
     updateBuildSummary(): void {
-        const summary = this.uiManager.mobileBuildSummary;
-        if (!summary) return;
+        const display = this.createDisplayPayload();
+        updateLegacyMobileBuildSummary(this.legacyRefs, display.legacyBuildSummary);
+        this.publishSnapshot(display);
+    }
 
-        const type = this.uiManager.selectedBuildingType;
-        const data = CONFIG.BUILDINGS[type] || CONFIG.CABLES[type];
-        if (!data) {
-            summary.textContent = type === 'REMOVE' ? t('action.removeMode') : '';
-            return;
-        }
+    private publishSnapshot(display: MobileActionDisplayPayload = this.createDisplayPayload()): void {
+        this.updateLegacyShadowState();
 
-        const cost = 'COST' in data && data.COST
-            ? data.COST.map(c => `${c.amount} ${getItemName(c.resource)}`).join(', ')
-            : 'COST_PER_TILE' in data && data.COST_PER_TILE
-                ? t('action.costPerTile', { amount: Number(data.COST_PER_TILE) })
-                : '';
-        summary.innerHTML = `
-            <strong>${CONFIG.BUILDINGS[type] ? getBuildingName(type) : getCableName(type)}</strong>
-            <span>${this.uiManager.mobileActionStatus || cost || t('action.noCost')}</span>
-        `;
+        EventBus.emit('MOBILE_ACTION_UPDATED', display.snapshot);
+    }
+
+    private createDisplayPayload(): MobileActionDisplayPayload {
+        return createMobileActionDisplayPayload({
+            cableMenuOpen: this.cableMenuOpen,
+            mobileActionStatus: this.uiManager.mobileActionStatus,
+            open: isMobileLayoutActive(),
+            selectedType: this.uiManager.selectedBuildingType,
+            showDefenseRange: Boolean(this.scene.showDefenseRange),
+            showPowerGrid: Boolean(this.scene.showPowerGrid)
+        });
+    }
+
+    private getActiveMap(): MobileActionActiveMap {
+        return createMobileActionActiveMap({
+            mobileActionStatus: this.uiManager.mobileActionStatus,
+            selectedType: this.uiManager.selectedBuildingType,
+            showDefenseRange: Boolean(this.scene.showDefenseRange),
+            showPowerGrid: Boolean(this.scene.showPowerGrid)
+        });
     }
 }

@@ -17,6 +17,7 @@ import type TutorialManager from './managers/TutorialManager';
 import type UIManager from './managers/UIManager';
 import type WaveManager from './managers/WaveManager';
 import type { Language } from './i18n';
+import type { ThreatLevel } from './utils/waveSimulation';
 
 export type GameMode = 'tutorial' | 'campaign';
 
@@ -335,6 +336,327 @@ export interface CoreDataEvent {
     type: string;
     score: number;
     total: number;
+}
+
+export interface TopHudLabels {
+    aria: string;
+    runtimeStats: string;
+    shortcuts: string;
+    settings: string;
+    research: string;
+    lab: string;
+    stats: {
+        dataReceived: string;
+        power: string;
+        silicon: string;
+        packets: string;
+        wave: string;
+        nextWave: string;
+    };
+}
+
+export interface HudSnapshot {
+    labels?: TopHudLabels;
+    score?: number;
+    power?: PowerUpdateData;
+    silicon?: number;
+    packets?: number;
+    wave?: number;
+    waveTimer?: string;
+}
+
+export interface TacticalPanelSnapshot {
+    labels: {
+        aria: string;
+        expand: string;
+        collapse: string;
+        panelNames: Record<'objective' | 'threat' | 'systems', string>;
+        objective: string;
+        threat: string;
+        systems: string;
+        powerLoad: string;
+    };
+    objective: {
+        title: string;
+        detail: string;
+    };
+    threat: {
+        title: string;
+        detail: string;
+        recommendation: string;
+        threatLevel: ThreatLevel;
+        routeNames: string[];
+        special: string | null;
+    };
+    defense: {
+        title: string;
+        detail: string;
+    };
+    powerStatus: {
+        text: string;
+        tone: 'default' | 'warning' | 'danger';
+    };
+}
+
+export interface BuildConsoleItemSnapshot {
+    key: string;
+    label: string;
+    cost: string;
+    color: string;
+    iconSrc?: string;
+    description?: string;
+    stats?: Array<{
+        label: string;
+        value: string;
+        tone?: 'default' | 'good' | 'warning';
+    }>;
+    hotkey?: string;
+    selected: boolean;
+}
+
+export interface BuildConsoleSnapshot {
+    activeCategory: string;
+    labels: {
+        aria: string;
+        categories: string;
+        tools: string;
+        toolInfo: string;
+        selectedTool: string;
+        more: string;
+        commandSelect: string;
+        commandRotate: string;
+        commandRemove: string;
+    };
+    categories: Array<{
+        id: string;
+        label: string;
+        active: boolean;
+    }>;
+    items: BuildConsoleItemSnapshot[];
+    selectedTool: {
+        type: string;
+        name: string;
+        cost: string;
+        hint: string;
+    };
+}
+
+export interface SettingsModalSnapshot {
+    open: boolean;
+    speed: number;
+    fps: number;
+    volume: number;
+    muted: boolean;
+    bloomEnabled: boolean;
+    language: Language;
+    labels: {
+        aria: string;
+        kicker: string;
+        title: string;
+        close: string;
+        tabs: Record<'game' | 'audio' | 'graphics' | 'system', string>;
+        speed: string;
+        language: string;
+        languageKo: string;
+        languageEn: string;
+        masterVolume: string;
+        muted: string;
+        graphics: string;
+        fps: string;
+        saveData: string;
+        save: string;
+        load: string;
+        tutorial: string;
+        restartTutorial: string;
+        note: string;
+        bloomOn: string;
+        bloomOff: string;
+    };
+}
+
+export interface TrainingLabRowSnapshot {
+    id: string;
+    kind: 'DEFENSE' | 'SYSTEM';
+    title: string;
+    detail: string;
+    progress: string;
+    active: boolean;
+    disabled?: boolean;
+    rewardPreference?: TrainingRewardPreference;
+}
+
+export interface TrainingLabSnapshot {
+    open: boolean;
+    title: string;
+    kicker: string;
+    closeLabel: string;
+    overview: string;
+    plannerStatus: string;
+    plannerReason: string;
+    autoToggleLabel: string;
+    autoEnabled: boolean;
+    activeTab: 'DEFENSE' | 'SYSTEM';
+    tabs: {
+        defense: string;
+        system: string;
+    };
+    rewardModeLabel: string;
+    rewardAccuracyShortLabel: string;
+    rewardDamageShortLabel: string;
+    dataProgressLabel: string;
+    workProgressLabel: string;
+    toneLabels: Record<'active' | 'complete' | 'training' | 'locked' | 'idle', string>;
+    duration: string;
+    rows: TrainingLabRowSnapshot[];
+}
+
+export interface GameOverSnapshot {
+    open: boolean;
+    kicker: string;
+    title: string;
+    failureCode: string;
+    integrityLabel: string;
+    bestModelLabel: string;
+    bestModelDetail: string;
+    restartLabel: string;
+    mainMenuLabel: string;
+    stats: Array<{
+        id: 'wave' | 'core' | 'data' | 'research';
+        label: string;
+        value: string;
+        tone: 'warn' | 'danger' | 'cyan' | 'green';
+    }>;
+    wave: number;
+    coreHpPercent: number;
+    totalDataReceived: number;
+    unlockedResearchCount: number;
+    bestModelName: string;
+    bestModelAccuracy: number;
+    bestModelDamageBonus: number;
+    bestModelVersion: number;
+}
+
+export interface WaveResultSnapshot {
+    open: boolean;
+    token: number;
+    wave: number;
+    kicker: string;
+    title: string;
+    closeLabel: string;
+    integrityLabel: string;
+    integrityTone: 'good' | 'warning' | 'danger';
+    historyLabel: string;
+    historyWaveLabel: string;
+    historyCoreLabel: string;
+    historyKillsLabel: string;
+    stats: Array<{
+        id: 'destroyed' | 'data' | 'integrity' | 'buildings';
+        label: string;
+        value: string;
+        tone: 'default' | 'good' | 'warning' | 'danger';
+    }>;
+    outcome: 'survived' | 'failed';
+    enemiesDestroyed: number;
+    dataProcessed: number;
+    coreHpPercent: number;
+    coreDamage: number;
+    buildingsDamaged: number;
+    buildingsDestroyed: number;
+}
+
+export interface ActivityLogEntrySnapshot {
+    id: number;
+    message: string;
+    isAlert: boolean;
+}
+
+export interface ActivityLogSnapshot {
+    ariaLabel: string;
+    title: string;
+    alertCountLabel: string;
+    historyLabel: string;
+    lessLabel: string;
+    noAlertsLabel: string;
+    entries: ActivityLogEntrySnapshot[];
+}
+
+export interface TooltipSnapshot {
+    open: boolean;
+    title: string;
+    closeLabel: string;
+    lines: string[];
+    x: number;
+    y: number;
+}
+
+export interface TutorialPanelSnapshot {
+    open: boolean;
+    kicker: string;
+    title: string;
+    labels: {
+        skip: string;
+        progress: string;
+        currentObjective: string;
+        steps: string;
+        ok: string;
+        moreSteps: string;
+    };
+    detail: string;
+    activeStepId: string;
+    completeCount: number;
+    totalCount: number;
+    steps: Array<{
+        id: string;
+        title: string;
+        completed: boolean;
+        active: boolean;
+    }>;
+}
+
+export interface MobileActionSnapshot {
+    open: boolean;
+    labels: {
+        aria: string;
+        toolbar: string;
+        cableMenu: string;
+    };
+    summaryTitle: string;
+    summaryDetail: string;
+    cableMenuOpen: boolean;
+    cableOptions: Array<{
+        id: string;
+        label: string;
+        selected: boolean;
+    }>;
+    actions: Array<{
+        id: string;
+        label: string;
+        active: boolean;
+    }>;
+}
+
+export interface MainMenuSnapshot {
+    open: boolean;
+    labels: {
+        aria: string;
+    };
+    title: string;
+    subtitle: string;
+    difficultyLabel: string;
+    startLabel: string;
+    continueLabel: string;
+    tutorialStatusLabel: string;
+    saveStatusLabel: string;
+    keyHints: string[];
+    selectedDifficulty: string;
+    difficulties: Array<{
+        id: string;
+        label: string;
+        description: string;
+        selected: boolean;
+    }>;
+    tutorialCompleted: boolean;
+    saveExists: boolean;
 }
 
 // ── 전력망 노드 ──

@@ -64,14 +64,15 @@ export default class InventoryManager {
     addResource(resourceType: string, amount: number): boolean {
         if (amount <= 0) return true;
 
-        let targetStorage: { inputBuffer: string[] } | null = null;
+        let targetStorage: BaseBuilding | null = null;
         this.forEachStorage(b => {
             if (!targetStorage) targetStorage = b;
         });
         if (!targetStorage) return false;
+        const storage = targetStorage as BaseBuilding;
 
         for (let i = 0; i < amount; i++) {
-            targetStorage.inputBuffer.push(resourceType);
+            storage.inputBuffer.push(resourceType);
         }
         return true;
     }
