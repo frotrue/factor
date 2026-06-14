@@ -6,7 +6,7 @@ import BaseBuilding from '../buildings/BaseBuilding';
 import BuildingManager from '../managers/BuildingManager';
 import ItemManager from '../managers/ItemManager';
 import MapManager from '../managers/MapManager';
-import UIManager from '../managers/UIManager';
+import UIManager from '../ui/UIManager';
 import GridRenderer from '../managers/GridRenderer';
 import CameraController from '../managers/CameraController';
 import TickSystem from '../managers/TickSystem';
@@ -74,6 +74,8 @@ export default class MainScene extends Phaser.Scene {
     private _cableDraftLine = new Phaser.Geom.Line();
 
     currentRotation: number = 0;
+    selectedBuildingType: string = 'DATA_DOWNLOADER';
+    mobileActionStatus: string | null = null;
     gameSpeed: number = 1;
     difficultyId: string = 'NORMAL';
     isMobileLayout: boolean = false;
@@ -165,18 +167,19 @@ export default class MainScene extends Phaser.Scene {
         this.setupEvents();
         this.gridRenderer.draw(true);
 
-        // Initialize UI buttons now that all managers are ready
+        // Initialize build controls now that all managers are ready.
         if (this.mode === 'tutorial') {
             this.tutorialManager = new TutorialManager(this);
         }
-        this.uiManager.createBuildingButtons();
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
         if (this.loadSaveOnStart) {
             this.saveManager.loadGame();
         }
     }
 
     setupEvents(): void {
-        EventBus.on('BUILDING_SELECTED', () => {
+        EventBus.on('BUILDING_SELECTED', ({ type }: { type: string }) => {
+            this.selectedBuildingType = type;
             this.updateCursorGraphics();
         }, 'MainScene');
 
@@ -187,14 +190,19 @@ export default class MainScene extends Phaser.Scene {
 
         EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
             this.effectsManager.playBuildOnline(building, type);
-            this.uiManager.logMessage(t('log.buildingOnline', { name: getBuildingName(type) }));
+            EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+                message: t('log.buildingOnline', { name: getBuildingName(type) })
+            });
             this.defenseRangeDirty = true;
         }, 'MainScene');
 
         EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
             const [x, y] = key.split(',').map(Number);
             this.effectsManager.playBuildingRemoved(x, y);
-            this.uiManager.logMessage(`System: Unit disconnected at [${x}, ${y}].`, true);
+            EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+                message: `System: Unit disconnected at [${x}, ${y}].`,
+                isAlert: true
+            });
             this.defenseRangeDirty = true;
         }, 'MainScene');
 
@@ -239,7 +247,7 @@ export default class MainScene extends Phaser.Scene {
                 buildingsDamaged: this.currentWaveStats.buildingsDamaged.size,
                 buildingsDestroyed: this.currentWaveStats.buildingsDestroyed.size
             });
-            this.uiManager.showWaveResultSummary(summary);
+            EventBus.emit('WAVE_RESULT_SUMMARY_REQUESTED', summary);
             this.currentWaveStats = null;
         }, 'MainScene');
 
@@ -254,13 +262,22 @@ export default class MainScene extends Phaser.Scene {
                 'CableManager',
                 'Core',
                 'BaseEnemyPathCache',
+                'BuildConsoleController',
                 'InputController',
                 'ItemManager',
+                'GameOverController',
+                'HudShellController',
+                'HudLocalizationController',
+                'NotificationController',
                 'PowerManager',
                 'SaveManager',
+                'SettingsController',
                 'SoundManager',
+                'TacticalPanelController',
+                'TopHudController',
+                'MobileActionController',
+                'TrainingLabController',
                 'TutorialManager',
-                'UIManager',
                 'WaveManager'
             ].forEach(owner => EventBus.offAll(owner));
             if ((window as any).__GRADIUM_PERF__ === this.performanceStats) {
@@ -314,7 +331,7 @@ export default class MainScene extends Phaser.Scene {
         state.trainingDurationTicks = CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS;
         state.currentRequirement = getNextTrainingRequirement(state.currentRequirement);
         this.syncDefenseModelType(type);
-        this.uiManager?.createBuildingButtons();
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
         return reward.kind;
     }
 
@@ -344,7 +361,7 @@ export default class MainScene extends Phaser.Scene {
         const wasMobile = this.isMobileLayout;
         this.isMobileLayout = matches;
         setMobileLayoutClass(matches);
-        this.uiManager?.syncLegacyHudShellShadow();
+        EventBus.emit('HUD_SHELL_SYNC_REQUESTED');
 
         if (this.cameraController) {
             const currentZoom = this.cameras.main.zoom || CONFIG.CAMERA.DEFAULT_ZOOM;
@@ -366,7 +383,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     updateCursorGraphics(): void {
-        const mode = this.uiManager.getSelectedBuildingType();
+        const mode = this.selectedBuildingType;
         this.ghostGraphics.clear();
 
         if (mode === 'REMOVE') {
@@ -433,15 +450,19 @@ export default class MainScene extends Phaser.Scene {
     toggleDefenseRange(): void {
         this.showDefenseRange = !this.showDefenseRange;
         this.defenseRangeDirty = true;
-        this.uiManager.updateMobileControls();
-        this.uiManager.logMessage(`System: Defense Range Overlay ${this.showDefenseRange ? 'ON' : 'OFF'}`);
+        EventBus.emit('MOBILE_ACTION_REFRESH_REQUESTED');
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+            message: `System: Defense Range Overlay ${this.showDefenseRange ? 'ON' : 'OFF'}`
+        });
     }
 
     togglePowerGrid(): void {
         this.showPowerGrid = !this.showPowerGrid;
         this.powerGridDirty = true;
-        this.uiManager.updateMobileControls();
-        this.uiManager.logMessage(`System: Power Grid Overlay ${this.showPowerGrid ? 'ON' : 'OFF'}`);
+        EventBus.emit('MOBILE_ACTION_REFRESH_REQUESTED');
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+            message: `System: Power Grid Overlay ${this.showPowerGrid ? 'ON' : 'OFF'}`
+        });
     }
 
     cancelCurrentAction(): void {
@@ -458,7 +479,7 @@ export default class MainScene extends Phaser.Scene {
         this.waveManager.update(delta * this.gameSpeed);
         this.saveManager.update(delta);
 
-        this.uiManager.update(this.itemManager.getItems().length);
+        EventBus.emit('UI_FRAME_REFRESH_REQUESTED', { itemCount: this.itemManager.getItems().length });
         this.cameraController.update();
 
         this.cableManager.markDirtyIfThrottlingChanged();
@@ -476,7 +497,7 @@ export default class MainScene extends Phaser.Scene {
             this.cableDraftGraphics.clear();
             const pointer = this.input.activePointer;
             const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-            const mode = this.uiManager.getSelectedBuildingType();
+            const mode = this.selectedBuildingType;
             const snappedX = Math.floor(worldPoint.x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
             const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
             const hoveredKey = this.cableManager.normalizeKey(`${snappedX},${snappedY}`, this.buildingManager);

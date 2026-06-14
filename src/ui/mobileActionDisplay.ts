@@ -24,6 +24,14 @@ export type MobileActionDisplayPayload = {
     snapshot: MobileActionSnapshot;
 };
 
+export function isMobileCableTool(type: string): type is 'BASIC' | 'FIBER' {
+    return type === 'BASIC' || type === 'FIBER';
+}
+
+export function isMobileTransientTool(type: string): boolean {
+    return type === 'REMOVE' || isMobileCableTool(type);
+}
+
 export function createMobileActionActiveMap({
     mobileActionStatus,
     selectedType,
@@ -38,7 +46,7 @@ export function createMobileActionActiveMap({
     return {
         rotate: false,
         remove: selectedType === 'REMOVE',
-        cable: selectedType === 'BASIC' || selectedType === 'FIBER',
+        cable: isMobileCableTool(selectedType),
         cancel: Boolean(mobileActionStatus),
         defense: showDefenseRange,
         power: showPowerGrid

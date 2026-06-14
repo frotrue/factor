@@ -1,7 +1,8 @@
 import { t, textForKey } from '../i18n';
 import type { ActivityLogEntrySnapshot, ActivityLogSnapshot, TooltipSnapshot } from '../types';
 
-const TOOLTIP_OFFSET_PX = 15;
+export const ACTIVITY_LOG_ENTRY_LIMIT = 12;
+export const TOOLTIP_OFFSET_PX = 15;
 
 export interface DesktopTooltipDisplayPayload {
     legacyDesktop: {
@@ -14,7 +15,7 @@ export interface DesktopTooltipDisplayPayload {
 }
 
 export interface MobileTooltipDisplayPayload {
-    legacyMobileHtml: string;
+    legacyMobile: LegacyMobileTooltipContent;
     snapshot: TooltipSnapshot;
 }
 
@@ -26,6 +27,13 @@ export interface ClosedTooltipDisplayPayload {
 export interface LegacyActivityLogDisplayEntry {
     message: string;
     isAlert: boolean;
+}
+
+export interface LegacyMobileTooltipContent {
+    title: string;
+    tags: string[];
+    details: string[];
+    fallback: string;
 }
 
 export interface ActivityLogDisplayPayload {
@@ -63,7 +71,7 @@ export function createMobileTooltipDisplayPayload(
     content: string
 ): MobileTooltipDisplayPayload {
     return {
-        legacyMobileHtml: createLegacyMobileTooltipHtml(title, content),
+        legacyMobile: createLegacyMobileTooltipContent(title, content),
         snapshot: createOpenTooltipSnapshot(title, content, { x: 0, y: 0 })
     };
 }
@@ -84,7 +92,7 @@ export function createOpenTooltipSnapshot(
         open: true,
         title,
         closeLabel: textForKey('tooltip.close'),
-        lines: splitTooltipLines(content),
+        lines: createTooltipLines(content),
         x: position.x,
         y: position.y
     };
@@ -112,7 +120,7 @@ export function appendActivityLogSnapshot(
         message,
         isAlert
     };
-    return [...entries, entry].slice(-12);
+    return [...entries, entry].slice(-ACTIVITY_LOG_ENTRY_LIMIT);
 }
 
 export function createActivityLogSnapshot(entries: ActivityLogEntrySnapshot[]): ActivityLogSnapshot {
@@ -155,8 +163,8 @@ export function createTrainingLabMissingLogMessage(): string {
     return textForKey('log.trainingLabMissing');
 }
 
-export function createLegacyMobileTooltipHtml(title: string, content: string): string {
-    const lines = splitTooltipLines(content);
+export function createLegacyMobileTooltipContent(title: string, content: string): LegacyMobileTooltipContent {
+    const lines = createTooltipLines(content);
     const tags: string[] = [];
     const details: string[] = [];
     const findLine = (...labels: string[]) => lines.find(line => labels.some(label => line.startsWith(`${label}:`)));
@@ -193,14 +201,17 @@ export function createLegacyMobileTooltipHtml(title: string, content: string): s
     if (networkLine) details.push(networkLine);
     if (recipeLine) details.push(recipeLine);
 
-    const tagHtml = tags.length
-        ? `<div class="mobile-status-tags">${tags.map(tag => `<span>${tag}</span>`).join('')}</div>`
-        : '';
-    const detailHtml = details.slice(0, 3).map(line => `<div>${line}</div>`).join('');
-
-    return `<div class="tooltip-title">${title}</div>${tagHtml}<div>${detailHtml || lines[0] || ''}</div>`;
+    return {
+        title,
+        tags,
+        details: details.slice(0, 3),
+        fallback: lines[0] || ''
+    };
 }
 
-function splitTooltipLines(content: string): string[] {
-    return content.split('\n').filter(Boolean);
+export function createTooltipLines(content: string): string[] {
+    return content
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
 }

@@ -23,6 +23,24 @@ export interface TutorialPanelDisplayPayload {
     snapshot: TutorialPanelSnapshot;
 }
 
+export type TutorialPanelStepSnapshot = TutorialPanelSnapshot['steps'][number];
+
+export function isTutorialPanelOpen(activeStep: TutorialStep | null, completed: boolean): boolean {
+    return Boolean(activeStep) && !completed;
+}
+
+export function createTutorialPanelStepSnapshots(
+    steps: TutorialStep[],
+    activeIndex: number
+): TutorialPanelStepSnapshot[] {
+    return steps.map((step, index) => ({
+        id: step.id,
+        title: step.title,
+        completed: step.completed,
+        active: index === activeIndex && !step.completed
+    }));
+}
+
 export function createTutorialPanelSnapshot({
     activeIndex,
     activeStep,
@@ -31,7 +49,7 @@ export function createTutorialPanelSnapshot({
     steps
 }: TutorialPanelDisplayPayloadInput): TutorialPanelSnapshot {
     return {
-        open: Boolean(activeStep) && !completed,
+        open: isTutorialPanelOpen(activeStep, completed),
         kicker: activeStep ? t('tutorial.kicker', { current: completeCount, total: steps.length }) : '',
         title: '[G.R.A.D.I.U.M. OS AI Assistant]',
         labels: {
@@ -46,12 +64,7 @@ export function createTutorialPanelSnapshot({
         activeStepId: activeStep?.id ?? '',
         completeCount,
         totalCount: steps.length,
-        steps: steps.map((step, index) => ({
-            id: step.id,
-            title: step.title,
-            completed: step.completed,
-            active: index === activeIndex && !step.completed
-        }))
+        steps: createTutorialPanelStepSnapshots(steps, activeIndex)
     };
 }
 

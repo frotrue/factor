@@ -60,27 +60,72 @@ export function setLegacyTrainingLabOpen(modal: HTMLElement | null, open: boolea
     if (open) {
         modal.dataset.preactShadow = 'true';
         modal.setAttribute('aria-hidden', 'true');
+        syncLegacyTrainingLabControls(modal, true);
         return;
     }
 
+    syncLegacyTrainingLabControls(modal, false);
     delete modal.dataset.preactShadow;
     modal.removeAttribute('aria-hidden');
+}
+
+function syncShadowTabIndex(element: HTMLElement, shadow: boolean): void {
+    if (shadow) {
+        if (element.dataset.preactShadowTabindex === undefined) {
+            element.dataset.preactShadowTabindex = element.getAttribute('tabindex') ?? '';
+        }
+        element.setAttribute('tabindex', '-1');
+        return;
+    }
+
+    const previous = element.dataset.preactShadowTabindex;
+    if (previous === undefined) return;
+    if (previous) {
+        element.setAttribute('tabindex', previous);
+    } else {
+        element.removeAttribute('tabindex');
+    }
+    delete element.dataset.preactShadowTabindex;
+}
+
+export function syncLegacyTrainingLabControls(modal: HTMLElement | null, shadow: boolean): void {
+    if (!modal) return;
+    modal.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        'button,input,select,textarea'
+    ).forEach(control => {
+        if (shadow && control.dataset.preactShadowDisabled === undefined) {
+            control.dataset.preactShadowDisabled = control.disabled ? 'true' : 'false';
+        }
+        if (!shadow && control.dataset.preactShadowDisabled !== undefined) {
+            control.disabled = control.dataset.preactShadowDisabled === 'true';
+            delete control.dataset.preactShadowDisabled;
+        } else if (shadow) {
+            control.disabled = true;
+        }
+        syncShadowTabIndex(control, shadow);
+    });
+
+    modal.querySelectorAll<HTMLElement>('[role="button"],[tabindex]').forEach(element => {
+        syncShadowTabIndex(element, shadow);
+    });
 }
 
 export function renderLegacyTrainingLabShell(
     modal: HTMLElement,
     options: LegacyTrainingLabShellOptions
 ): HTMLElement {
-    modal.innerHTML = '';
+    modal.replaceChildren();
 
     const header = document.createElement('div');
     header.className = 'training-lab-header';
-    header.innerHTML = `
-        <div>
-            <div class="training-lab-kicker">${textForKey('trainingLab.kicker')}</div>
-            <h2>${textForKey('trainingLab.title')}</h2>
-        </div>
-    `;
+
+    const headingGroup = document.createElement('div');
+    const kicker = document.createElement('div');
+    kicker.className = 'training-lab-kicker';
+    kicker.textContent = textForKey('trainingLab.kicker');
+    const title = document.createElement('h2');
+    title.textContent = textForKey('trainingLab.title');
+    headingGroup.replaceChildren(kicker, title);
 
     const closeButton = document.createElement('button');
     closeButton.id = 'btn-close-training-lab';
@@ -93,7 +138,7 @@ export function renderLegacyTrainingLabShell(
         event.stopPropagation();
         options.onClose();
     };
-    header.appendChild(closeButton);
+    header.replaceChildren(headingGroup, closeButton);
     modal.appendChild(header);
 
     const overview = document.createElement('div');
@@ -103,10 +148,11 @@ export function renderLegacyTrainingLabShell(
 
     const autoPanel = document.createElement('div');
     autoPanel.className = 'training-lab-buffer training-auto-panel';
-    autoPanel.innerHTML = `
-        <span>${options.autoModeText}</span>
-        <span class="training-target-effect">${options.plannerReasonText}</span>
-    `;
+    const autoMode = document.createElement('span');
+    autoMode.textContent = options.autoModeText;
+    const plannerReason = document.createElement('span');
+    plannerReason.className = 'training-target-effect';
+    plannerReason.textContent = options.plannerReasonText;
     const autoButton = document.createElement('button');
     autoButton.type = 'button';
     autoButton.className = `training-reward-btn ${options.autoActive ? 'active' : ''}`;
@@ -117,7 +163,7 @@ export function renderLegacyTrainingLabShell(
         event.stopPropagation();
         options.onAutoToggle();
     };
-    autoPanel.appendChild(autoButton);
+    autoPanel.replaceChildren(autoMode, plannerReason, autoButton);
     modal.appendChild(autoPanel);
 
     const list = document.createElement('div');
@@ -154,6 +200,22 @@ export function renderLegacyTrainingLabShell(
     return list;
 }
 
+function createTrainingText(className: string, text: string): HTMLSpanElement {
+    const span = document.createElement('span');
+    span.className = className;
+    span.textContent = text;
+    return span;
+}
+
+function createTrainingProgressTrack(percent: number, extraClass = ''): HTMLSpanElement {
+    const track = document.createElement('span');
+    track.className = `training-progress-track${extraClass ? ` ${extraClass}` : ''}`;
+    const fill = document.createElement('span');
+    fill.style.width = `${percent}%`;
+    track.appendChild(fill);
+    return track;
+}
+
 export function renderLegacyTrainingLabDefenseRows(
     list: HTMLElement,
     rows: LegacyTrainingLabDefenseRow[],
@@ -171,20 +233,34 @@ export function renderLegacyTrainingLabDefenseRows(
         row.dataset.rewardPreference = rowState.rewardPreference;
         row.tabIndex = 0;
         row.role = 'button';
-        row.innerHTML = `
-            <span class="training-target-name">${rowState.name}</span>
-            <span class="training-target-stat">${rowState.statText}</span>
-            <span class="training-target-effect">${rowState.nextRewardText}</span>
-            <span class="training-reward-toggle" role="group" aria-label="${rowState.rewardModeText}">
-                <span class="training-target-effect">${rowState.rewardModeText}</span>
-                <button type="button" class="training-reward-btn ${rowState.rewardPreference === 'accuracy' ? 'active' : ''}" data-reward="accuracy">${rowState.rewardAccuracyText}</button>
-                <button type="button" class="training-reward-btn ${rowState.rewardPreference === 'damage' ? 'active' : ''}" data-reward="damage">${rowState.rewardDamageText}</button>
-            </span>
-            <span class="training-target-effect">${rowState.dataProgressText}</span>
-            <span class="training-progress-track"><span style="width:${rowState.dataPercent}%"></span></span>
-            <span class="training-target-effect">${rowState.trainingStatusText}</span>
-            <span class="training-progress-track training-progress-work"><span style="width:${rowState.trainingPercent}%"></span></span>
-        `;
+
+        const rewardToggle = document.createElement('span');
+        rewardToggle.className = 'training-reward-toggle';
+        rewardToggle.setAttribute('role', 'group');
+        rewardToggle.setAttribute('aria-label', rowState.rewardModeText);
+        const rewardMode = createTrainingText('training-target-effect', rowState.rewardModeText);
+        const accuracyButton = document.createElement('button');
+        accuracyButton.type = 'button';
+        accuracyButton.className = `training-reward-btn ${rowState.rewardPreference === 'accuracy' ? 'active' : ''}`;
+        accuracyButton.dataset.reward = 'accuracy';
+        accuracyButton.textContent = rowState.rewardAccuracyText;
+        const damageButton = document.createElement('button');
+        damageButton.type = 'button';
+        damageButton.className = `training-reward-btn ${rowState.rewardPreference === 'damage' ? 'active' : ''}`;
+        damageButton.dataset.reward = 'damage';
+        damageButton.textContent = rowState.rewardDamageText;
+        rewardToggle.replaceChildren(rewardMode, accuracyButton, damageButton);
+
+        row.replaceChildren(
+            createTrainingText('training-target-name', rowState.name),
+            createTrainingText('training-target-stat', rowState.statText),
+            createTrainingText('training-target-effect', rowState.nextRewardText),
+            rewardToggle,
+            createTrainingText('training-target-effect', rowState.dataProgressText),
+            createTrainingProgressTrack(rowState.dataPercent),
+            createTrainingText('training-target-effect', rowState.trainingStatusText),
+            createTrainingProgressTrack(rowState.trainingPercent, 'training-progress-work')
+        );
         options.guardDomPointer(row);
         row.querySelectorAll<HTMLButtonElement>('.training-reward-btn').forEach(btn => {
             options.guardDomPointer(btn);
@@ -224,14 +300,14 @@ export function renderLegacyTrainingLabSystemRows(
         row.disabled = rowState.disabled;
         row.dataset.trainingKind = 'SYSTEM';
         row.dataset.trainingId = rowState.id;
-        row.innerHTML = `
-            <span class="training-target-name">${rowState.name}</span>
-            <span class="training-target-stat">${rowState.statText}</span>
-            <span class="training-target-effect">${rowState.effectText}</span>
-            <span class="training-progress-track"><span style="width:${rowState.progressPercent}%"></span></span>
-            <span class="training-target-effect">${rowState.statusText}</span>
-            <span class="training-progress-track training-progress-work"><span style="width:${rowState.trainingPercent}%"></span></span>
-        `;
+        row.replaceChildren(
+            createTrainingText('training-target-name', rowState.name),
+            createTrainingText('training-target-stat', rowState.statText),
+            createTrainingText('training-target-effect', rowState.effectText),
+            createTrainingProgressTrack(rowState.progressPercent),
+            createTrainingText('training-target-effect', rowState.statusText),
+            createTrainingProgressTrack(rowState.trainingPercent, 'training-progress-work')
+        );
         options.guardDomPointer(row);
         row.onclick = event => {
             event.preventDefault();

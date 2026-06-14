@@ -53,11 +53,14 @@ export function createSettingsModalSnapshot({
     speed,
     volume
 }: SettingsSnapshotInput): SettingsModalSnapshot {
+    const normalizedFps = normalizeFpsLimit(fps);
+    const normalizedVolume = normalizeVolumePercent(volume);
+
     return {
         open,
         speed,
-        fps,
-        volume,
+        fps: normalizedFps,
+        volume: normalizedVolume,
         muted,
         bloomEnabled,
         language,
@@ -107,17 +110,24 @@ export function withSettingsModalOpenState(
 }
 
 export function createSettingsDisplayPayload(input: SettingsSnapshotInput): SettingsDisplayPayload {
+    const normalizedFps = normalizeFpsLimit(input.fps);
+    const normalizedVolume = normalizeVolumePercent(input.volume);
+
     return {
         legacySettings: {
             open: input.open,
             inputs: {
                 bloomEnabled: input.bloomEnabled,
-                fps: input.fps,
+                fps: normalizedFps,
                 language: input.language,
                 muted: input.muted,
-                volume: input.volume
+                volume: normalizedVolume
             }
         },
-        snapshot: createSettingsModalSnapshot(input)
+        snapshot: createSettingsModalSnapshot({
+            ...input,
+            fps: normalizedFps,
+            volume: normalizedVolume
+        })
     };
 }

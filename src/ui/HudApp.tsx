@@ -13,6 +13,7 @@ import Tooltip from './components/Tooltip';
 import TrainingLabModal from './components/TrainingLabModal';
 import TutorialPanel from './components/TutorialPanel';
 import WaveResultCard from './components/WaveResultCard';
+import { mainMenu } from './signals/menuState';
 
 interface HudAppProps {
     game: Phaser.Game;
@@ -20,22 +21,28 @@ interface HudAppProps {
 
 export default function HudApp({ game }: HudAppProps) {
     const sceneCount = game.scene?.getScenes(false).length ?? 0;
+    const menuSnapshot = mainMenu.value;
+    const showGameplayHud = !menuSnapshot.open && menuSnapshot.title.length > 0;
 
     return (
         <div class={styles.hudRoot} data-testid="preact-hud-root" data-scene-count={sceneCount}>
             <MainMenu />
-            <TopBar />
-            <RightRail />
-            <BuildConsole />
-            <SettingsModal />
-            <TrainingLabModal />
-            <GameOverScreen />
-            <WaveResultCard />
-            <ActivityLog />
-            <Tooltip />
-            <TutorialPanel />
-            <MobileBuildSummary />
-            <MobileActionBar />
+            {showGameplayHud && (
+                <>
+                    <TopBar />
+                    <RightRail />
+                    <BuildConsole />
+                    <SettingsModal />
+                    <TrainingLabModal />
+                    <GameOverScreen />
+                    <WaveResultCard />
+                    <ActivityLog />
+                    <Tooltip />
+                    <TutorialPanel />
+                    <MobileBuildSummary />
+                    <MobileActionBar />
+                </>
+            )}
         </div>
     );
 }

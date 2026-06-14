@@ -6,6 +6,14 @@ import styles from './MainMenu.module.css';
 export default function MainMenu() {
     const snapshot = mainMenu.value;
     const difficultyIds = snapshot.difficulties.map(option => option.id);
+    const titleId = 'preact-main-menu-title';
+    const subtitleId = 'preact-main-menu-subtitle';
+    const statusId = 'preact-main-menu-status';
+    const tutorialStatusId = 'preact-main-menu-tutorial-status';
+    const saveStatusId = 'preact-main-menu-save-status';
+    const difficultyLabelId = 'preact-main-menu-difficulty-label';
+    const descriptionId = 'preact-main-menu-difficulty-description';
+    const keyHintsId = 'preact-main-menu-key-hints';
 
     useEffect(() => {
         if (!snapshot.open) return;
@@ -38,33 +46,57 @@ export default function MainMenu() {
 
     if (!snapshot.open) return null;
     const selected = snapshot.difficulties.find(option => option.id === snapshot.selectedDifficulty);
-    const descriptionId = 'preact-main-menu-difficulty-description';
+    const describedBy = `${subtitleId} ${statusId} ${keyHintsId}`;
 
     return (
-        <section class={styles.menu} aria-label={snapshot.labels.aria} data-testid="preact-main-menu">
+        <section
+            aria-describedby={describedBy}
+            aria-label={snapshot.labels.aria}
+            aria-labelledby={titleId}
+            class={styles.menu}
+            data-testid="preact-main-menu"
+        >
             <div class={styles.titleBlock}>
-                <h1>{snapshot.title}</h1>
-                <p>{snapshot.subtitle}</p>
+                <h1 data-testid="preact-main-menu-title" id={titleId}>{snapshot.title}</h1>
+                <p data-testid="preact-main-menu-subtitle" id={subtitleId}>{snapshot.subtitle}</p>
             </div>
-            <div aria-live="polite" class={styles.statusStrip} data-testid="preact-main-menu-status">
-                <span class={snapshot.tutorialCompleted ? styles.ready : styles.warning}>
+            <div
+                aria-atomic="true"
+                aria-live="polite"
+                class={styles.statusStrip}
+                data-testid="preact-main-menu-status"
+                id={statusId}
+                role="status"
+            >
+                <span
+                    class={snapshot.tutorialCompleted ? styles.ready : styles.warning}
+                    data-testid="preact-main-menu-tutorial-status"
+                    id={tutorialStatusId}
+                >
                     {snapshot.tutorialStatusLabel}
                 </span>
-                <span class={snapshot.saveExists ? styles.ready : styles.idle}>
+                <span
+                    class={snapshot.saveExists ? styles.ready : styles.idle}
+                    data-testid="preact-main-menu-save-status"
+                    id={saveStatusId}
+                >
                     {snapshot.saveStatusLabel}
                 </span>
             </div>
             <div class={styles.difficulty}>
-                <div class={styles.label}>{snapshot.difficultyLabel}</div>
+                <div class={styles.label} data-testid="preact-main-menu-difficulty-label" id={difficultyLabelId}>
+                    {snapshot.difficultyLabel}
+                </div>
                 <div
                     aria-describedby={selected ? descriptionId : undefined}
-                    aria-label={snapshot.difficultyLabel}
+                    aria-labelledby={difficultyLabelId}
                     class={styles.options}
                     data-testid="preact-main-menu-difficulty-group"
                     role="group"
                 >
                     {snapshot.difficulties.map(option => (
                         <button
+                            aria-describedby={option.selected ? descriptionId : undefined}
                             aria-pressed={option.selected}
                             class={`${styles.option} ${option.selected ? styles.selected : ''}`}
                             data-testid={`preact-main-menu-difficulty-${option.id.toLowerCase()}`}
@@ -104,7 +136,13 @@ export default function MainMenu() {
                 {snapshot.startLabel}
             </button>
             <div class={styles.keyHint}>
-                {snapshot.keyHints.map(hint => <span key={hint}>{hint}</span>)}
+                <div class={styles.keyHintList} data-testid="preact-main-menu-key-hints" id={keyHintsId} role="list">
+                    {snapshot.keyHints.map(hint => (
+                        <span data-testid="preact-main-menu-key-hint" key={hint} role="listitem">
+                            {hint}
+                        </span>
+                    ))}
+                </div>
             </div>
         </section>
     );

@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
 import EventBus from '../managers/EventBus';
 import { showLegacyGameplayHudSurfaces } from '../ui/legacyHudDom';
-import { createLegacyMainMenuFallback } from '../ui/legacyMainMenuFallback';
 import {
-    createMainMenuDisplayPayload,
+    createMainMenuSnapshot,
     MAIN_MENU_DIFFICULTY_IDS
 } from '../ui/mainMenuDisplay';
 
@@ -52,23 +51,20 @@ export default class MainMenuScene extends Phaser.Scene {
             });
         }
 
-        let updateDifficultyButtons = (_selectedId: string) => {};
         const publishMenuSnapshot = (open = true) => {
-            const display = createMainMenuDisplayPayload({
+            const snapshot = createMainMenuSnapshot({
                 open,
                 selectedDifficulty: this.selectedDifficulty,
                 tutorialCompleted: localStorage.getItem('gradium_tutorial_completed') === 'true',
                 saveExists: Boolean(localStorage.getItem('gradium_save'))
             });
-            EventBus.emit('MAIN_MENU_UPDATED', display.snapshot);
-            return display;
+            EventBus.emit('MAIN_MENU_UPDATED', snapshot);
         };
         const selectDifficulty = (id: string) => {
             this.selectedDifficulty = id;
-            const display = publishMenuSnapshot();
-            updateDifficultyButtons(display.legacyMenu.selectedDifficulty);
+            publishMenuSnapshot();
         };
-        const initialDisplay = publishMenuSnapshot();
+        publishMenuSnapshot();
         const startGame = (loadSave = false) => {
             showLegacyGameplayHudSurfaces();
             publishMenuSnapshot(false);
@@ -82,15 +78,7 @@ export default class MainMenuScene extends Phaser.Scene {
                 });
             });
         };
-        ({ updateDifficultyButtons } = createLegacyMainMenuFallback(this, {
-            difficultyIds: initialDisplay.legacyMenu.difficultyIds,
-            getSelectedDifficulty: () => this.selectedDifficulty,
-            height,
-            isCompact,
-            onDifficultySelect: selectDifficulty,
-            onStart: () => startGame(),
-            width
-        }));
+        this.createCoordinateFallbackZones(width, height, isCompact, selectDifficulty, () => startGame());
 
         EventBus.offAll('MainMenuScene');
         EventBus.on('MAIN_MENU_DIFFICULTY_REQUESTED', ({ id }) => {
@@ -102,5 +90,29 @@ export default class MainMenuScene extends Phaser.Scene {
             EventBus.offAll('MainMenuScene');
             publishMenuSnapshot(false);
         });
+    }
+
+    private createCoordinateFallbackZones(
+        width: number,
+        height: number,
+        isCompact: boolean,
+        onDifficultySelect: (id: string) => void,
+        onStart: () => void
+    ): void {
+        MAIN_MENU_DIFFICULTY_IDS.forEach((id, index) => {
+            const col = isCompact ? index % 2 : index;
+            const row = isCompact ? Math.floor(index / 2) : 0;
+            const x = isCompact ? width / 2 - 76 + col * 152 : width / 2 - 210 + index * 140;
+            const y = isCompact ? height / 2 - 4 + row * 46 : height / 2 + 48;
+            this.add.zone(x, y, isCompact ? 132 : 124, 42)
+                .setOrigin(0.5)
+                .setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => onDifficultySelect(id));
+        });
+
+        this.add.zone(width / 2, height / 2 + (isCompact ? 112 : 120), Math.min(width - 32, isCompact ? 220 : 260), 62)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', onStart);
     }
 }

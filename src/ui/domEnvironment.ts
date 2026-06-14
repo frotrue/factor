@@ -30,3 +30,13 @@ export function restoreGameCanvasFocus(): void {
     if (canvas.tabIndex < 0) canvas.tabIndex = 0;
     requestAnimationFrame(() => canvas.focus({ preventScroll: true }));
 }
+
+export function guardDomPointer(element: HTMLElement | null): void {
+    if (!element || element.dataset.pointerGuarded === 'true') return;
+    element.dataset.pointerGuarded = 'true';
+    ['pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(eventName => {
+        element.addEventListener(eventName, event => {
+            event.stopPropagation();
+        }, { passive: false });
+    });
+}

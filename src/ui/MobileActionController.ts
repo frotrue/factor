@@ -1,7 +1,6 @@
 import { CONFIG } from '../config';
 import type MainScene from '../scenes/MainScene';
-import EventBus from './EventBus';
-import type UIManager from './UIManager';
+import EventBus from '../managers/EventBus';
 import {
     ensureLegacyMobileRefs,
     renderLegacyMobileActions,
@@ -11,32 +10,52 @@ import {
     updateLegacyMobileActionState,
     updateLegacyMobileBuildSummary,
     type LegacyMobileRefs
-} from '../ui/legacyMobileControls';
-import { isMobileLayoutActive, isShortLandscapeLayout } from '../ui/domEnvironment';
+} from './legacyMobileControls';
+import { guardDomPointer, isMobileLayoutActive, isShortLandscapeLayout } from './domEnvironment';
 import {
     createMobileActionActiveMap,
     createMobileActionDisplayPayload,
     createMobileActionItems,
     createMobileCableOptions,
+    isMobileTransientTool,
     type MobileActionDisplayPayload,
     type MobileActionActiveMap,
     type MobileActionId
-} from '../ui/mobileActionDisplay';
+} from './mobileActionDisplay';
 
-export default class MobileUIManager {
+const OWNER = 'MobileActionController';
+
+export default class MobileActionController {
     private legacyRefs: LegacyMobileRefs | null = null;
     private cableMenuOpen: boolean = false;
+    private mobileActionStatus: string | null = null;
+    private selectedBuildingType: string = 'DATA_DOWNLOADER';
+    private previousBuildSelection: string = 'DATA_DOWNLOADER';
 
-    constructor(
-        private scene: MainScene,
-        private uiManager: UIManager
-    ) {}
+    constructor(private scene: MainScene) {}
 
     setup(): void {
-        EventBus.off('MOBILE_ACTION_REQUESTED', 'MobileUIManager');
-        EventBus.on('MOBILE_ACTION_REQUESTED', ({ id }) => this.handleAction(id), 'MobileUIManager');
+        EventBus.offAll(OWNER);
+        this.scene.events.once('shutdown', () => this.teardown());
+        EventBus.on('MOBILE_ACTION_REQUESTED', ({ id }) => this.handleAction(id), OWNER);
+        EventBus.on('BUILDING_SELECTED', ({ type }) => this.syncSelectedBuilding(type), OWNER);
+        EventBus.on('MOBILE_ACTION_REFRESH_REQUESTED', () => {
+            this.updateControls();
+        }, OWNER);
+        EventBus.on('MOBILE_BUILD_SUMMARY_REFRESH_REQUESTED', () => {
+            this.updateBuildSummary();
+        }, OWNER);
+        EventBus.on('MOBILE_UI_REBUILD_REQUESTED', () => {
+            this.setup();
+        }, OWNER);
+        EventBus.on('MOBILE_ACTION_CANCEL_REQUESTED', () => {
+            this.cancelAction();
+        }, OWNER);
+        EventBus.on('MOBILE_ACTION_STATUS_REQUESTED', ({ status }: { status: string | null }) => {
+            this.setActionStatus(status);
+        }, OWNER);
 
-        this.legacyRefs = ensureLegacyMobileRefs(element => this.uiManager.guardDomPointer(element));
+        this.legacyRefs = ensureLegacyMobileRefs(guardDomPointer);
         this.setCableMenuOpen(false);
 
         renderLegacyMobileActions(this.legacyRefs, createMobileActionItems(this.getActiveMap()).map(action => ({
@@ -51,18 +70,14 @@ export default class MobileUIManager {
         this.updateLegacyShadowState();
     }
 
-    closeCableMenu(): void {
-        this.setCableMenuOpen(false);
-    }
-
     private handleAction(id: string): void {
         if (id.startsWith('cable:')) {
             this.setCableMenuOpen(false);
-            this.uiManager.selectBuilding(id.slice('cable:'.length));
+            this.requestToolSelection(id.slice('cable:'.length));
         } else if (id === 'rotate') {
             this.scene.rotateCursor();
         } else if (id === 'remove') {
-            this.uiManager.selectBuilding('REMOVE');
+            this.requestToolSelection('REMOVE');
         } else if (id === 'cable') {
             this.openCableMenu();
         } else if (id === 'cancel') {
@@ -77,11 +92,11 @@ export default class MobileUIManager {
     renderCableMenu(): void {
         if (!this.legacyRefs) return;
 
-        renderLegacyMobileCableMenu(this.legacyRefs, createMobileCableOptions(this.uiManager.selectedBuildingType).map(option => ({
+        renderLegacyMobileCableMenu(this.legacyRefs, createMobileCableOptions(this.selectedBuildingType).map(option => ({
             label: option.label,
             onPress: () => {
                 this.setCableMenuOpen(false);
-                this.uiManager.selectBuilding(option.id);
+                this.requestToolSelection(option.id);
             }
         })));
     }
@@ -89,7 +104,7 @@ export default class MobileUIManager {
     openCableMenu(): void {
         const fiberUnlocked = !CONFIG.CABLES.FIBER.UNLOCK_REQUIRED || this.scene.researchManager?.isUnlocked(CONFIG.CABLES.FIBER.UNLOCK_REQUIRED);
         if (!fiberUnlocked) {
-            this.uiManager.selectBuilding('BASIC');
+            this.requestToolSelection('BASIC');
             this.publishSnapshot();
             return;
         }
@@ -100,9 +115,10 @@ export default class MobileUIManager {
 
     cancelAction(): void {
         this.setCableMenuOpen(false);
-        this.uiManager.mobileActionStatus = null;
-        if (this.uiManager.selectedBuildingType === 'REMOVE' || this.uiManager.selectedBuildingType === 'BASIC' || this.uiManager.selectedBuildingType === 'FIBER') {
-            this.uiManager.selectBuilding(this.uiManager.previousBuildSelection || 'DATA_DOWNLOADER');
+        this.mobileActionStatus = null;
+        this.scene.mobileActionStatus = null;
+        if (isMobileTransientTool(this.selectedBuildingType)) {
+            this.requestToolSelection(this.previousBuildSelection || 'DATA_DOWNLOADER');
         } else {
             this.updateBuildSummary();
             this.updateControls();
@@ -111,7 +127,8 @@ export default class MobileUIManager {
     }
 
     setActionStatus(status: string | null): void {
-        this.uiManager.mobileActionStatus = status;
+        this.mobileActionStatus = status;
+        this.scene.mobileActionStatus = status;
         this.updateBuildSummary();
         this.updateControls();
     }
@@ -129,13 +146,28 @@ export default class MobileUIManager {
         setLegacyMobileCableMenuOpen(this.legacyRefs, open);
     }
 
-    updateControls(): void {
+    private requestToolSelection(type: string): void {
+        EventBus.emit('BUILD_TOOL_SELECT_REQUESTED', { type });
+    }
+
+    private syncSelectedBuilding(type: string): void {
+        this.selectedBuildingType = type;
+        this.setCableMenuOpen(false);
+        if (!isMobileTransientTool(type)) {
+            this.previousBuildSelection = type;
+        }
+        this.renderCableMenu();
+        this.updateBuildSummary();
+        this.updateControls();
+    }
+
+    private updateControls(): void {
         const display = this.createDisplayPayload();
         updateLegacyMobileActionState(display.legacyActiveMap);
         this.publishSnapshot(display);
     }
 
-    updateBuildSummary(): void {
+    private updateBuildSummary(): void {
         const display = this.createDisplayPayload();
         updateLegacyMobileBuildSummary(this.legacyRefs, display.legacyBuildSummary);
         this.publishSnapshot(display);
@@ -150,9 +182,9 @@ export default class MobileUIManager {
     private createDisplayPayload(): MobileActionDisplayPayload {
         return createMobileActionDisplayPayload({
             cableMenuOpen: this.cableMenuOpen,
-            mobileActionStatus: this.uiManager.mobileActionStatus,
+            mobileActionStatus: this.mobileActionStatus,
             open: isMobileLayoutActive(),
-            selectedType: this.uiManager.selectedBuildingType,
+            selectedType: this.selectedBuildingType,
             showDefenseRange: Boolean(this.scene.showDefenseRange),
             showPowerGrid: Boolean(this.scene.showPowerGrid)
         });
@@ -160,10 +192,14 @@ export default class MobileUIManager {
 
     private getActiveMap(): MobileActionActiveMap {
         return createMobileActionActiveMap({
-            mobileActionStatus: this.uiManager.mobileActionStatus,
-            selectedType: this.uiManager.selectedBuildingType,
+            mobileActionStatus: this.mobileActionStatus,
+            selectedType: this.selectedBuildingType,
             showDefenseRange: Boolean(this.scene.showDefenseRange),
             showPowerGrid: Boolean(this.scene.showPowerGrid)
         });
+    }
+
+    private teardown(): void {
+        EventBus.offAll(OWNER);
     }
 }

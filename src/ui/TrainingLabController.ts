@@ -1,16 +1,16 @@
 import ModelTrainingLab from '../buildings/ModelTrainingLab';
 import type MainScene from '../scenes/MainScene';
-import type UIManager from './UIManager';
 import { CONFIG } from '../config';
 import { getBuildingName, textForKey } from '../i18n';
-import EventBus from './EventBus';
+import EventBus from '../managers/EventBus';
 import {
     ensureLegacyTrainingLabModal,
     renderLegacyTrainingLabDefenseRows,
     renderLegacyTrainingLabShell,
     renderLegacyTrainingLabSystemRows,
-    setLegacyTrainingLabOpen
-} from '../ui/legacyTrainingLab';
+    setLegacyTrainingLabOpen,
+    syncLegacyTrainingLabControls
+} from './legacyTrainingLab';
 import {
     createTrainingLabDefenseRowSnapshots,
     createTrainingLabDefenseRows,
@@ -18,42 +18,58 @@ import {
     createTrainingLabShellDisplay,
     createTrainingLabSystemRowSnapshots,
     createTrainingLabSystemRows
-} from '../ui/trainingLabDisplay';
+} from './trainingLabDisplay';
 import type { TrainingLabRowSnapshot } from '../types';
+import { guardDomPointer, restoreGameCanvasFocus } from './domEnvironment';
+import { createTrainingLabMissingLogMessage } from './notificationDisplay';
 
-export default class TrainingLabUI {
+const OWNER = 'TrainingLabController';
+
+export default class TrainingLabController {
     private activeTrainingLab: ModelTrainingLab | null = null;
     private activeTab: 'DEFENSE' | 'SYSTEM' = 'DEFENSE';
     private modal: HTMLElement | null = null;
 
-    constructor(
-        private scene: MainScene,
-        private uiManager: UIManager
-    ) {}
+    constructor(private scene: MainScene) {}
 
     setup(): void {
-        this.modal = ensureLegacyTrainingLabModal(element => this.uiManager.guardDomPointer(element));
+        this.modal = ensureLegacyTrainingLabModal(guardDomPointer);
+        EventBus.offAll(OWNER);
+        this.scene.events.once('shutdown', () => this.teardown());
+        EventBus.on('TRAINING_LAB_RENDER_REQUESTED', () => {
+            this.render();
+        }, OWNER);
+        EventBus.on('TRAINING_LAB_OPEN_REQUESTED', ({ lab, tab }: { lab?: ModelTrainingLab; tab?: 'DEFENSE' | 'SYSTEM' }) => {
+            if (tab) {
+                this.setActiveTab(tab);
+            }
+            if (lab) {
+                this.open(lab);
+                return;
+            }
+            this.openFirstLab(tab);
+        }, OWNER);
         EventBus.on('TRAINING_LAB_TAB_REQUESTED', ({ tab }) => {
             this.activeTab = tab;
             this.render();
-        }, 'TrainingLabUI');
+        }, OWNER);
         EventBus.on('TRAINING_LAB_CLOSE_REQUESTED', () => {
             this.close();
-        }, 'TrainingLabUI');
+        }, OWNER);
         EventBus.on('TRAINING_LAB_AUTO_REQUESTED', ({ enabled }) => {
             this.scene.trainingPlanner.setAutoEnabled(enabled);
             this.render();
-        }, 'TrainingLabUI');
+        }, OWNER);
         EventBus.on('TRAINING_LAB_JOB_SELECT_REQUESTED', ({ kind, id }) => {
             if (kind === 'DEFENSE') {
                 this.selectDefenseJob(id);
             } else {
                 this.selectSystemJob(id);
             }
-        }, 'TrainingLabUI');
+        }, OWNER);
         EventBus.on('TRAINING_LAB_REWARD_REQUESTED', ({ type, reward }) => {
             this.setDefenseReward(type, reward);
-        }, 'TrainingLabUI');
+        }, OWNER);
     }
 
     setActiveTab(tab: 'DEFENSE' | 'SYSTEM'): void {
@@ -65,6 +81,17 @@ export default class TrainingLabUI {
         this.activeTrainingLab = lab;
         setLegacyTrainingLabOpen(this.modal, true);
         this.render();
+    }
+
+    private openFirstLab(tab: 'DEFENSE' | 'SYSTEM' = 'DEFENSE'): void {
+        const lab = (this.scene.buildingManager?.getByType('MODEL_TRAINING_LAB') || [])
+            .find(building => building instanceof ModelTrainingLab) as ModelTrainingLab | undefined;
+        if (!lab) {
+            this.logMessage(createTrainingLabMissingLogMessage());
+            return;
+        }
+        this.setActiveTab(tab);
+        this.open(lab);
     }
 
     render(): void {
@@ -86,7 +113,7 @@ export default class TrainingLabUI {
                 autoModeText: display.plannerStatusText,
                 autoToggleText: display.autoToggleText,
                 durationText: display.durationText,
-                guardDomPointer: element => this.uiManager.guardDomPointer(element),
+                guardDomPointer,
                 onAutoToggle: () => {
                     planner.setAutoEnabled(!display.autoActive);
                     this.render();
@@ -107,6 +134,7 @@ export default class TrainingLabUI {
         } else {
             rows = this.renderSystemJobs(list);
         }
+        syncLegacyTrainingLabControls(modal, Boolean(modal?.dataset.preactShadow));
         this.publishDisplayPayload({
             activeTab: this.activeTab,
             open: true,
@@ -140,7 +168,7 @@ export default class TrainingLabUI {
         });
         if (list) {
             renderLegacyTrainingLabDefenseRows(list, rows, {
-                guardDomPointer: element => this.uiManager.guardDomPointer(element),
+                guardDomPointer,
                 onRewardSelect: (id, reward) => this.setDefenseReward(id, reward),
                 onSelect: id => this.selectDefenseJob(id)
             });
@@ -156,7 +184,7 @@ export default class TrainingLabUI {
         });
         if (list) {
             renderLegacyTrainingLabSystemRows(list, rows, {
-                guardDomPointer: element => this.uiManager.guardDomPointer(element),
+                guardDomPointer,
                 onSelect: id => this.selectSystemJob(id)
             });
         }
@@ -167,7 +195,7 @@ export default class TrainingLabUI {
         const lab = this.activeTrainingLab;
         if (!lab || !CONFIG.MODEL_TRAINING.TARGET_TYPES.includes(type as any)) return;
         lab.setTarget(type);
-        this.uiManager.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
+        this.logMessage(textForKey('trainingLab.targetSet', { name: getBuildingName(type) }));
         this.render();
     }
 
@@ -178,7 +206,7 @@ export default class TrainingLabUI {
         const available = this.scene.researchManager.isJobAvailable(id);
         if (!available && !progress.completed) return;
         lab.setSystemJob(id);
-        this.uiManager.logMessage(textForKey('trainingLab.jobSet', { name: textForKey(`research.${id}.name`) }));
+        this.logMessage(textForKey('trainingLab.jobSet', { name: textForKey(`research.${id}.name`) }));
         this.render();
     }
 
@@ -186,7 +214,7 @@ export default class TrainingLabUI {
         const lab = this.activeTrainingLab;
         if (!lab || !CONFIG.MODEL_TRAINING.TARGET_TYPES.includes(type as any)) return;
         lab.setTrainingRewardPreference(type, reward);
-        this.uiManager.logMessage(textForKey('trainingLab.rewardSet', {
+        this.logMessage(textForKey('trainingLab.rewardSet', {
             name: getBuildingName(type),
             reward: reward === 'accuracy'
                 ? textForKey('trainingLab.rewardAccuracy')
@@ -195,9 +223,18 @@ export default class TrainingLabUI {
         this.render();
     }
 
+    private logMessage(message: string): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message });
+    }
+
     private close(): void {
+        this.activeTrainingLab = null;
         setLegacyTrainingLabOpen(this.modal, false);
         EventBus.emit('TRAINING_LAB_OPEN_CHANGED', { open: false });
-        this.uiManager.restoreCanvasFocus();
+        restoreGameCanvasFocus();
+    }
+
+    private teardown(): void {
+        EventBus.offAll(OWNER);
     }
 }

@@ -1,4 +1,4 @@
-import { createLegacyMobileTooltipHtml } from './notificationDisplay';
+import { createLegacyMobileTooltipContent, type LegacyMobileTooltipContent } from './notificationDisplay';
 
 export interface LegacyWaveResultContent {
     kicker: string;
@@ -19,13 +19,24 @@ export function showLegacyWaveResultCard(content: LegacyWaveResultContent): bool
     card.className = 'wave-result-card glass-panel';
     card.dataset.preactShadow = 'true';
     card.setAttribute('aria-hidden', 'true');
-    card.innerHTML = `
-        <div class="wave-result-kicker">${content.kicker}</div>
-        <div class="wave-result-title">${content.title}</div>
-        <div class="wave-result-grid">
-            ${content.items.map(item => `<span>${item}</span>`).join('')}
-        </div>
-    `;
+
+    const kicker = document.createElement('div');
+    kicker.className = 'wave-result-kicker';
+    kicker.textContent = content.kicker;
+
+    const title = document.createElement('div');
+    title.className = 'wave-result-title';
+    title.textContent = content.title;
+
+    const grid = document.createElement('div');
+    grid.className = 'wave-result-grid';
+    content.items.forEach(item => {
+        const itemEl = document.createElement('span');
+        itemEl.textContent = item;
+        grid.appendChild(itemEl);
+    });
+
+    card.replaceChildren(kicker, title, grid);
     container.appendChild(card);
 
     setTimeout(() => {
@@ -41,7 +52,12 @@ export function showLegacyDesktopTooltip(x: number, y: number, title: string, co
     tooltip.style.display = 'block';
     tooltip.dataset.preactShadow = 'true';
     tooltip.setAttribute('aria-hidden', 'true');
-    tooltip.innerHTML = `<div class="tooltip-title">${title}</div><div>${content}</div>`;
+    const titleEl = document.createElement('div');
+    titleEl.className = 'tooltip-title';
+    titleEl.textContent = title;
+    const contentEl = document.createElement('div');
+    contentEl.textContent = content;
+    tooltip.replaceChildren(titleEl, contentEl);
     tooltip.style.left = '0px';
     tooltip.style.top = '0px';
 
@@ -75,7 +91,7 @@ function getMobileInfoSheet(): HTMLElement | null {
     return document.getElementById('mobile-info-sheet');
 }
 
-export function showLegacyMobileTooltip(formattedHtml: string): void {
+export function showLegacyMobileTooltip(content: LegacyMobileTooltipContent): void {
     const tooltip = document.getElementById('tooltip');
     if (tooltip) {
         tooltip.style.display = 'none';
@@ -88,11 +104,37 @@ export function showLegacyMobileTooltip(formattedHtml: string): void {
     mobileInfoSheet.style.display = 'block';
     mobileInfoSheet.dataset.preactShadow = 'true';
     mobileInfoSheet.setAttribute('aria-hidden', 'true');
-    mobileInfoSheet.innerHTML = formattedHtml;
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'tooltip-title';
+    titleEl.textContent = content.title;
+
+    const children: HTMLElement[] = [titleEl];
+    if (content.tags.length > 0) {
+        const tagsEl = document.createElement('div');
+        tagsEl.className = 'mobile-status-tags';
+        content.tags.forEach(tag => {
+            const tagEl = document.createElement('span');
+            tagEl.textContent = tag;
+            tagsEl.appendChild(tagEl);
+        });
+        children.push(tagsEl);
+    }
+
+    const detailsEl = document.createElement('div');
+    const detailLines = content.details.length > 0 ? content.details : [content.fallback].filter(Boolean);
+    detailLines.forEach(line => {
+        const lineEl = document.createElement('div');
+        lineEl.textContent = line;
+        detailsEl.appendChild(lineEl);
+    });
+    children.push(detailsEl);
+
+    mobileInfoSheet.replaceChildren(...children);
 }
 
-export function formatLegacyMobileTooltipInfo(title: string, content: string): string {
-    return createLegacyMobileTooltipHtml(title, content);
+export function formatLegacyMobileTooltipInfo(title: string, content: string): LegacyMobileTooltipContent {
+    return createLegacyMobileTooltipContent(title, content);
 }
 
 export function hideLegacyTooltipSurfaces(): void {
@@ -122,7 +164,7 @@ export function appendLegacyActivityLogEntry(message: string, isAlert: boolean):
         entry.style.borderLeftColor = '#ff4444';
         entry.style.color = '#ffaaaa';
     }
-    entry.innerText = `> ${message}`;
+    entry.textContent = `> ${message}`;
     logContainer.appendChild(entry);
 
     setTimeout(() => {

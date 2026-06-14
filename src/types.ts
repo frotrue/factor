@@ -14,7 +14,7 @@ import type TickSystem from './managers/TickSystem';
 import type TrainingPlannerManager from './managers/TrainingPlannerManager';
 import type PerformanceStats from './managers/PerformanceStats';
 import type TutorialManager from './managers/TutorialManager';
-import type UIManager from './managers/UIManager';
+import type UIManager from './ui/UIManager';
 import type WaveManager from './managers/WaveManager';
 import type { Language } from './i18n';
 import type { ThreatLevel } from './utils/waveSimulation';

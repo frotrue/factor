@@ -39,19 +39,19 @@ export function updateLegacyObjectivePanel(
     title: string,
     detail: string
 ): void {
-    if (refs.objectiveTitleEl) refs.objectiveTitleEl.innerText = title;
-    if (refs.objectiveDetailEl) refs.objectiveDetailEl.innerText = detail;
+    if (refs.objectiveTitleEl) refs.objectiveTitleEl.textContent = title;
+    if (refs.objectiveDetailEl) refs.objectiveDetailEl.textContent = detail;
 }
 
 export function updateLegacyWavePanel(
     refs: Pick<LegacyTacticalPanelRefs, 'waveTitleEl' | 'waveDetailEl' | 'waveRecommendationEl' | 'waveTimerEl'>,
     values: { title?: string; detail?: string; recommendation?: string; timer?: string }
 ): void {
-    if (typeof values.timer === 'string' && refs.waveTimerEl) refs.waveTimerEl.innerText = values.timer;
-    if (typeof values.title === 'string' && refs.waveTitleEl) refs.waveTitleEl.innerText = values.title;
-    if (typeof values.detail === 'string' && refs.waveDetailEl) refs.waveDetailEl.innerText = values.detail;
+    if (typeof values.timer === 'string' && refs.waveTimerEl) refs.waveTimerEl.textContent = values.timer;
+    if (typeof values.title === 'string' && refs.waveTitleEl) refs.waveTitleEl.textContent = values.title;
+    if (typeof values.detail === 'string' && refs.waveDetailEl) refs.waveDetailEl.textContent = values.detail;
     if (typeof values.recommendation === 'string' && refs.waveRecommendationEl) {
-        refs.waveRecommendationEl.innerText = values.recommendation;
+        refs.waveRecommendationEl.textContent = values.recommendation;
     }
 }
 
@@ -60,8 +60,8 @@ export function updateLegacyDefensePanel(
     title: string,
     detail: string
 ): void {
-    if (refs.defenseTitleEl) refs.defenseTitleEl.innerText = title;
-    if (refs.defenseDetailEl) refs.defenseDetailEl.innerText = detail;
+    if (refs.defenseTitleEl) refs.defenseTitleEl.textContent = title;
+    if (refs.defenseDetailEl) refs.defenseDetailEl.textContent = detail;
 }
 
 export function updateLegacyPowerStatus(
@@ -72,7 +72,7 @@ export function updateLegacyPowerStatus(
     const chip = refs.powerStatusChipEl;
     if (!chip) return;
     chip.classList.remove('panel-chip-danger', 'panel-chip-warning');
-    chip.innerText = text;
+    chip.textContent = text;
     if (tone === 'danger') chip.classList.add('panel-chip-danger');
     if (tone === 'warning') chip.classList.add('panel-chip-warning');
 }

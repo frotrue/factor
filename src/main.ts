@@ -4,11 +4,13 @@ import './styles/main.css';
 import './styles/legacy-ui.css';
 import MainMenuScene from './scenes/MainMenuScene';
 import MainScene from './scenes/MainScene';
+import EventBus from './managers/EventBus';
 import { mountHud } from './ui/mountHud';
 
 declare global {
     interface Window {
         __GRADIUM_GAME__?: Phaser.Game;
+        __GRADIUM_EVENT_BUS__?: typeof EventBus;
     }
 }
 
@@ -38,4 +40,5 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const game = new Phaser.Game(config);
 window.__GRADIUM_GAME__ = game;
+window.__GRADIUM_EVENT_BUS__ = EventBus;
 mountHud(game);

@@ -34,11 +34,8 @@ export default class BuildingManager {
         if (!config.skipCost && bConfig.COST && bConfig.COST.length > 0) {
             const inventoryManager = this.scene.inventoryManager;
             if (inventoryManager && !inventoryManager.spend(bConfig.COST)) {
-                const uiManager = this.scene.uiManager;
-                if (uiManager) {
-                    const costText = bConfig.COST.map((c: BuildingCost) => `${c.amount} ${c.resource}`).join(', ');
-                    uiManager.logMessage(`System: Insufficient resources. Need: ${costText}`, true);
-                }
+                const costText = bConfig.COST.map((c: BuildingCost) => `${c.amount} ${c.resource}`).join(', ');
+                this.logMessage(`System: Insufficient resources. Need: ${costText}`, true);
                 return null;
             }
         }
@@ -70,8 +67,7 @@ export default class BuildingManager {
         const building = this.buildings.get(key);
         if (building) {
             if (building.type === 'CORE') {
-                const uiManager = this.scene.uiManager;
-                if (uiManager) uiManager.logMessage("System: Cannot remove Neural Core.", true);
+                this.logMessage("System: Cannot remove Neural Core.", true);
                 return;
             }
 
@@ -105,6 +101,10 @@ export default class BuildingManager {
 
     has(key: string): boolean {
         return this.buildings.has(key);
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
     }
 
     forEach(callback: (building: BaseBuilding) => void): void {

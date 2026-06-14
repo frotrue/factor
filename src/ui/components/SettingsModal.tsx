@@ -83,18 +83,25 @@ export default function SettingsModal() {
                 <div aria-labelledby={activeTabId} class={styles.grid} data-testid={panelId} id={panelId} role="tabpanel">
                     {activeTab.value === 'game' ? (
                         <>
-                            <SettingGroup label={settings.labels.speed}>
+                            <SettingGroup id="speed" label={settings.labels.speed}>
+                                {labelId => (
                                 <Segmented
-                                    ariaLabel={settings.labels.speed}
+                                    dataTestId="preact-settings-speed"
+                                    labelledBy={labelId}
+                                    optionTestIdPrefix="preact-settings-speed-option"
                                     options={[1, 2, 3].map(speed => ({ label: `${speed}x`, value: String(speed) }))}
                                     value={String(settings.speed)}
                                     onChange={value => EventBus.emit('SETTINGS_SPEED_REQUESTED', { speed: Number(value) })}
                                 />
+                                )}
                             </SettingGroup>
 
-                            <SettingGroup label={settings.labels.language}>
+                            <SettingGroup id="language" label={settings.labels.language}>
+                                {labelId => (
                                 <Segmented
-                                    ariaLabel={settings.labels.language}
+                                    dataTestId="preact-settings-language"
+                                    labelledBy={labelId}
+                                    optionTestIdPrefix="preact-settings-language-option"
                                     options={[
                                         { label: settings.labels.languageKo, value: 'ko' },
                                         { label: settings.labels.languageEn, value: 'en' }
@@ -102,17 +109,21 @@ export default function SettingsModal() {
                                     value={settings.language}
                                     onChange={value => EventBus.emit('SETTINGS_LANGUAGE_REQUESTED', { language: value })}
                                 />
+                                )}
                             </SettingGroup>
                         </>
                     ) : null}
 
                     {activeTab.value === 'audio' ? (
-                        <SettingGroup label={settings.labels.masterVolume}>
+                        <SettingGroup id="master-volume" label={settings.labels.masterVolume}>
+                            {labelId => (
                             <div class={styles.inline}>
                                 <input
-                                    aria-label={settings.labels.masterVolume}
+                                    aria-labelledby={labelId}
                                     aria-valuetext={`${settings.volume}%`}
                                     class={styles.range}
+                                    data-testid="preact-settings-volume"
+                                    id="preact-settings-volume"
                                     type="range"
                                     min="0"
                                     max="100"
@@ -123,6 +134,8 @@ export default function SettingsModal() {
                                     active={settings.muted}
                                     ariaPressed={settings.muted}
                                     className={styles.toggle}
+                                    dataTestId="preact-settings-muted"
+                                    id="preact-settings-muted"
                                     onClick={event => {
                                         stopModalEvent(event);
                                         requestAudio({ muted: !settings.muted });
@@ -132,25 +145,34 @@ export default function SettingsModal() {
                                     {settings.muted ? settings.labels.muted : `${settings.volume}%`}
                                 </Button>
                             </div>
+                            )}
                         </SettingGroup>
                     ) : null}
 
                     {activeTab.value === 'graphics' ? (
                         <>
-                            <SettingGroup label={settings.labels.fps}>
+                            <SettingGroup id="fps" label={settings.labels.fps}>
+                                {labelId => (
                                 <Segmented
-                                    ariaLabel={settings.labels.fps}
+                                    dataTestId="preact-settings-fps"
+                                    labelledBy={labelId}
+                                    optionTestIdPrefix="preact-settings-fps-option"
                                     options={[60, 144, 240].map(fps => ({ label: `${fps}`, value: String(fps) }))}
                                     value={String(settings.fps)}
                                     onChange={value => EventBus.emit('SETTINGS_FPS_REQUESTED', { fps: Number(value) })}
                                 />
+                                )}
                             </SettingGroup>
 
-                            <SettingGroup label={settings.labels.graphics}>
+                            <SettingGroup id="graphics" label={settings.labels.graphics}>
+                                {labelId => (
                                 <Button
                                     active={settings.bloomEnabled}
                                     ariaPressed={settings.bloomEnabled}
+                                    ariaDescribedBy={labelId}
                                     className={styles.toggle}
+                                    dataTestId="preact-settings-bloom"
+                                    id="preact-settings-bloom"
                                     onClick={event => {
                                         stopModalEvent(event);
                                         EventBus.emit('SETTINGS_BLOOM_REQUESTED', { enabled: !settings.bloomEnabled });
@@ -159,36 +181,41 @@ export default function SettingsModal() {
                                 >
                                     {settings.bloomEnabled ? settings.labels.bloomOn : settings.labels.bloomOff}
                                 </Button>
+                                )}
                             </SettingGroup>
                         </>
                     ) : null}
 
                     {activeTab.value === 'system' ? (
                         <>
-                            <SettingGroup label={settings.labels.saveData}>
+                            <SettingGroup id="save-data" label={settings.labels.saveData}>
+                                {labelId => (
                                 <div class={styles.inline}>
                                     <Button onClick={event => {
                                         stopModalEvent(event);
                                         EventBus.emit('SAVE_REQUESTED');
-                                    }} tabIndex={0}>
+                                    }} ariaDescribedBy={labelId} dataTestId="preact-settings-save" id="preact-settings-save" tabIndex={0}>
                                         {settings.labels.save}
                                     </Button>
                                     <Button onClick={event => {
                                         stopModalEvent(event);
                                         EventBus.emit('LOAD_REQUESTED');
-                                    }} tabIndex={0}>
+                                    }} ariaDescribedBy={labelId} dataTestId="preact-settings-load" id="preact-settings-load" tabIndex={0}>
                                         {settings.labels.load}
                                     </Button>
                                 </div>
+                                )}
                             </SettingGroup>
 
-                            <SettingGroup label={settings.labels.tutorial}>
+                            <SettingGroup id="tutorial" label={settings.labels.tutorial}>
+                                {labelId => (
                                 <Button onClick={event => {
                                     stopModalEvent(event);
                                     EventBus.emit('SETTINGS_RESET_TUTORIAL_REQUESTED');
-                                }} tabIndex={0}>
+                                }} ariaDescribedBy={labelId} dataTestId="preact-settings-reset-tutorial" id="preact-settings-reset-tutorial" tabIndex={0}>
                                     {settings.labels.restartTutorial}
                                 </Button>
+                                )}
                             </SettingGroup>
                         </>
                     ) : null}
@@ -200,31 +227,46 @@ export default function SettingsModal() {
     );
 }
 
-function SettingGroup({ children, label }: { children: ComponentChildren; label: string }) {
+function SettingGroup({
+    children,
+    id,
+    label
+}: {
+    children: ComponentChildren | ((labelId: string) => ComponentChildren);
+    id: string;
+    label: string;
+}) {
+    const groupId = `preact-settings-group-${id}`;
+    const labelId = `preact-settings-label-${id}`;
     return (
-        <div class={styles.group}>
-            <span class={styles.label}>{label}</span>
-            {children}
+        <div aria-labelledby={labelId} class={styles.group} data-testid={groupId} id={groupId} role="group">
+            <span class={styles.label} data-testid={labelId} id={labelId}>{label}</span>
+            {typeof children === 'function' ? children(labelId) : children}
         </div>
     );
 }
 
 function Segmented({
-    ariaLabel,
+    dataTestId,
+    labelledBy,
     onChange,
+    optionTestIdPrefix,
     options,
     value
 }: {
-    ariaLabel: string;
+    dataTestId: string;
+    labelledBy: string;
     onChange: (value: string) => void;
+    optionTestIdPrefix: string;
     options: Array<{ label: string; value: string }>;
     value: string;
 }) {
     return (
-        <div aria-label={ariaLabel} class={styles.segmented} role="group">
+        <div aria-labelledby={labelledBy} class={styles.segmented} data-testid={dataTestId} role="group">
             {options.map(option => (
                 <button
                     aria-pressed={option.value === value}
+                    data-testid={`${optionTestIdPrefix}-${option.value}`}
                     key={option.value}
                     type="button"
                     class={`${styles.segment} ${option.value === value ? styles.active : ''}`}

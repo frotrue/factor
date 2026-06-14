@@ -228,7 +228,9 @@ export default class CableManager {
             const refundAmount = Math.floor(cable.costPaid * 0.5);
             if (refundAmount > 0) {
                 this.scene.inventoryManager.addResource('SILICON', refundAmount);
-                this.scene.uiManager?.logMessage(`System: Cable removed. Refunded ${refundAmount} Silicon.`);
+                EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+                    message: `System: Cable removed. Refunded ${refundAmount} Silicon.`
+                });
             }
         }
         this.cables.delete(id);

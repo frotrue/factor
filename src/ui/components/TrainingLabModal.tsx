@@ -43,22 +43,30 @@ export default function TrainingLabModal() {
     const visibleRows = snapshot.rows;
     const panelId = 'preact-training-lab-panel';
     const activeTabId = `preact-training-lab-tab-${snapshot.activeTab}`;
+    const titleId = 'preact-training-lab-title';
+    const overviewId = 'preact-training-lab-overview';
+    const plannerId = 'preact-training-lab-planner';
+    const durationId = 'preact-training-lab-duration';
 
     return (
         <aside
-            aria-labelledby="preact-training-lab-title"
+            aria-describedby={`${overviewId} ${plannerId} ${durationId}`}
+            aria-labelledby={titleId}
             class={styles.panel}
             data-testid="preact-training-lab-modal"
             role="dialog"
         >
-            <div class={styles.header}>
+            <div class={styles.header} data-testid="preact-training-lab-header">
                 <div>
-                    <span class={styles.kicker}>{snapshot.kicker}</span>
-                    <strong id="preact-training-lab-title">{snapshot.title}</strong>
+                    <span class={styles.kicker} data-testid="preact-training-lab-kicker">{snapshot.kicker}</span>
+                    <strong data-testid="preact-training-lab-title" id={titleId}>{snapshot.title}</strong>
                 </div>
                 <button
+                    aria-controls={panelId}
+                    aria-describedby={plannerId}
                     class={styles.close}
                     data-testid="preact-training-lab-close"
+                    id="preact-training-lab-close"
                     type="button"
                     onClick={event => {
                         stopLabEvent(event);
@@ -69,15 +77,28 @@ export default function TrainingLabModal() {
                 </button>
             </div>
 
-            <div class={styles.status}>{snapshot.overview}</div>
-            <div class={styles.planner}>
-                <span>{snapshot.plannerStatus}</span>
-                <small>{snapshot.plannerReason}</small>
+            <div class={styles.status} data-testid="preact-training-lab-overview" id={overviewId}>{snapshot.overview}</div>
+            <div
+                aria-labelledby="preact-training-lab-planner-status"
+                class={styles.planner}
+                data-testid="preact-training-lab-planner"
+                id={plannerId}
+                role="status"
+            >
+                <span data-testid="preact-training-lab-planner-status" id="preact-training-lab-planner-status">
+                    {snapshot.plannerStatus}
+                </span>
+                <small data-testid="preact-training-lab-planner-reason" id="preact-training-lab-planner-reason">
+                    {snapshot.plannerReason}
+                </small>
                 <Button
                     active={snapshot.autoEnabled}
+                    ariaControls={plannerId}
+                    ariaDescribedBy="preact-training-lab-planner-reason"
                     ariaPressed={snapshot.autoEnabled}
                     className={styles.autoButton}
                     dataTestId="preact-training-lab-auto"
+                    id="preact-training-lab-auto"
                     onClick={event => {
                         stopLabEvent(event);
                         EventBus.emit('TRAINING_LAB_AUTO_REQUESTED', { enabled: !snapshot.autoEnabled });
@@ -90,7 +111,7 @@ export default function TrainingLabModal() {
                 </Button>
             </div>
 
-            <div aria-label={snapshot.title} class={styles.tabs} role="tablist">
+            <div aria-labelledby={titleId} class={styles.tabs} data-testid="preact-training-lab-tabs" role="tablist">
                 {[
                     { id: 'DEFENSE' as const, label: snapshot.tabs.defense },
                     { id: 'SYSTEM' as const, label: snapshot.tabs.system }
@@ -116,16 +137,26 @@ export default function TrainingLabModal() {
                 ))}
             </div>
 
-            <div aria-labelledby={activeTabId} class={styles.rows} id={panelId} role="tabpanel">
+            <div
+                aria-describedby={plannerId}
+                aria-labelledby={activeTabId}
+                class={styles.rows}
+                data-testid="preact-training-lab-panel"
+                id={panelId}
+                role="tabpanel"
+            >
                 {visibleRows.map((row, index) => {
                     const [dataProgress, workProgress] = parseProgressPair(row.progress);
                     const tone = getRowTone(row, workProgress);
                     const rowBaseId = `preact-training-lab-row-${row.id}`;
                     const titleId = `${rowBaseId}-title`;
                     const detailId = `${rowBaseId}-detail`;
+                    const toneId = `${rowBaseId}-tone`;
+                    const rewardGroupId = `${rowBaseId}-reward-group`;
+                    const rewardLabelId = `${rowBaseId}-reward-label`;
                     return (
                         <div
-                            aria-describedby={detailId}
+                            aria-describedby={`${detailId} ${toneId}`}
                             aria-disabled={row.disabled ? 'true' : 'false'}
                             aria-labelledby={titleId}
                             aria-pressed={row.active ? 'true' : 'false'}
@@ -146,13 +177,23 @@ export default function TrainingLabModal() {
                         >
                             <div class={styles.rowHeader}>
                                 <strong data-testid={`${rowBaseId}-title`} id={titleId}>{row.title}</strong>
-                                <span class={styles.badge} data-testid={`${rowBaseId}-tone`}>{snapshot.toneLabels[tone]}</span>
+                                <span class={styles.badge} data-testid={`${rowBaseId}-tone`} id={toneId}>{snapshot.toneLabels[tone]}</span>
                             </div>
                             <span class={styles.detail} data-testid={`${rowBaseId}-detail`} id={detailId}>{row.detail}</span>
                             {row.kind === 'DEFENSE' && row.rewardPreference ? (
-                                <div class={styles.rewardControls} aria-label={snapshot.rewardModeLabel} role="group">
+                                <div
+                                    aria-labelledby={rewardLabelId}
+                                    class={styles.rewardControls}
+                                    data-testid={rewardGroupId}
+                                    id={rewardGroupId}
+                                    role="group"
+                                >
+                                    <span class={styles.rewardLabel} data-testid={rewardLabelId} id={rewardLabelId}>
+                                        {snapshot.rewardModeLabel}
+                                    </span>
                                     {(['accuracy', 'damage'] as TrainingRewardPreference[]).map(reward => (
                                         <button
+                                            aria-describedby={rewardLabelId}
                                             aria-pressed={row.rewardPreference === reward}
                                             class={`${styles.rewardButton} ${row.rewardPreference === reward ? styles.rewardActive : ''}`}
                                             data-testid={`preact-training-lab-reward-${row.id}-${reward}`}
@@ -189,7 +230,7 @@ export default function TrainingLabModal() {
                 })}
             </div>
 
-            <div class={styles.duration}>{snapshot.duration}</div>
+            <div class={styles.duration} data-testid="preact-training-lab-duration" id={durationId}>{snapshot.duration}</div>
         </aside>
     );
 }

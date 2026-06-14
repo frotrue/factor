@@ -16,11 +16,6 @@ function createSceneStub(options: {
     const scene: any = {
         time: { now: 0 },
         defenseModelStates: states,
-        uiManager: {
-            logMessage: () => {},
-            renderTrainingLab: () => {},
-            createBuildingButtons: () => {}
-        },
         effectsManager: {
             playModelTrainingPulse: () => {}
         },

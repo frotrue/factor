@@ -4,12 +4,9 @@ async function startGame(page: Page): Promise<void> {
     const viewport = page.viewportSize()!;
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
-    await page.waitForFunction(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainMenuScene') as any;
-        return scene?.children?.list?.some((child: any) =>
-            child.text === '> 시스템 초기화 <' || child.text === '> Initialize System <'
-        );
-    });
+    await page.waitForFunction(() => window.__GRADIUM_GAME__?.scene.isActive('MainMenuScene'));
+    await expect(page.getByTestId('preact-main-menu')).toBeVisible();
+    await expect(page.locator('#preact-main-menu-start')).toBeVisible();
 
     const isCompact = viewport.width < 600 || viewport.height < 520;
     const preactStart = page.locator('#preact-main-menu-start');

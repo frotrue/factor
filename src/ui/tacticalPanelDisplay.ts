@@ -111,17 +111,21 @@ function createTacticalPanelLabels(): TacticalPanelSnapshot['labels'] {
     };
 }
 
+export function formatTacticalWaveTimer(timer: number): string {
+    return `${Math.max(0, Math.ceil(timer / 1000))}s`;
+}
+
 export function createLegacyWavePanelDisplay(
     briefing: WaveBriefing | null,
     timer?: number
 ): LegacyWavePanelDisplay | null {
     if (!briefing) {
         if (typeof timer !== 'number') return null;
-        return { timer: `${Math.ceil(timer / 1000)}s` };
+        return { timer: formatTacticalWaveTimer(timer) };
     }
 
     const countdown = typeof timer === 'number'
-        ? `${Math.max(0, Math.ceil(timer / 1000))}s`
+        ? formatTacticalWaveTimer(timer)
         : null;
     const routeText = briefing.routeNames.join(' + ');
     const specialText = briefing.special ? ` | ${briefing.special}` : '';

@@ -54,6 +54,31 @@ export function guardLegacySettingsRefs(
     ].forEach(element => guardDomPointer(element));
 }
 
+function syncLegacySettingsControls(refs: LegacySettingsRefs, shadow: boolean): void {
+    [
+        refs.btnClose,
+        refs.btnSave,
+        refs.btnLoad,
+        refs.volumeInput,
+        refs.mutedInput,
+        refs.bloomInput,
+        refs.btnResetTutorial,
+        ...refs.languageButtons,
+        ...refs.speedButtons,
+        ...refs.fpsButtons
+    ].forEach(element => {
+        if (!element) return;
+        if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement) {
+            element.disabled = shadow;
+        }
+        if (shadow) {
+            element.setAttribute('tabindex', '-1');
+        } else {
+            element.removeAttribute('tabindex');
+        }
+    });
+}
+
 export function syncLegacySettingsInputs(
     refs: LegacySettingsRefs,
     state: {
@@ -85,11 +110,13 @@ export function setLegacySettingsOpen(refs: LegacySettingsRefs, open: boolean): 
     if (open) {
         modal.dataset.preactShadow = 'true';
         modal.setAttribute('aria-hidden', 'true');
+        syncLegacySettingsControls(refs, true);
         return;
     }
 
     delete modal.dataset.preactShadow;
     modal.removeAttribute('aria-hidden');
+    syncLegacySettingsControls(refs, false);
 }
 
 export function isLegacySettingsOpen(refs: LegacySettingsRefs): boolean {

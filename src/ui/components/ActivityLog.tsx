@@ -13,13 +13,28 @@ export default function ActivityLog() {
     const filteredEntries = alertsOnly.value ? allEntries.filter(entry => entry.isAlert) : allEntries;
     const entries = expanded.value ? filteredEntries : filteredEntries.slice(-5);
     if (allEntries.length === 0) return null;
+    const titleId = 'preact-activity-log-title';
     const entriesId = 'preact-activity-log-entries';
+    const controlsId = 'preact-activity-log-controls';
 
     return (
-        <section class={styles.log} aria-label={snapshot.ariaLabel} data-testid="preact-activity-log">
+        <section
+            aria-labelledby={titleId}
+            class={styles.log}
+            data-testid="preact-activity-log"
+            role="region"
+        >
             <div class={styles.header}>
-                <span id="preact-activity-log-title">{snapshot.title} <small>{allEntries.length}</small></span>
-                <div class={styles.controls}>
+                <span data-testid="preact-activity-log-title" id={titleId}>
+                    {snapshot.title} <small data-testid="preact-activity-log-count">{allEntries.length}</small>
+                </span>
+                <div
+                    aria-label={snapshot.ariaLabel}
+                    class={styles.controls}
+                    data-testid="preact-activity-log-controls"
+                    id={controlsId}
+                    role="group"
+                >
                     {alertCount > 0 ? (
                         <Button
                             active={alertsOnly.value}
@@ -62,23 +77,24 @@ export default function ActivityLog() {
                 </div>
             ) : null}
             <div
-                aria-labelledby="preact-activity-log-title"
+                aria-labelledby={titleId}
                 aria-live="polite"
                 aria-relevant="additions text"
                 class={styles.entries}
+                data-testid="preact-activity-log-entries"
                 id={entriesId}
                 role="log"
             >
                 {entries.map(entry => (
-                <div
-                    class={`${styles.entry} ${entry.isAlert ? styles.alert : ''}`}
-                    data-testid={`preact-activity-log-entry-${entry.id}`}
-                    key={entry.id}
-                    role="article"
-                >
-                    <span aria-hidden="true">{entry.isAlert ? '!' : '>'}</span>
-                    <p>{entry.message}</p>
-                </div>
+                    <div
+                        class={`${styles.entry} ${entry.isAlert ? styles.alert : ''}`}
+                        data-testid={`preact-activity-log-entry-${entry.id}`}
+                        key={entry.id}
+                        role="article"
+                    >
+                        <span aria-hidden="true">{entry.isAlert ? '!' : '>'}</span>
+                        <p>{entry.message}</p>
+                    </div>
                 ))}
             </div>
         </section>

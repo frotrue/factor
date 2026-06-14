@@ -10,14 +10,23 @@ export interface MainMenuDisplayPayloadInput {
     tutorialCompleted: boolean;
 }
 
-export interface MainMenuLegacyDisplay {
-    difficultyIds: string[];
-    selectedDifficulty: string;
+export type MainMenuDifficultyOption = MainMenuSnapshot['difficulties'][number];
+
+export function createMainMenuKeyHints(saveExists: boolean): string[] {
+    return [
+        t('menu.hint.difficulty'),
+        t('menu.hint.start'),
+        ...(saveExists ? [t('menu.hint.continue')] : [])
+    ];
 }
 
-export interface MainMenuDisplayPayload {
-    legacyMenu: MainMenuLegacyDisplay;
-    snapshot: MainMenuSnapshot;
+export function createMainMenuDifficultyOptions(selectedDifficulty: string): MainMenuDifficultyOption[] {
+    return MAIN_MENU_DIFFICULTY_IDS.map(id => ({
+        id,
+        label: getDifficultyName(id).toUpperCase(),
+        description: t(`menu.description.${id}` as any),
+        selected: id === selectedDifficulty
+    }));
 }
 
 export function createMainMenuSnapshot({
@@ -38,29 +47,10 @@ export function createMainMenuSnapshot({
         continueLabel: t('menu.continue'),
         tutorialStatusLabel: tutorialCompleted ? t('menu.tutorialComplete') : t('menu.tutorialRecommended'),
         saveStatusLabel: saveExists ? t('menu.saveDetected') : t('menu.noSave'),
-        keyHints: [
-            t('menu.hint.difficulty'),
-            t('menu.hint.start'),
-            ...(saveExists ? [t('menu.hint.continue')] : [])
-        ],
+        keyHints: createMainMenuKeyHints(saveExists),
         selectedDifficulty,
         tutorialCompleted,
         saveExists,
-        difficulties: MAIN_MENU_DIFFICULTY_IDS.map(id => ({
-            id,
-            label: getDifficultyName(id).toUpperCase(),
-            description: t(`menu.description.${id}` as any),
-            selected: id === selectedDifficulty
-        }))
-    };
-}
-
-export function createMainMenuDisplayPayload(input: MainMenuDisplayPayloadInput): MainMenuDisplayPayload {
-    return {
-        legacyMenu: {
-            difficultyIds: MAIN_MENU_DIFFICULTY_IDS,
-            selectedDifficulty: input.selectedDifficulty
-        },
-        snapshot: createMainMenuSnapshot(input)
+        difficulties: createMainMenuDifficultyOptions(selectedDifficulty)
     };
 }

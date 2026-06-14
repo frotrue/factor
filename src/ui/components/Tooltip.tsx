@@ -28,9 +28,11 @@ export default function Tooltip() {
             role="tooltip"
             style={panelStyle}
         >
-            <div class={styles.header}>
-                <div class={styles.title} id={titleId}>{snapshot.title}</div>
+            <div class={styles.header} data-testid="preact-tooltip-header">
+                <div class={styles.title} data-testid="preact-tooltip-title" id={titleId}>{snapshot.title}</div>
                 <Button
+                    ariaControls={bodyId}
+                    ariaDescribedBy={bodyId}
                     className={styles.close}
                     dataTestId="preact-tooltip-close"
                     onClick={event => {
@@ -42,9 +44,9 @@ export default function Tooltip() {
                     {snapshot.closeLabel}
                 </Button>
             </div>
-            <div class={styles.body} data-testid="preact-tooltip-body" id={bodyId}>
+            <div class={styles.body} data-testid="preact-tooltip-body" id={bodyId} role="list">
                 {snapshot.lines.map((line, index) => (
-                    <p key={`${index}-${line}`}>{line}</p>
+                    <p data-testid="preact-tooltip-line" key={`${index}-${line}`} role="listitem">{line}</p>
                 ))}
             </div>
         </aside>

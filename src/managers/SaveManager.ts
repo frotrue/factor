@@ -32,7 +32,7 @@ export default class SaveManager {
         EventBus.on('SAVE_REQUESTED', () => {
             this.cancelScheduledAutoSave();
             if (this.saveGame()) {
-                this.scene.uiManager.logMessage(t('log.saved'));
+                this.logMessage(t('log.saved'));
             }
         }, 'SaveManager');
         EventBus.on('LOAD_REQUESTED', () => this.loadGame(), 'SaveManager');
@@ -86,6 +86,10 @@ export default class SaveManager {
         this.saveDirty = true;
     }
 
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
+    }
+
     private shouldAutoSave(): boolean {
         if (this.saveDirty) return true;
         if (this.scene.waveManager.waveActive || this.scene.waveManager.enemies.size > 0) return true;
@@ -109,7 +113,7 @@ export default class SaveManager {
                 if (token !== this.autoSaveToken) return;
                 this.autoSavePending = false;
                 if (saved) {
-                    this.scene.uiManager.logMessage('System: Auto-saved successfully.');
+                    this.logMessage('System: Auto-saved successfully.');
                 }
             } catch (error) {
                 if (token === this.autoSaveToken) {
@@ -546,15 +550,15 @@ export default class SaveManager {
                 );
             }
 
-            this.scene.uiManager.createBuildingButtons();
+            EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
             this.scene.powerManager.updatePowerGrid();
             this.scene.powerGridDirty = true;
             this.scene.defenseRangeDirty = true;
-            this.scene.uiManager.logMessage(t('log.loaded'));
+            this.logMessage(t('log.loaded'));
             return true;
         } catch (e) {
             console.error('Failed to load save', e);
-            this.scene.uiManager.logMessage(t('log.corrupted'), true);
+            this.logMessage(t('log.corrupted'), true);
             return false;
         }
     }

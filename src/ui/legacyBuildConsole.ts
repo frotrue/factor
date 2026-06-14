@@ -1,9 +1,5 @@
-import { CONFIG } from '../config';
-import { getBuildingName, getCableName, textForKey } from '../i18n';
-import {
-    createBuildConsoleDisplayState,
-    getBuildableCostText
-} from './buildConsoleSnapshot';
+import type { BuildConsoleItemSnapshot, BuildConsoleSnapshot } from '../types';
+import type { BuildConsoleDisplayState } from './buildConsoleSnapshot';
 
 export interface LegacyBuildCategory {
     id: string;
@@ -19,32 +15,25 @@ export interface LegacyBuildConsoleRenderResult {
 }
 
 interface LegacyBuildConsoleRenderOptions {
-    activeCategory: string;
     allowedBuildings: string[] | null;
+    displayState: BuildConsoleDisplayState;
     guardDomPointer: (element: HTMLElement | null) => void;
-    hasFirstDefenseSuccess: boolean;
-    hotkeys: string[];
-    isGpuUnlocked: boolean;
-    isResearchUnlocked: (researchId: string) => boolean;
     onCategorySelect: (category: string) => void;
     onToolSelect: (type: string) => void;
-    selectedBuildingType: string;
+    snapshot: BuildConsoleSnapshot;
 }
 
 function createBuildButton(
-    key: string,
-    data: any,
-    hotkey: string | undefined,
+    item: BuildConsoleItemSnapshot,
     isLocked: boolean,
-    selectedBuildingType: string,
     guardDomPointer: (element: HTMLElement | null) => void,
     onToolSelect: (type: string) => void
 ): HTMLButtonElement {
     const button = document.createElement('button');
-    button.id = `btn-${key.toLowerCase()}`;
+    button.id = item.key === 'REMOVE' ? 'btn-remove' : `btn-${item.key.toLowerCase()}`;
     button.className = 'build-btn';
     button.type = 'button';
-    if (key === selectedBuildingType) button.classList.add('active');
+    if (item.selected) button.classList.add('active');
     if (isLocked) {
         button.classList.add('build-btn-locked');
         button.style.opacity = '0.22';
@@ -52,67 +41,38 @@ function createBuildButton(
         button.disabled = true;
     }
 
-    if (hotkey) {
+    if (item.hotkey) {
         const hotkeyLabel = document.createElement('div');
         hotkeyLabel.className = 'hotkey-label';
-        hotkeyLabel.innerText = hotkey;
+        hotkeyLabel.textContent = item.hotkey;
         button.appendChild(hotkeyLabel);
     }
 
     const icon = document.createElement('div');
     icon.className = 'build-swatch icon';
-    icon.style.background = `#${data.COLOR.toString(16).padStart(6, '0')}`;
+    icon.style.background = item.color;
+    if (item.key === 'REMOVE') {
+        icon.style.border = '1px solid #ff6676';
+    }
     button.appendChild(icon);
 
     const label = document.createElement('span');
     label.className = 'build-label';
-    label.innerText = CONFIG.BUILDINGS[key] ? getBuildingName(key) : getCableName(key);
+    label.textContent = item.label;
     button.appendChild(label);
 
     const costLabel = document.createElement('span');
     costLabel.className = 'build-cost';
-    costLabel.innerText = getBuildableCostText(data);
+    costLabel.textContent = item.cost;
     button.appendChild(costLabel);
 
     guardDomPointer(button);
     button.onclick = event => {
         event.preventDefault();
         event.stopPropagation();
-        onToolSelect(key);
+        onToolSelect(item.key);
     };
     return button;
-}
-
-function createRemoveButton(
-    isLocked: boolean,
-    selectedBuildingType: string,
-    guardDomPointer: (element: HTMLElement | null) => void,
-    onToolSelect: (type: string) => void
-): HTMLButtonElement {
-    const removeButton = document.createElement('button');
-    removeButton.id = 'btn-remove';
-    removeButton.className = 'build-btn';
-    removeButton.type = 'button';
-    if (selectedBuildingType === 'REMOVE') removeButton.classList.add('active');
-    if (isLocked) {
-        removeButton.classList.add('build-btn-locked');
-        removeButton.style.opacity = '0.22';
-        removeButton.style.cursor = 'not-allowed';
-        removeButton.disabled = true;
-    }
-    removeButton.innerHTML = `
-        <div class="hotkey-label">0</div>
-        <div class="build-swatch icon" style="background:#2b3038; border:1px solid #ff6676"></div>
-        <span class="build-label">${textForKey('action.remove')}</span>
-        <span class="build-cost">${textForKey('action.removeMode')}</span>
-    `;
-    guardDomPointer(removeButton);
-    removeButton.onclick = event => {
-        event.preventDefault();
-        event.stopPropagation();
-        onToolSelect('REMOVE');
-    };
-    return removeButton;
 }
 
 export function renderLegacyBuildConsole(options: LegacyBuildConsoleRenderOptions): LegacyBuildConsoleRenderResult | null {
@@ -123,19 +83,14 @@ export function renderLegacyBuildConsole(options: LegacyBuildConsoleRenderOption
     options.guardDomPointer(overlay);
     options.guardDomPointer(tabsContainer);
 
-    const displayState = createBuildConsoleDisplayState({
-        activeCategory: options.activeCategory,
-        hasFirstDefenseSuccess: options.hasFirstDefenseSuccess,
-        isGpuUnlocked: options.isGpuUnlocked,
-        isResearchUnlocked: options.isResearchUnlocked
-    });
-    const { categories, currentTabBuildings } = displayState;
+    const { categories, currentTabBuildings } = options.displayState;
+    const itemByKey = new Map(options.snapshot.items.map(item => [item.key, item]));
 
-    tabsContainer.innerHTML = '';
+    tabsContainer.replaceChildren();
     categories.forEach(category => {
         const tabButton = document.createElement('button');
         tabButton.className = `tab-btn ${category.active ? 'active' : ''}`;
-        tabButton.innerText = category.label;
+        tabButton.textContent = category.label;
         options.guardDomPointer(tabButton);
         tabButton.onclick = event => {
             event.preventDefault();
@@ -145,18 +100,16 @@ export function renderLegacyBuildConsole(options: LegacyBuildConsoleRenderOption
         tabsContainer.appendChild(tabButton);
     });
 
-    overlay.innerHTML = '';
+    overlay.replaceChildren();
     const buttons: Record<string, HTMLButtonElement> = {};
 
-    currentTabBuildings.forEach((key, index) => {
-        const data = displayState.buildableData[key];
+    currentTabBuildings.forEach(key => {
+        const item = itemByKey.get(key);
+        if (!item) return;
         const isLocked = options.allowedBuildings !== null && !options.allowedBuildings.includes(key);
         const button = createBuildButton(
-            key,
-            data,
-            index < options.hotkeys.length ? options.hotkeys[index] : undefined,
+            item,
             isLocked,
-            options.selectedBuildingType,
             options.guardDomPointer,
             options.onToolSelect
         );
@@ -164,18 +117,21 @@ export function renderLegacyBuildConsole(options: LegacyBuildConsoleRenderOption
         buttons[key] = button;
     });
 
-    const removeButton = createRemoveButton(
-        options.allowedBuildings !== null && !options.allowedBuildings.includes('REMOVE'),
-        options.selectedBuildingType,
-        options.guardDomPointer,
-        options.onToolSelect
-    );
-    overlay.appendChild(removeButton);
-    buttons.REMOVE = removeButton;
+    const removeItem = itemByKey.get('REMOVE');
+    if (removeItem) {
+        const removeButton = createBuildButton(
+            removeItem,
+            options.allowedBuildings !== null && !options.allowedBuildings.includes('REMOVE'),
+            options.guardDomPointer,
+            options.onToolSelect
+        );
+        overlay.appendChild(removeButton);
+        buttons.REMOVE = removeButton;
+    }
 
     return {
         buttons,
-        buildableData: displayState.buildableData,
+        buildableData: options.displayState.buildableData,
         categories,
         currentTabBuildings
     };
@@ -185,9 +141,9 @@ export function updateLegacySelectedToolPanel(name: string, cost: string, hint: 
     const nameEl = document.getElementById('selected-tool-name');
     const costEl = document.getElementById('selected-tool-cost');
     const hintEl = document.getElementById('selected-tool-hint');
-    if (nameEl) nameEl.innerText = name;
-    if (costEl) costEl.innerText = cost;
-    if (hintEl) hintEl.innerText = hint;
+    if (nameEl) nameEl.textContent = name;
+    if (costEl) costEl.textContent = cost;
+    if (hintEl) hintEl.textContent = hint;
 }
 
 export function updateLegacyBuildSelection(

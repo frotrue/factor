@@ -14,12 +14,15 @@
 .log-entry[data-preact-shadow="true"],
 #tooltip[data-preact-shadow="true"],
 #mobile-info-sheet[data-preact-shadow="true"],
-#tutorial-panel[data-preact-shadow="true"] {
+#tutorial-panel[data-preact-shadow="true"],
+#info-layer[data-preact-shadow="true"] {
     visibility: hidden;
     pointer-events: none;
 }
 
+body:not(.mobile-layout) #hud-top-bar[data-preact-shadow="true"],
 body:not(.mobile-layout) #top-hud[data-preact-shadow="true"],
+body:not(.mobile-layout) #top-actions[data-preact-shadow="true"],
 body:not(.mobile-layout) #hud-right-rail[data-preact-shadow="true"],
 body:not(.mobile-layout) #bottom-ui-container[data-preact-shadow="true"],
 body:not(.mobile-layout) #build-console[data-preact-shadow="true"] {
@@ -1191,8 +1194,36 @@ body.mobile-layout #build-console[data-preact-shadow="true"] {
 }
 
 @media (max-width: 520px) {
+    body.mobile-layout #hud-top-bar {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+    }
+
     body.mobile-layout #top-hud {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    body.mobile-layout #top-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    body.mobile-layout .hud-value {
+        font-size: 12px;
+        line-height: 1.15;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    body.mobile-layout .icon-action-btn {
+        min-width: 0;
+        min-height: 34px;
+        padding: 4px 6px;
+    }
+
+    body.mobile-layout #hud-right-rail {
+        top: calc(210px + env(safe-area-inset-top, 0px));
     }
 }
 
@@ -1216,6 +1247,35 @@ body.mobile-layout #build-console[data-preact-shadow="true"] {
 
     body.mobile-layout #ui-overlay {
         padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.mobile-layout #hud-right-rail {
+        top: calc(78px + env(safe-area-inset-top, 0px));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: 118px;
+        overflow: hidden;
+    }
+
+    body.mobile-layout .tactical-panel {
+        padding: 7px 10px;
+    }
+
+    body.mobile-layout .panel-title {
+        font-size: 18px;
+        line-height: 1.05;
+    }
+
+    body.mobile-layout .panel-detail {
+        max-height: 34px;
+        overflow: hidden;
+        font-size: 11px;
+        line-height: 1.25;
+    }
+
+    body.mobile-layout .panel-chip {
+        margin-top: 5px;
+        font-size: 10px;
+        line-height: 1.1;
     }
 
     body.mobile-layout .build-btn {

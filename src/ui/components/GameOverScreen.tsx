@@ -12,6 +12,10 @@ export default function GameOverScreen() {
     const snapshot = gameOverScreen.value;
     if (!snapshot.open) return null;
 
+    const titleId = 'preact-game-over-title';
+    const failureId = 'preact-game-over-failure-code';
+    const panelId = 'preact-game-over-panel';
+    const actionsId = 'preact-game-over-actions';
     const toneClass = {
         cyan: styles.cyan,
         danger: styles.danger,
@@ -22,19 +26,22 @@ export default function GameOverScreen() {
 
     return (
         <section
-            aria-labelledby="preact-game-over-title"
+            aria-describedby={failureId}
+            aria-labelledby={titleId}
             aria-modal="true"
             class={styles.screen}
             data-testid="preact-game-over-screen"
             role="dialog"
         >
-            <div class={styles.panel} id="preact-game-over-panel">
+            <div class={styles.panel} data-testid="preact-game-over-panel" id={panelId}>
                 <div class={styles.header}>
                     <div>
                         <div class={styles.kicker}>{snapshot.kicker}</div>
-                        <h2 class={styles.title} id="preact-game-over-title">{snapshot.title}</h2>
+                        <h2 class={styles.title} data-testid="preact-game-over-title" id={titleId}>{snapshot.title}</h2>
                     </div>
-                    <div class={styles.failureCode}>{snapshot.failureCode}</div>
+                    <div class={styles.failureCode} data-testid="preact-game-over-failure-code" id={failureId}>
+                        {snapshot.failureCode}
+                    </div>
                 </div>
                 <div class={styles.integrity}>
                     <span>{snapshot.integrityLabel}</span>
@@ -79,8 +86,15 @@ export default function GameOverScreen() {
                         <span style={{ width: `${modelStrength}%` }} />
                     </div>
                 </div>
-                <div class={styles.actions}>
+                <div
+                    aria-label={snapshot.title}
+                    class={styles.actions}
+                    data-testid="preact-game-over-actions"
+                    id={actionsId}
+                    role="group"
+                >
                     <Button
+                        ariaControls={panelId}
                         className={styles.action}
                         dataTestId="preact-game-over-restart"
                         onClick={event => {
@@ -92,6 +106,7 @@ export default function GameOverScreen() {
                         {snapshot.restartLabel}
                     </Button>
                     <Button
+                        ariaControls={panelId}
                         className={styles.action}
                         dataTestId="preact-game-over-main-menu"
                         onClick={event => {

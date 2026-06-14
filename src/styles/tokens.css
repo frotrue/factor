@@ -51,6 +51,21 @@
     --transition-fast: 0.12s ease;
     --transition-base: 0.2s ease;
     --transition-slow: 0.35s ease;
+
+    /* Compatibility aliases for legacy fallback CSS while migration is in progress. */
+    --neon-cyan: var(--holo-cyan);
+    --neon-magenta: var(--holo-magenta);
+    --neon-green: var(--holo-green);
+    --bg-dark: var(--bg-void);
+    --surface-strong: var(--bg-surface);
+    --surface-panel: var(--bg-panel);
+    --surface-panel-soft: var(--bg-elevated);
+    --surface-hover: var(--bg-panel-hover);
+    --text-main: var(--text-primary);
+    --text-muted: var(--text-secondary);
+    --state-warning: var(--holo-amber);
+    --state-danger: var(--holo-red);
+    --state-success: var(--holo-green);
 }
 
 #preact-hud {

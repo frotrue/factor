@@ -103,8 +103,8 @@ const STORAGE_STEP = 'gradium_tutorial_step';
             this.transitionToCampaign();
         }
 
-        // Sync HUD buttons when tutorial is skipped/completed
-        this.scene.uiManager?.createBuildingButtons?.();
+        // Sync build controls when tutorial is skipped/completed.
+        this.requestBuildConsoleRefresh();
         this.render();
     }
 
@@ -216,16 +216,24 @@ const STORAGE_STEP = 'gradium_tutorial_step';
 
         this.steps = completeTutorialStep(this.steps, id);
         this.persistProgress();
-        this.scene.uiManager.logMessage(t('tutorial.stepComplete' as any, { title: step.title }));
+        this.logMessage(t('tutorial.stepComplete' as any, { title: step.title }));
 
         if (this.steps.every(item => item.completed)) {
             this.completed = true;
             this.persistProgress();
-            this.scene.uiManager.logMessage(t('tutorial.completeDetail'));
-            this.scene.uiManager?.createBuildingButtons?.();
+            this.logMessage(t('tutorial.completeDetail'));
+            this.requestBuildConsoleRefresh();
             this.transitionToCampaign();
         }
         this.render();
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
+    }
+
+    private requestBuildConsoleRefresh(): void {
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
     }
 
     private transitionToCampaign(): void {
@@ -304,8 +312,8 @@ const STORAGE_STEP = 'gradium_tutorial_step';
                 () => this.completeAll({ transitionToCampaign: true })
             );
 
-            // Sync UIManager building buttons whenever active step locks change
-            this.scene.uiManager?.createBuildingButtons?.();
+            // Sync build controls whenever active step locks change.
+            this.requestBuildConsoleRefresh();
 
             // Run retro console terminal typing simulation
             this.typeText(display.legacyPanel.detail, 'tutorial-typewriter');

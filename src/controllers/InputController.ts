@@ -84,7 +84,7 @@ export default class InputController {
         const element = document.elementFromPoint(pointer.x, pointer.y);
         if (!element) return false;
 
-        return Boolean(element.closest([
+        const uiElement = element.closest<HTMLElement>([
             '#bottom-ui-container',
             '#ui-overlay',
             '#ui-tabs',
@@ -103,7 +103,10 @@ export default class InputController {
             '.mobile-action-btn',
             '.mobile-cable-option',
             '.training-target-row'
-        ].join(',')));
+        ].join(','));
+        if (!uiElement) return false;
+
+        return !Boolean(uiElement.closest('[data-preact-shadow="true"][aria-hidden="true"]'));
     }
 
     setupCursor(): void {
@@ -139,11 +142,23 @@ export default class InputController {
         scene.cableStartKey = null;
         scene.cableDraftGraphics?.clear();
         if (wasCablePending) {
-            scene.uiManager.logMessage('System: Cable connection cancelled.');
+            this.logMessage('System: Cable connection cancelled.');
         }
-        scene.uiManager.setMobileActionStatus(null);
-        scene.uiManager.cancelMobileAction();
+        EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+        EventBus.emit('MOBILE_ACTION_CANCEL_REQUESTED');
         this.invalidateCursorCache();
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
+    }
+
+    private showTooltip(x: number, y: number, title: string, content: string): void {
+        EventBus.emit('TOOLTIP_SHOW_REQUESTED', { x, y, title, content });
+    }
+
+    private hideTooltip(): void {
+        EventBus.emit('TOOLTIP_CLOSE_REQUESTED');
     }
 
     updateCursorPosition(): void {
@@ -155,7 +170,7 @@ export default class InputController {
         scene.cursorContainer.setPosition(snappedX, snappedY);
 
         const key = `${snappedX},${snappedY}`;
-        const mode = scene.uiManager.getSelectedBuildingType();
+        const mode = scene.selectedBuildingType;
 
         if (
             !scene.isMobileLayout &&
@@ -297,19 +312,19 @@ export default class InputController {
                 content += `\n${textForKey('tooltip.attackInput')}: ${textForKey('tooltip.modelAccuracy')}`;
             }
 
-            scene.uiManager.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
+            this.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
         } else {
             const resourceType = scene.mapManager.getResourceAt(snappedX, snappedY);
             const terrainType = scene.mapManager.getTerrainAt(snappedX, snappedY);
             if (resourceType) {
                 const resourceName = getItemName(resourceType);
-                scene.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `${textForKey('tooltip.type')}: ${resourceType}`);
+                this.showTooltip(pointer.x, pointer.y, resourceName, `${textForKey('tooltip.type')}: ${resourceType}`);
             } else if (terrainType === 'BLOCKER') {
                 const title = textForKey('terrain.BLOCKER.name');
                 const content = `${textForKey('tooltip.type')}: ${textForKey('tooltip.terrain')}\n${textForKey('tooltip.blockerDescription')}`;
-                scene.uiManager.showTooltip(pointer.x, pointer.y, title, content);
+                this.showTooltip(pointer.x, pointer.y, title, content);
             } else {
-                scene.uiManager.hideTooltip();
+                this.hideTooltip();
             }
         }
     }
@@ -411,7 +426,7 @@ export default class InputController {
         const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         const key = `${snappedX},${snappedY}`;
         const normalizedKey = scene.cableManager.normalizeKey(key, scene.buildingManager);
-        const mode = scene.uiManager.getSelectedBuildingType();
+        const mode = scene.selectedBuildingType;
 
         if (button === 'primary') {
             if (mode === 'REMOVE') {
@@ -419,7 +434,7 @@ export default class InputController {
                     const cables = scene.cableManager.getCablesForBuilding(normalizedKey);
                     if (cables.length > 0) {
                         cables.forEach(c => scene.cableManager.disconnect(c.id, true));
-                        scene.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
+                        this.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                     } else {
                         scene.buildingManager.remove(key);
                     }
@@ -432,20 +447,20 @@ export default class InputController {
                     if (scene.cableState === 'IDLE') {
                         scene.cableState = 'CABLE_START';
                         scene.cableStartKey = normalizedKey;
-                        scene.uiManager.setMobileActionStatus(t('action.cableEndpoint'));
-                        scene.uiManager.logMessage('System: Cable start selected. Choose an endpoint.');
+                        EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: t('action.cableEndpoint') });
+                        this.logMessage('System: Cable start selected. Choose an endpoint.');
                     } else if (scene.cableState === 'CABLE_START') {
                         if (scene.cableStartKey === normalizedKey) {
-                            scene.uiManager.logMessage('System: Select a different building for the cable endpoint.', true);
+                            this.logMessage('System: Select a different building for the cable endpoint.', true);
                             return;
                         }
                         if (scene.cableStartKey !== normalizedKey) {
                             const validation = scene.cableManager.canConnect(scene.cableStartKey!, normalizedKey, mode);
                             if (!validation.ok) {
-                                scene.uiManager.logMessage(this.getCableValidationMessage(validation), true);
+                                this.logMessage(this.getCableValidationMessage(validation), true);
                                 scene.cableState = 'IDLE';
                                 scene.cableStartKey = null;
-                                scene.uiManager.setMobileActionStatus(null);
+                                EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
                                 return;
                             }
                             if (validation.cost > 0) {
@@ -453,8 +468,8 @@ export default class InputController {
                                 if (!canAfford) {
                                     scene.cableState = 'IDLE';
                                     scene.cableStartKey = null;
-                                    scene.uiManager.setMobileActionStatus(null);
-                                    scene.uiManager.logMessage(`System: Not enough Silicon for cable. Need: ${validation.cost}`, true);
+                                    EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+                                    this.logMessage(`System: Not enough Silicon for cable. Need: ${validation.cost}`, true);
                                     return;
                                 }
                             }
@@ -462,33 +477,33 @@ export default class InputController {
                                 if (validation.cost > 0) {
                                     scene.inventoryManager.spend([{ resource: 'SILICON', amount: validation.cost }]);
                                 }
-                                scene.uiManager.logMessage(`System: Cable connected. Cost: ${validation.cost} Silicon.`);
+                                this.logMessage(`System: Cable connected. Cost: ${validation.cost} Silicon.`);
                             } else {
-                                scene.uiManager.logMessage(`System: Cable connection failed.`, true);
+                                this.logMessage(`System: Cable connection failed.`, true);
                             }
                         }
                         scene.cableState = 'IDLE';
                         scene.cableStartKey = null;
-                        scene.uiManager.setMobileActionStatus(null);
+                        EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
                     }
                 } else if (scene.cableState === 'CABLE_START') {
                     scene.cableState = 'IDLE';
                     scene.cableStartKey = null;
-                    scene.uiManager.setMobileActionStatus(null);
-                    scene.uiManager.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
+                    EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+                    this.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
                 } else if (!isUnlocked) {
-                    scene.uiManager.logMessage(t('log.cableLocked', { name: getCableName(mode) }), true);
+                    this.logMessage(t('log.cableLocked', { name: getCableName(mode) }), true);
                 } else {
-                    scene.uiManager.logMessage('System: Select a building to start the cable.', true);
+                    this.logMessage('System: Select a building to start the cable.', true);
                 }
             } else {
                 scene.cableState = 'IDLE';
                 scene.cableStartKey = null;
-                scene.uiManager.setMobileActionStatus(null);
+                EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
 
                 const existingBuilding = scene.buildingManager.get(key);
                 if (existingBuilding instanceof ModelTrainingLab) {
-                    scene.uiManager.openTrainingLab(existingBuilding);
+                    EventBus.emit('TRAINING_LAB_OPEN_REQUESTED', { lab: existingBuilding });
                     return;
                 }
                 if (existingBuilding instanceof NeuralTrainer) {
@@ -509,13 +524,13 @@ export default class InputController {
         } else if (button === 'secondary') {
             scene.cableState = 'IDLE';
             scene.cableStartKey = null;
-            scene.uiManager.setMobileActionStatus(null);
+            EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
 
             if ((mode === 'BASIC' || mode === 'FIBER') && scene.buildingManager.has(key)) {
                 const cables = scene.cableManager.getCablesForBuilding(normalizedKey);
                 if (cables.length > 0) {
                     cables.forEach(c => scene.cableManager.disconnect(c.id, true));
-                    scene.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
+                    this.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                 }
             } else if (scene.buildingManager.has(key)) {
                 scene.buildingManager.remove(key);

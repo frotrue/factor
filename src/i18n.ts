@@ -808,7 +808,7 @@ export function textForKey(key: string, values: Record<string, string | number> 
 
 export function translateStaticDom(root: ParentNode = document): void {
     root.querySelectorAll<HTMLElement>('[data-i18n]').forEach(element => {
-        element.innerText = textForKey(element.dataset.i18n || '');
+        element.textContent = textForKey(element.dataset.i18n || '');
     });
     document.documentElement.lang = currentLanguage;
 }

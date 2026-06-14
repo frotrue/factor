@@ -7,6 +7,10 @@ export interface GameOverDisplayPayload {
     snapshot: GameOverSnapshot;
 }
 
+export type GameOverStatDisplay = GameOverSnapshot['stats'][number] & {
+    legacyLine: string;
+};
+
 export function createGameOverDisplayPayload(summary: RunResultSummary): GameOverDisplayPayload {
     return {
         legacyStatLines: createLegacyGameOverStatLines(summary),
@@ -14,19 +18,61 @@ export function createGameOverDisplayPayload(summary: RunResultSummary): GameOve
     };
 }
 
+export function createGameOverStatDisplays(summary: RunResultSummary): GameOverStatDisplay[] {
+    return [
+        {
+            id: 'wave',
+            label: textForKey('gameOver.statLabel.wave'),
+            value: String(summary.wave),
+            tone: 'warn',
+            legacyLine: textForKey('gameOver.stat.wave', { wave: summary.wave })
+        },
+        {
+            id: 'core',
+            label: textForKey('gameOver.statLabel.core'),
+            value: `${summary.coreHpPercent}%`,
+            tone: getGameOverCoreTone(summary.coreHpPercent),
+            legacyLine: textForKey('gameOver.stat.core', { percent: summary.coreHpPercent })
+        },
+        {
+            id: 'data',
+            label: textForKey('gameOver.statLabel.data'),
+            value: String(summary.totalDataReceived),
+            tone: 'cyan',
+            legacyLine: textForKey('gameOver.stat.data', { amount: summary.totalDataReceived })
+        },
+        {
+            id: 'research',
+            label: textForKey('gameOver.statLabel.research'),
+            value: String(summary.unlockedResearchCount),
+            tone: 'green',
+            legacyLine: textForKey('gameOver.stat.research', { count: summary.unlockedResearchCount })
+        }
+    ];
+}
+
+export function createGameOverStats(summary: RunResultSummary): GameOverSnapshot['stats'] {
+    return createGameOverStatDisplays(summary).map(({ legacyLine, ...stat }) => stat);
+}
+
+export function getGameOverCoreTone(coreHpPercent: number): GameOverSnapshot['stats'][number]['tone'] {
+    return coreHpPercent <= 25 ? 'danger' : 'warn';
+}
+
 export function createLegacyGameOverStatLines(summary: RunResultSummary): string[] {
     return [
-        textForKey('gameOver.stat.wave', { wave: summary.wave }),
-        textForKey('gameOver.stat.core', { percent: summary.coreHpPercent }),
-        textForKey('gameOver.stat.data', { amount: summary.totalDataReceived }),
-        textForKey('gameOver.stat.research', { count: summary.unlockedResearchCount }),
-        textForKey('gameOver.stat.model', {
-            name: summary.bestModelName,
-            confidence: summary.bestModelAccuracy,
-            damage: summary.bestModelDamageBonus,
-            version: summary.bestModelVersion
-        })
+        ...createGameOverStatDisplays(summary).map(stat => stat.legacyLine),
+        createGameOverModelStatLine(summary)
     ];
+}
+
+export function createGameOverModelStatLine(summary: RunResultSummary): string {
+    return textForKey('gameOver.stat.model', {
+        name: summary.bestModelName,
+        confidence: summary.bestModelAccuracy,
+        damage: summary.bestModelDamageBonus,
+        version: summary.bestModelVersion
+    });
 }
 
 export function createGameOverSnapshot(summary: RunResultSummary): GameOverSnapshot {
@@ -44,32 +90,7 @@ export function createGameOverSnapshot(summary: RunResultSummary): GameOverSnaps
         }),
         restartLabel: textForKey('gameOver.restart'),
         mainMenuLabel: textForKey('gameOver.mainMenu'),
-        stats: [
-            {
-                id: 'wave',
-                label: textForKey('gameOver.statLabel.wave'),
-                value: String(summary.wave),
-                tone: 'warn'
-            },
-            {
-                id: 'core',
-                label: textForKey('gameOver.statLabel.core'),
-                value: `${summary.coreHpPercent}%`,
-                tone: summary.coreHpPercent <= 25 ? 'danger' : 'warn'
-            },
-            {
-                id: 'data',
-                label: textForKey('gameOver.statLabel.data'),
-                value: String(summary.totalDataReceived),
-                tone: 'cyan'
-            },
-            {
-                id: 'research',
-                label: textForKey('gameOver.statLabel.research'),
-                value: String(summary.unlockedResearchCount),
-                tone: 'green'
-            }
-        ],
+        stats: createGameOverStats(summary),
         wave: summary.wave,
         coreHpPercent: summary.coreHpPercent,
         totalDataReceived: summary.totalDataReceived,

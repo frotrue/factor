@@ -22,8 +22,10 @@ import { tutorialPanel } from './tutorialState';
 
 const OWNER = 'PreactHudBridge';
 let waveResultCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let activeDisconnect: (() => void) | null = null;
 
 export function connectGameStateBridge(): () => void {
+    activeDisconnect?.();
     EventBus.offAll(OWNER);
     const languageChangeHandler = () => {
         gameState.language.value = getLanguage();
@@ -99,12 +101,16 @@ export function connectGameStateBridge(): () => void {
         applyHudSnapshot(createWaveTimerHudSnapshot(data.timer));
     }, OWNER);
 
-    return () => {
+    const disconnect = () => {
+        if (activeDisconnect !== disconnect) return;
         EventBus.offAll(OWNER);
         window.removeEventListener('languagechange', languageChangeHandler);
         if (waveResultCloseTimer) clearTimeout(waveResultCloseTimer);
         waveResultCloseTimer = null;
+        activeDisconnect = null;
     };
+    activeDisconnect = disconnect;
+    return disconnect;
 }
 
 function applyHudSnapshot(snapshot: HudSnapshot): void {

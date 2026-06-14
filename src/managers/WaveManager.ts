@@ -196,8 +196,7 @@ export default class WaveManager {
             // If it's a boss wave and it's the last enemy to spawn, make it a boss
             if (!typeOverride && isBossWave && this.enemiesSpawned === this.enemiesToSpawn) {
                 type = 'OVERFITTED_MODEL';
-                const uiManager = this.scene.uiManager;
-                if (uiManager) uiManager.logMessage('System: WARNING - Overfitted Model detected!', true);
+                this.logMessage('System: WARNING - Overfitted Model detected!', true);
             } else if (!typeOverride) {
                 if (this.currentWave > 5 && Math.random() < 0.3) type = 'MALWARE';
                 if (this.currentWave > 15 && Math.random() < 0.2) type = 'ADVERSARIAL';
@@ -217,8 +216,7 @@ export default class WaveManager {
     spawnDdosSwarm(): void {
         if (this.ddosSwarmSpawned || this.ddosBotsToSpawn <= 0) return;
         this.ddosSwarmSpawned = true;
-        const uiManager = this.scene.uiManager;
-        if (uiManager) uiManager.logMessage(`System: DDoS swarm detected (${this.ddosBotsToSpawn} packets)!`, true);
+        this.logMessage(`System: DDoS swarm detected (${this.ddosBotsToSpawn} packets)!`, true);
         for (let i = 0; i < this.ddosBotsToSpawn; i++) {
             this.spawnEnemy('DDOS_BOT');
         }
@@ -338,9 +336,8 @@ export default class WaveManager {
             }
         });
 
-        const uiManager = this.scene.uiManager;
-        if (uiManager && remaining < amount) {
-            uiManager.logMessage(`System: Recovered ${amount - remaining} Silicon from enemy residue.`);
+        if (remaining < amount) {
+            this.logMessage(`System: Recovered ${amount - remaining} Silicon from enemy residue.`);
         }
     }
 
@@ -351,8 +348,11 @@ export default class WaveManager {
 
         this.ddosRewardGranted = true;
         this.grantSiliconReward(5);
-        const uiManager = this.scene.uiManager;
-        if (uiManager) uiManager.logMessage('System: DDoS swarm scrubbed. Silicon bounty recovered.');
+        this.logMessage('System: DDoS swarm scrubbed. Silicon bounty recovered.');
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
     }
 
     getEnemiesInRange(x: number, y: number, range: number): BaseEnemy[] {

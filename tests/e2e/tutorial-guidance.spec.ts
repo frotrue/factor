@@ -4,12 +4,9 @@ async function startGame(page: Page): Promise<void> {
     const viewport = page.viewportSize()!;
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
-    await page.waitForFunction(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainMenuScene') as any;
-        return scene?.children?.list?.some((child: any) =>
-            child.text === '> 시스템 초기화 <' || child.text === '> Initialize System <'
-        );
-    });
+    await page.waitForFunction(() => window.__GRADIUM_GAME__?.scene.isActive('MainMenuScene'));
+    await expect(page.getByTestId('preact-main-menu')).toBeVisible();
+    await expect(page.locator('#preact-main-menu-start')).toBeVisible();
 
     const isCompact = viewport.width < 600 || viewport.height < 520;
     const preactStart = page.locator('#preact-main-menu-start');
@@ -22,11 +19,12 @@ async function startGame(page: Page): Promise<void> {
         await expect(page.locator('#top-hud')).toBeAttached();
         await expect(page.locator('#top-hud')).toBeHidden();
         await expect(page.locator('#top-hud')).toHaveAttribute('data-preact-shadow', 'true');
+        await expect(page.getByTestId('preact-top-bar')).toBeVisible();
     } else {
         await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
         await expect(page.locator('#top-hud')).toBeVisible();
+        await expect(page.getByTestId('preact-top-bar')).toBeAttached();
     }
-    await expect(page.getByTestId('preact-top-bar')).toBeVisible();
     if (viewport.width > 1180) {
         await expect(page.getByTestId('preact-tutorial-panel')).toBeVisible();
     } else {

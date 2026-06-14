@@ -57,7 +57,7 @@ export function ensureLegacyMobileRefs(guardDomPointer: (element: HTMLElement | 
 }
 
 export function renderLegacyMobileActions(refs: LegacyMobileRefs, actions: LegacyMobileAction[]): void {
-    refs.actionBar.innerHTML = '';
+    refs.actionBar.replaceChildren();
     refs.actionBar.appendChild(refs.cableMenu);
 
     actions.forEach(action => {
@@ -78,7 +78,7 @@ export function renderLegacyMobileActions(refs: LegacyMobileRefs, actions: Legac
 }
 
 export function renderLegacyMobileCableMenu(refs: LegacyMobileRefs, options: LegacyMobileCableOption[]): void {
-    refs.cableMenu.innerHTML = '';
+    refs.cableMenu.replaceChildren();
     options.forEach(option => {
         const button = document.createElement('button');
         button.className = 'mobile-cable-option';
@@ -115,6 +115,14 @@ export function syncLegacyMobileShadowState(
             element.removeAttribute('aria-hidden');
         }
     });
+    refs.actionBar.querySelectorAll<HTMLButtonElement>('button').forEach(button => {
+        button.disabled = shadow;
+        if (shadow) {
+            button.setAttribute('tabindex', '-1');
+        } else {
+            button.removeAttribute('tabindex');
+        }
+    });
 }
 
 export function updateLegacyMobileActionState(activeMap: Record<string, boolean>): void {
@@ -133,8 +141,9 @@ export function updateLegacyMobileBuildSummary(
         refs.buildSummary.textContent = '';
         return;
     }
-    refs.buildSummary.innerHTML = `
-        <strong>${summary.title}</strong>
-        <span>${summary.detail}</span>
-    `;
+    const title = document.createElement('strong');
+    title.textContent = summary.title;
+    const detail = document.createElement('span');
+    detail.textContent = summary.detail;
+    refs.buildSummary.replaceChildren(title, detail);
 }

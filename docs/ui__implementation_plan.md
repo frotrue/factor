@@ -155,7 +155,7 @@ export default defineConfig({
 - `batch()`로 다중 signal 쓰기를 하나의 렌더 사이클로 묶음
 - Preact → Phaser 역방향은 콜백 함수 signal로 처리 (건물 선택, 설정 변경 등)
 
-#### [MODIFY] [UIManager.ts](file:///c:/Users/user/Desktop/projects/factor/src/managers/UIManager.ts)
+#### [MODIFY] [UIManager.ts](file:///c:/Users/user/Desktop/react/factor/src/ui/UIManager.ts)
 - HUD stat 업데이트 (`scoreEl`, `powerEl` 등)를 EventBus emit으로 교체
 - 기존 DOM 직접 조작 코드를 signal bridge로 리다이렉트
 - 일단 기존 기능은 유지하면서 신호 발행만 추가 (dual-write)
@@ -192,7 +192,7 @@ export default defineConfig({
 - 건물 선택, 카테고리, 건물 목록, 비용 등 빌드 UI 전용 signal
 - Preact → Phaser 역방향: `selectedBuildingType` signal 변경 시 EventBus emit
 
-#### [MODIFY] [UIManager.ts](file:///c:/Users/user/Desktop/projects/factor/src/managers/UIManager.ts)
+#### [MODIFY] [UIManager.ts](file:///c:/Users/user/Desktop/react/factor/src/ui/UIManager.ts)
 - `createBuildingButtons()` 로직을 signals/buildState로 이전
 - DOM 직접 생성 코드 제거, Preact 컴포넌트로 대체
 - 기존 hotkey 바인딩은 유지 (Phaser input)
@@ -267,7 +267,7 @@ export default defineConfig({
 - 타이프라이터 효과 유지
 - Phaser 가이드 하이라이트(Graphics)는 그대로 유지
 
-#### [MODIFY] [UIManager.ts](file:///c:/Users/user/Desktop/projects/factor/src/managers/UIManager.ts)
+#### [MODIFY] [UIManager.ts](file:///c:/Users/user/Desktop/react/factor/src/ui/UIManager.ts)
 - 최종 축소: Phaser ↔ DOM 이벤트 중개만 담당하는 얇은 레이어로 변환
 - 또는 bridge.ts로 완전 대체 후 제거
 
@@ -289,6 +289,7 @@ src/
 ├── ui/                              # ← 새 Preact UI 레이어
 │   ├── mountHud.tsx                 # Preact 마운트 진입점
 │   ├── HudApp.tsx                   # 최상위 조합 컴포넌트
+│   ├── UIManager.ts                 # DOM UI controller 조립 shell
 │   ├── signals/
 │   │   ├── gameState.ts             # 게임 상태 signals
 │   │   ├── buildState.ts            # 빌드 UI signals
@@ -318,10 +319,6 @@ src/
 │   ├── tokens.css                   # 디자인 토큰 (글로벌)
 │   └── main.css                     # 리셋 + 글로벌 유틸리티 (~100줄)
 ├── managers/
-│   ├── UIManager.ts                 # 축소: 이벤트 중개만 또는 제거
-│   ├── MobileUIManager.ts           # → Preact로 이전 후 제거
-│   ├── SettingsUI.ts                # → Preact로 이전 후 제거
-│   ├── TrainingLabUI.ts             # → Preact로 이전 후 제거
 │   ├── ResearchUI.ts                # → 제거 (이미 no-op)
 │   └── ... (나머지 매니저는 변경 없음)
 ├── scenes/

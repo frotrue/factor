@@ -26,30 +26,30 @@ export function getLegacyTopHudRefs(): LegacyTopHudRefs {
 }
 
 export function updateLegacyScore(refs: LegacyTopHudRefs, score: number): void {
-    if (refs.scoreEl) refs.scoreEl.innerText = String(score);
+    if (refs.scoreEl) refs.scoreEl.textContent = String(score);
 }
 
 export function updateLegacyPower(refs: LegacyTopHudRefs, data: LegacyPowerDisplay): void {
     if (!refs.powerEl) return;
 
     const networkText = data.networks ? ` | ${data.networks.length} grids` : '';
-    refs.powerEl.innerText = `${data.production} / ${data.consumption} W${networkText}`;
+    refs.powerEl.textContent = `${data.production} / ${data.consumption} W${networkText}`;
     refs.powerEl.style.color = data.isDeficit ? '#ef4444' : '#fde047';
     refs.powerEl.style.textShadow = data.isDeficit ? '0 0 10px #ef4444' : '0 0 10px #fde047';
 }
 
 export function updateLegacyWave(refs: LegacyTopHudRefs, wave: number): void {
-    if (refs.waveEl) refs.waveEl.innerText = String(wave);
+    if (refs.waveEl) refs.waveEl.textContent = String(wave);
 }
 
 export function updateLegacyWaveTimer(refs: LegacyTopHudRefs, waveTimer: string): void {
-    if (refs.waveTimerEl) refs.waveTimerEl.innerText = waveTimer;
+    if (refs.waveTimerEl) refs.waveTimerEl.textContent = waveTimer;
 }
 
 export function updateLegacyPackets(refs: LegacyTopHudRefs, packets: number): void {
-    if (refs.packetsEl) refs.packetsEl.innerText = String(packets);
+    if (refs.packetsEl) refs.packetsEl.textContent = String(packets);
 }
 
 export function updateLegacySilicon(refs: LegacyTopHudRefs, silicon: number): void {
-    if (refs.siliconEl) refs.siliconEl.innerText = String(silicon);
+    if (refs.siliconEl) refs.siliconEl.textContent = String(silicon);
 }

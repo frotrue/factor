@@ -34,42 +34,53 @@ async function startGame(page: Page): Promise<void> {
     } else {
         await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
         await expect(page.locator('#top-hud')).toBeVisible();
+        await expect(page.locator('#btn-settings')).toBeEnabled();
+        await expect(page.locator('#btn-settings')).not.toHaveAttribute('tabindex', '-1');
         const shortLandscape = viewport.width > viewport.height && viewport.height <= 480;
         if (shortLandscape) {
             await expect(page.locator('#bottom-ui-container')).toBeVisible();
             await expect(page.locator('#build-console')).toBeVisible();
+            await expect(page.locator('#ui-tabs button').first()).toBeEnabled();
+            await expect(page.locator('#ui-tabs button').first()).not.toHaveAttribute('tabindex', '-1');
         } else {
             await expect(page.locator('#bottom-ui-container')).toBeHidden();
             await expect(page.locator('#build-console')).toBeHidden();
             await expect(page.locator('#bottom-ui-container')).toHaveAttribute('data-preact-shadow', 'true');
             await expect(page.locator('#build-console')).toHaveAttribute('data-preact-shadow', 'true');
+            await expect(page.locator('#ui-tabs button').first()).toBeDisabled();
+            await expect(page.locator('#ui-tabs button').first()).toHaveAttribute('tabindex', '-1');
             await expect(page.getByTestId('preact-build-console')).toBeVisible();
         }
         await expect(page.locator('#mission-panel')).toBeVisible();
         await expect(page.locator('#threat-panel')).toBeVisible();
     }
     await expect(page.locator('#info-layer')).toBeAttached();
+    await expect(page.locator('#info-layer')).toBeHidden();
+    await expect(page.locator('#info-layer')).toHaveAttribute('data-preact-shadow', 'true');
+    await expect(page.locator('#info-layer')).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('#ui-overlay .build-btn').first()).toBeAttached();
     await page.waitForFunction(() => document.getElementById('btn-settings')?.dataset.pointerGuarded === 'true');
 }
 
 async function waitForMainMenu(page: Page): Promise<void> {
-    await page.waitForFunction(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainMenuScene') as any;
-        return scene?.children?.list?.some((child: any) =>
-            child.text === '> 시스템 초기화 <' || child.text === '> Initialize System <'
-        );
-    });
+    await page.waitForFunction(() => window.__GRADIUM_GAME__?.scene.isActive('MainMenuScene'));
+    await expect(page.getByTestId('preact-main-menu')).toBeVisible();
+    await expect(page.locator('#preact-main-menu-start')).toBeVisible();
 }
 
 async function expectLegacyHudShellShadow(page: Page): Promise<void> {
-    for (const selector of ['#top-hud', '#hud-right-rail', '#bottom-ui-container', '#build-console']) {
+    await expect(page.locator('#game-hud-shell')).toBeAttached();
+    for (const selector of ['#hud-top-bar', '#top-hud', '#top-actions', '#hud-right-rail', '#bottom-ui-container', '#build-console']) {
         const legacy = page.locator(selector);
         await expect(legacy).toBeAttached();
         await expect(legacy).toBeHidden();
         await expect(legacy).toHaveAttribute('data-preact-shadow', 'true');
         await expect(legacy).toHaveAttribute('aria-hidden', 'true');
     }
+    await expect(page.locator('#ui-tabs button').first()).toBeDisabled();
+    await expect(page.locator('#ui-tabs button').first()).toHaveAttribute('tabindex', '-1');
+    await expect(page.locator('#btn-settings')).toBeDisabled();
+    await expect(page.locator('#btn-settings')).toHaveAttribute('tabindex', '-1');
 }
 
 async function expectLegacySettingsShadow(page: Page): Promise<void> {
@@ -78,6 +89,10 @@ async function expectLegacySettingsShadow(page: Page): Promise<void> {
     await expect(legacySettings).toBeHidden();
     await expect(legacySettings).toHaveAttribute('data-preact-shadow', 'true');
     await expect(legacySettings).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#btn-save')).toBeDisabled();
+    await expect(page.locator('#btn-save')).toHaveAttribute('tabindex', '-1');
+    await expect(page.locator('#audio-volume')).toBeDisabled();
+    await expect(page.locator('#audio-volume')).toHaveAttribute('tabindex', '-1');
 }
 
 async function expectLegacyTrainingLabShadow(page: Page): Promise<void> {
@@ -86,6 +101,9 @@ async function expectLegacyTrainingLabShadow(page: Page): Promise<void> {
     await expect(legacyLab).toBeHidden();
     await expect(legacyLab).toHaveAttribute('data-preact-shadow', 'true');
     await expect(legacyLab).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#btn-close-training-lab')).toBeDisabled();
+    await expect(page.locator('#btn-close-training-lab')).toHaveAttribute('tabindex', '-1');
+    await expect(page.locator('#training-target-list .training-target-row').first()).toHaveAttribute('tabindex', '-1');
 }
 
 async function expectLegacyGameOverShadow(page: Page): Promise<void> {
@@ -94,6 +112,8 @@ async function expectLegacyGameOverShadow(page: Page): Promise<void> {
     await expect(legacyGameOver).toBeHidden();
     await expect(legacyGameOver).toHaveAttribute('data-preact-shadow', 'true');
     await expect(legacyGameOver).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#btn-restart')).toBeDisabled();
+    await expect(page.locator('#btn-restart')).toHaveAttribute('tabindex', '-1');
 }
 
 async function expectLegacyWaveResultShadow(page: Page): Promise<void> {
@@ -130,6 +150,8 @@ async function expectLegacyTutorialPanelShadow(page: Page): Promise<void> {
     await expect(legacyTutorial).toBeHidden();
     await expect(legacyTutorial).toHaveAttribute('data-preact-shadow', 'true');
     await expect(legacyTutorial).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#btn-skip-tutorial')).toBeDisabled();
+    await expect(page.locator('#btn-skip-tutorial')).toHaveAttribute('tabindex', '-1');
 }
 
 async function getMainSceneState(page: Page): Promise<{
@@ -158,13 +180,13 @@ async function getMainSceneState(page: Page): Promise<{
         return {
             buildings,
             cableCount: scene.cableManager.cables.size,
-            selectedBuildingType: scene.uiManager.getSelectedBuildingType(),
+            selectedBuildingType: scene.selectedBuildingType,
             currentRotation: scene.currentRotation,
             cableState: scene.cableState,
             showDefenseRange: scene.showDefenseRange,
             showPowerGrid: scene.showPowerGrid,
             gameSpeed: scene.gameSpeed,
-            mobileActionStatus: scene.uiManager.mobileActionStatus,
+            mobileActionStatus: scene.mobileActionStatus,
             mobileCableMenuOpen: Boolean(document.getElementById('mobile-cable-menu')?.classList.contains('open')),
             savedGameExists: Boolean(localStorage.getItem('gradium_save'))
         };
@@ -189,8 +211,8 @@ async function unlockFirstDefenseProgress(page: Page): Promise<void> {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         scene.waveManager.currentWave = 1;
         scene.waveManager.waveActive = false;
-        scene.uiManager.renderTacticalPanels();
-        scene.uiManager.createBuildingButtons();
+        window.__GRADIUM_EVENT_BUS__?.emit('TACTICAL_PANELS_REFRESH_REQUESTED');
+        window.__GRADIUM_EVENT_BUS__?.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
     });
 }
 
@@ -239,6 +261,8 @@ async function expectLegacyMobileControlsShadow(page: Page): Promise<void> {
         await expect(page.locator('#mobile-action-bar')).toBeVisible();
         await expect(page.locator('#mobile-build-summary')).toBeVisible();
         await expect(page.locator('#mobile-action-bar')).not.toHaveAttribute('data-preact-shadow', 'true');
+        await expect(page.locator('#mobile-action-rotate')).toBeEnabled();
+        await expect(page.locator('#mobile-action-rotate')).not.toHaveAttribute('tabindex', '-1');
         return;
     }
 
@@ -248,6 +272,8 @@ async function expectLegacyMobileControlsShadow(page: Page): Promise<void> {
     await expect(page.locator('#mobile-build-summary')).toHaveAttribute('data-preact-shadow', 'true');
     await expect(page.locator('#mobile-action-bar')).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('#mobile-build-summary')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#mobile-action-rotate')).toBeDisabled();
+    await expect(page.locator('#mobile-action-rotate')).toHaveAttribute('tabindex', '-1');
     await expect(page.locator('#mobile-action-bar')).toBeHidden();
     await expect(page.locator('#mobile-build-summary')).toBeHidden();
 }
@@ -274,16 +300,12 @@ async function selectBuildCategory(page: Page, category: string): Promise<void> 
     const preactCategory = page.getByTestId(`preact-build-category-${category}`);
     if (await preactCategory.isVisible().catch(() => false)) {
         await preactCategory.click();
+        await expect(preactCategory).toHaveAttribute('aria-selected', 'true');
     } else {
-        await page.getByRole('button', { name: legacyCategoryLabels[category] }).click();
+        const legacyCategory = page.getByRole('button', { name: legacyCategoryLabels[category] });
+        await legacyCategory.click();
+        await expect(legacyCategory).toHaveClass(/active/);
     }
-
-    await expect.poll(async () => {
-        return page.evaluate(() => {
-            const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-            return scene?.uiManager?.activeCategory;
-        });
-    }).toBe(category);
 }
 
 async function selectBuildTool(page: Page, type: string): Promise<void> {
@@ -324,25 +346,58 @@ test('desktop exposes Preact main menu difficulty and keyboard start contracts',
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
     await waitForMainMenu(page);
+    await expect(page.locator('#game-hud-shell')).toHaveCount(0);
+    const mainMenuPhaserTextCount = await page.evaluate(() => {
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainMenuScene') as any;
+        return scene?.children?.list?.filter((child: any) => child.type === 'Text').length ?? -1;
+    });
+    expect(mainMenuPhaserTextCount).toBe(0);
 
     const menu = page.getByTestId('preact-main-menu');
     const difficultyGroup = page.getByTestId('preact-main-menu-difficulty-group');
     const easy = page.getByTestId('preact-main-menu-difficulty-easy');
     const normal = page.getByTestId('preact-main-menu-difficulty-normal');
+    const descriptionId = 'preact-main-menu-difficulty-description';
 
     await expect(menu).toBeVisible();
-    await expect(page.getByTestId('preact-main-menu-status')).toBeVisible();
-    await expect(difficultyGroup).toHaveAttribute('aria-describedby', 'preact-main-menu-difficulty-description');
+    await expect(menu).toHaveAttribute('aria-labelledby', 'preact-main-menu-title');
+    await expect(menu).toHaveAttribute(
+        'aria-describedby',
+        /preact-main-menu-subtitle preact-main-menu-status preact-main-menu-key-hints/
+    );
+    await expect(page.getByTestId('preact-main-menu-title')).toBeVisible();
+    await expect(page.getByTestId('preact-main-menu-subtitle')).toBeVisible();
+    await expect(page.getByTestId('preact-main-menu-status')).toHaveAttribute('role', 'status');
+    await expect(page.getByTestId('preact-main-menu-status')).toHaveAttribute('aria-atomic', 'true');
+    await expect(page.getByTestId('preact-main-menu-tutorial-status')).toBeVisible();
+    await expect(page.getByTestId('preact-main-menu-save-status')).toBeVisible();
+    await expect(difficultyGroup).toHaveAttribute('aria-labelledby', 'preact-main-menu-difficulty-label');
+    await expect(difficultyGroup).toHaveAttribute('aria-describedby', descriptionId);
     await expect(normal).toHaveAttribute('aria-pressed', 'true');
+    await expect(normal).toHaveAttribute('aria-describedby', descriptionId);
+    await expect(page.getByTestId('preact-main-menu-key-hints')).toHaveAttribute('role', 'list');
+    await expect(page.getByTestId('preact-main-menu-key-hint').first()).toHaveAttribute('role', 'listitem');
 
     await easy.click();
     await expect(easy).toHaveAttribute('aria-pressed', 'true');
+    await expect(easy).toHaveAttribute('aria-describedby', descriptionId);
     await page.keyboard.press('ArrowRight');
     await expect(normal).toHaveAttribute('aria-pressed', 'true');
+    await expect(normal).toHaveAttribute('aria-describedby', descriptionId);
 
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('preact-top-bar')).toBeVisible();
     await expectLegacyHudShellShadow(page);
+    await expect.poll(async () => page.evaluate(() => {
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
+        const shadowActions = document.getElementById('top-actions');
+        const rect = shadowActions?.getBoundingClientRect();
+        if (!scene?.inputController || !rect) return null;
+        return scene.inputController.isPointerOverDomUI({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        });
+    })).toBe(false);
 
     expect(runtimeErrors).toEqual([]);
 });
@@ -411,11 +466,23 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.getByTestId('preact-right-rail-threat-routes')).toHaveAttribute('role', 'list');
     await expect(page.getByTestId('preact-right-rail-power-load')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-right-rail-power-load')).toHaveAttribute('aria-valuetext', /^\d+%$/);
-    await expect(page.getByTestId('preact-tutorial-panel')).toBeVisible();
+    const tutorialPanel = page.getByTestId('preact-tutorial-panel');
+    await expect(tutorialPanel).toBeVisible();
+    await expect(tutorialPanel).toHaveAttribute('aria-labelledby', 'preact-tutorial-title');
+    await expect(tutorialPanel).toHaveAttribute('aria-describedby', /preact-tutorial-detail/);
+    await expect(page.getByTestId('preact-tutorial-header')).toBeVisible();
+    await expect(page.getByTestId('preact-tutorial-title')).toHaveAttribute('id', 'preact-tutorial-title');
+    await expect(page.getByTestId('preact-tutorial-detail')).toHaveAttribute('id', 'preact-tutorial-detail');
     await expect(page.getByTestId('preact-tutorial-skip')).toBeVisible();
+    await expect(page.getByTestId('preact-tutorial-skip')).toHaveAttribute('aria-describedby', 'preact-tutorial-detail');
     await expect(page.getByTestId('preact-tutorial-progress')).toHaveAttribute('aria-valuetext', /^\d+\/\d+$/);
+    await expect(page.getByTestId('preact-tutorial-current')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-tutorial-current')).toHaveAttribute('aria-labelledby', 'preact-tutorial-current-label preact-tutorial-current-title');
+    await expect(page.getByTestId('preact-tutorial-current-title')).toHaveAttribute('id', 'preact-tutorial-current-title');
     await expect(page.getByTestId('preact-tutorial-steps')).toHaveAttribute('role', 'list');
-    await expect(page.locator('[data-testid^="preact-tutorial-step-"][aria-current="step"]')).toHaveCount(1);
+    const currentTutorialStep = page.locator('[data-testid^="preact-tutorial-step-"][aria-current="step"]');
+    await expect(currentTutorialStep).toHaveCount(1);
+    await expect(currentTutorialStep).toHaveAttribute('role', 'listitem');
     await expectLegacyTutorialPanelShadow(page);
     await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', /CORE|RESOURCE|POWER/, { timeout: 5000 });
     await expect(page.locator('#tutorial-panel')).toContainText(/(Core 목표|자원 확인|전력망 확장)/);
@@ -440,10 +507,26 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(settingsModal).toHaveAttribute('aria-describedby', 'preact-settings-note');
     await expect(page.getByTestId('preact-settings-tabs')).toHaveAttribute('role', 'tablist');
     await expect(page.getByTestId('preact-settings-panel')).toHaveAttribute('role', 'tabpanel');
+    await expect(page.getByTestId('preact-settings-group-speed')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-settings-group-speed')).toHaveAttribute('aria-labelledby', 'preact-settings-label-speed');
+    await expect(page.getByTestId('preact-settings-speed')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-settings-speed')).toHaveAttribute('aria-labelledby', 'preact-settings-label-speed');
+    await expect(page.getByTestId('preact-settings-speed-option-1')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('preact-settings-group-language')).toHaveAttribute('aria-labelledby', 'preact-settings-label-language');
+    await expect(page.getByTestId('preact-settings-language')).toHaveAttribute('role', 'group');
+    await expect(settingsModal.getByRole('tab', { name: /^(오디오|Audio)$/ })).toHaveAttribute('aria-controls', 'preact-settings-panel');
+    await settingsModal.getByRole('tab', { name: /^(오디오|Audio)$/ }).click();
+    await expect(page.getByTestId('preact-settings-panel')).toHaveAttribute('aria-labelledby', 'preact-settings-tab-audio');
+    await expect(page.getByTestId('preact-settings-group-master-volume')).toHaveAttribute('aria-labelledby', 'preact-settings-label-master-volume');
+    await expect(page.getByTestId('preact-settings-volume')).toHaveAttribute('aria-labelledby', 'preact-settings-label-master-volume');
+    await expect(page.getByTestId('preact-settings-muted')).toHaveAttribute('id', 'preact-settings-muted');
+    await expect(page.getByTestId('preact-settings-muted')).toHaveAttribute('aria-pressed', /^(true|false)$/);
     await expectLegacySettingsShadow(page);
     await page.keyboard.press('Escape');
     await expect(page.locator('#settings-modal')).toBeHidden();
     await expect(page.locator('#settings-modal')).not.toHaveAttribute('data-preact-shadow', 'true');
+    await expect(page.locator('#btn-save')).toBeEnabled();
+    await expect(page.locator('#btn-save')).not.toHaveAttribute('tabindex', '-1');
     await expect(settingsModal).toHaveCount(0);
 
     expect(runtimeErrors).toEqual([]);
@@ -455,8 +538,7 @@ test('desktop can show wave result summary', async ({ page }, testInfo) => {
 
     await startGame(page);
     await page.evaluate(async () => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.uiManager.showWaveResultSummary({
+        window.__GRADIUM_EVENT_BUS__?.emit('WAVE_RESULT_SUMMARY_REQUESTED', {
             wave: 1,
             outcome: 'survived',
             enemiesDestroyed: 5,
@@ -468,7 +550,7 @@ test('desktop can show wave result summary', async ({ page }, testInfo) => {
             lines: []
         });
         await new Promise(resolve => setTimeout(resolve, 5));
-        scene.uiManager.showWaveResultSummary({
+        window.__GRADIUM_EVENT_BUS__?.emit('WAVE_RESULT_SUMMARY_REQUESTED', {
             wave: 2,
             outcome: 'survived',
             enemiesDestroyed: 8,
@@ -486,23 +568,50 @@ test('desktop can show wave result summary', async ({ page }, testInfo) => {
     await expect(latestLegacyWaveResult).toContainText('웨이브 결과');
     await expect(latestLegacyWaveResult).toContainText('Core 수신 데이터');
     await expect(page.getByTestId('preact-wave-result-card')).toBeVisible();
+    await expect(page.getByTestId('preact-wave-result-card')).toHaveAttribute('aria-atomic', 'true');
     await expect(page.getByTestId('preact-wave-result-card')).toContainText(/Core Integrity|Core 무결성/);
     const waveTitleId = await page.getByTestId('preact-wave-result-title').getAttribute('id');
     const waveIntegritySummaryId = await page.getByTestId('preact-wave-result-integrity-summary').getAttribute('id');
+    const waveIntegrityLabelId = await page.getByTestId('preact-wave-result-integrity-label').getAttribute('id');
+    const waveIntegrityValueId = await page.getByTestId('preact-wave-result-integrity-value').getAttribute('id');
     expect(waveTitleId).toBeTruthy();
     expect(waveIntegritySummaryId).toBeTruthy();
+    expect(waveIntegrityLabelId).toBeTruthy();
+    expect(waveIntegrityValueId).toBeTruthy();
+    await expect(page.getByTestId('preact-wave-result-header')).toBeVisible();
+    await expect(page.getByTestId('preact-wave-result-kicker')).toBeVisible();
+    await expect(page.getByTestId('preact-wave-result-close')).toHaveAttribute('id', 'preact-wave-result-close');
+    await expect(page.getByTestId('preact-wave-result-close')).toHaveAttribute('aria-controls', 'preact-wave-result-card');
+    await expect(page.getByTestId('preact-wave-result-close')).toHaveAttribute('aria-describedby', waveIntegritySummaryId!);
     await expect(page.getByTestId('preact-wave-result-card')).toHaveAttribute('aria-labelledby', waveTitleId!);
     await expect(page.getByTestId('preact-wave-result-card')).toHaveAttribute('aria-describedby', waveIntegritySummaryId!);
     await expect(page.getByTestId('preact-wave-result-integrity')).toHaveAttribute('role', 'progressbar');
+    await expect(page.getByTestId('preact-wave-result-integrity')).toHaveAttribute('aria-labelledby', waveIntegrityLabelId!);
+    await expect(page.getByTestId('preact-wave-result-integrity')).toHaveAttribute('aria-describedby', waveIntegrityValueId!);
     await expect(page.getByTestId('preact-wave-result-integrity')).toHaveAttribute('aria-valuenow', '96');
     await expect(page.getByTestId('preact-wave-result-integrity')).toHaveAttribute('aria-valuetext', '96%');
     await expect(page.getByTestId('preact-wave-result-stats')).toHaveAttribute('role', 'list');
-    await expect(page.locator('[data-testid^="preact-wave-result-stat-"]')).toHaveCount(4);
+    await expect(page.getByTestId('preact-wave-result-stats')).toHaveAttribute('aria-labelledby', waveTitleId!);
+    await expect(page.getByTestId('preact-wave-result-stats').locator('[role="listitem"]')).toHaveCount(4);
+    const destroyedStatLabelId = await page.getByTestId('preact-wave-result-stat-destroyed-label').getAttribute('id');
+    const destroyedStatValueId = await page.getByTestId('preact-wave-result-stat-destroyed-value').getAttribute('id');
+    expect(destroyedStatLabelId).toBeTruthy();
+    expect(destroyedStatValueId).toBeTruthy();
+    await expect(page.getByTestId('preact-wave-result-stat-destroyed')).toHaveAttribute('aria-labelledby', destroyedStatLabelId!);
+    await expect(page.getByTestId('preact-wave-result-stat-destroyed')).toHaveAttribute('aria-describedby', destroyedStatValueId!);
     await expect(page.getByTestId('preact-wave-result-history')).toHaveAttribute('role', 'list');
     const waveHistoryLabelId = await page.getByTestId('preact-wave-result-history-label').getAttribute('id');
     expect(waveHistoryLabelId).toBeTruthy();
     await expect(page.getByTestId('preact-wave-result-history')).toHaveAttribute('aria-labelledby', waveHistoryLabelId!);
     await expect(page.getByTestId('preact-wave-result-history').locator('[role="listitem"]')).toHaveCount(2);
+    const secondHistoryLabelId = await page.getByTestId('preact-wave-result-history-2-label').getAttribute('id');
+    const secondHistoryCoreId = await page.getByTestId('preact-wave-result-history-2-core').getAttribute('id');
+    const secondHistoryKillsId = await page.getByTestId('preact-wave-result-history-2-kills').getAttribute('id');
+    expect(secondHistoryLabelId).toBeTruthy();
+    expect(secondHistoryCoreId).toBeTruthy();
+    expect(secondHistoryKillsId).toBeTruthy();
+    await expect(page.getByTestId('preact-wave-result-history-2')).toHaveAttribute('aria-labelledby', secondHistoryLabelId!);
+    await expect(page.getByTestId('preact-wave-result-history-2')).toHaveAttribute('aria-describedby', `${secondHistoryCoreId} ${secondHistoryKillsId}`);
     await page.getByTestId('preact-wave-result-close').click();
     await expect(page.getByTestId('preact-wave-result-card')).toHaveCount(0);
 
@@ -521,7 +630,15 @@ test('desktop shows the Preact game-over screen from the existing game-over even
     });
 
     const preactGameOver = page.getByTestId('preact-game-over-screen');
+    const preactGameOverPanel = page.getByTestId('preact-game-over-panel');
+    const preactGameOverTitle = page.getByTestId('preact-game-over-title');
+    const preactGameOverFailureCode = page.getByTestId('preact-game-over-failure-code');
     await expect(preactGameOver).toBeVisible();
+    await expect(preactGameOverPanel).toBeVisible();
+    await expect(preactGameOverTitle).toHaveAttribute('id', 'preact-game-over-title');
+    await expect(preactGameOverFailureCode).toHaveAttribute('id', 'preact-game-over-failure-code');
+    await expect(preactGameOver).toHaveAttribute('aria-labelledby', 'preact-game-over-title');
+    await expect(preactGameOver).toHaveAttribute('aria-describedby', 'preact-game-over-failure-code');
     await expect(preactGameOver).toContainText('Game Over');
     await expect(preactGameOver).toContainText(/Core Integrity|Core 무결성/);
     await expect(page.getByTestId('preact-game-over-integrity')).toHaveAttribute('role', 'progressbar');
@@ -530,8 +647,9 @@ test('desktop shows the Preact game-over screen from the existing game-over even
     await expect(page.getByTestId('preact-game-over-model-meter')).toHaveAttribute('aria-valuetext', /^\d+%$/);
     await expect(page.getByTestId('preact-game-over-stats')).toHaveAttribute('role', 'list');
     await expect(page.locator('[data-testid^="preact-game-over-stat-"]')).toHaveCount(4);
-    await expect(page.getByTestId('preact-game-over-restart')).toBeVisible();
-    await expect(page.getByTestId('preact-game-over-main-menu')).toBeVisible();
+    await expect(page.getByTestId('preact-game-over-actions')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-game-over-restart')).toHaveAttribute('aria-controls', 'preact-game-over-panel');
+    await expect(page.getByTestId('preact-game-over-main-menu')).toHaveAttribute('aria-controls', 'preact-game-over-panel');
     await expectLegacyGameOverShadow(page);
     await expect(page.locator('#game-over-stats')).toContainText(/Wave|웨이브/);
 
@@ -541,26 +659,55 @@ test('desktop shows the Preact game-over screen from the existing game-over even
 test('desktop shows Preact activity log entries while legacy log entries stay shadowed', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only activity log smoke');
     const runtimeErrors = collectRuntimeErrors(page);
-    const message = 'System: Preact activity smoke.';
+    const messages = [
+        { message: 'System: Preact activity smoke 1.', isAlert: false },
+        { message: 'System: Preact activity smoke 2.', isAlert: false },
+        { message: 'System: Preact activity smoke 3.', isAlert: false },
+        { message: 'System: Preact activity smoke 4.', isAlert: false },
+        { message: 'System: Preact activity smoke 5.', isAlert: false },
+        { message: 'Alert: Preact activity smoke 6.', isAlert: true }
+    ];
+    const alertMessage = messages[messages.length - 1].message;
 
     await startGame(page);
-    await page.evaluate(text => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.uiManager.logMessage(text, true);
-    }, message);
+    await page.evaluate(entries => {
+        entries.forEach(entry => window.__GRADIUM_EVENT_BUS__?.emit('ACTIVITY_LOG_ENTRY_REQUESTED', entry));
+    }, messages);
 
-    await expect(page.getByTestId('preact-activity-log')).toBeVisible();
-    await expect(page.getByTestId('preact-activity-log')).toContainText(message);
-    const activityEntries = page.locator('#preact-activity-log-entries');
+    const activityLog = page.getByTestId('preact-activity-log');
+    await expect(activityLog).toBeVisible();
+    await expect(activityLog).toHaveAttribute('role', 'region');
+    await expect(activityLog).toHaveAttribute('aria-labelledby', 'preact-activity-log-title');
+    await expect(page.getByTestId('preact-activity-log-title')).toHaveAttribute('id', 'preact-activity-log-title');
+    const totalEntries = Number(await page.getByTestId('preact-activity-log-count').textContent());
+    expect(totalEntries).toBeGreaterThanOrEqual(messages.length);
+    await expect(activityLog).toContainText(alertMessage);
+    await expectLegacyActivityLogShadow(page, alertMessage);
+    await expect(page.getByTestId('preact-activity-log-controls')).toHaveAttribute('role', 'group');
+    const activityEntries = page.getByTestId('preact-activity-log-entries');
     await expect(activityEntries).toHaveAttribute('role', 'log');
+    await expect(activityEntries).toHaveAttribute('aria-labelledby', 'preact-activity-log-title');
     await expect(activityEntries).toHaveAttribute('aria-live', 'polite');
     await expect(activityEntries).toHaveAttribute('aria-relevant', 'additions text');
+    await expect(activityEntries.locator('[data-testid^="preact-activity-log-entry-"]')).toHaveCount(Math.min(5, totalEntries));
     await expect(activityEntries.locator('[data-testid^="preact-activity-log-entry-"]').last()).toHaveAttribute('role', 'article');
     const alertFilter = page.getByTestId('preact-activity-log-alerts');
     await expect(alertFilter).toBeVisible();
     await expect(alertFilter).toHaveAttribute('aria-controls', 'preact-activity-log-entries');
     await expect(alertFilter).toHaveAttribute('aria-pressed', 'false');
-    await expectLegacyActivityLogShadow(page, message);
+    await alertFilter.click();
+    await expect(alertFilter).toHaveAttribute('aria-pressed', 'true');
+    await expect(activityEntries).toContainText(alertMessage);
+    expect(await activityEntries.locator('[data-testid^="preact-activity-log-entry-"]').count()).toBeGreaterThanOrEqual(1);
+    await alertFilter.click();
+    await expect(alertFilter).toHaveAttribute('aria-pressed', 'false');
+    const historyToggle = page.getByTestId('preact-activity-log-history');
+    await expect(historyToggle).toBeVisible();
+    await expect(historyToggle).toHaveAttribute('aria-controls', 'preact-activity-log-entries');
+    await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
+    await historyToggle.click();
+    await expect(historyToggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(activityEntries.locator('[data-testid^="preact-activity-log-entry-"]')).toHaveCount(totalEntries);
 
     expect(runtimeErrors).toEqual([]);
 });
@@ -577,6 +724,11 @@ test('desktop shows the Preact tooltip while the legacy tooltip stays shadowed',
     await expect(preactTooltip).toBeVisible();
     await expect(preactTooltip).toHaveAttribute('aria-labelledby', 'preact-tooltip-title');
     await expect(preactTooltip).toHaveAttribute('aria-describedby', 'preact-tooltip-body');
+    await expect(page.getByTestId('preact-tooltip-header')).toBeVisible();
+    await expect(page.getByTestId('preact-tooltip-title')).toHaveAttribute('id', 'preact-tooltip-title');
+    await expect(page.getByTestId('preact-tooltip-body')).toHaveAttribute('id', 'preact-tooltip-body');
+    await expect(page.getByTestId('preact-tooltip-body')).toHaveAttribute('role', 'list');
+    await expect(page.getByTestId('preact-tooltip-line').first()).toHaveAttribute('role', 'listitem');
     await expect(preactTooltip).toContainText(/Neural Core|CORE|Type|유형/);
     await expectLegacyTooltipShadow(page);
 
@@ -645,6 +797,14 @@ test('mobile layout exposes action controls without blocking startup', async ({ 
         await expect(preactBuildSummary).toHaveAttribute('aria-labelledby', 'preact-mobile-build-summary-title');
         await expect(preactBuildSummary).toHaveAttribute('aria-describedby', 'preact-mobile-build-summary-detail');
         await expect(preactBuildSummary).toHaveAttribute('aria-live', 'polite');
+        await expect(preactBuildSummary).toHaveAttribute('aria-atomic', 'true');
+        await expect(preactBuildSummary).toHaveAttribute('data-has-detail', 'true');
+        await expect(page.getByTestId('preact-mobile-build-summary-handle')).toHaveAttribute('aria-hidden', 'true');
+        await expect(page.getByTestId('preact-mobile-build-summary-content')).toHaveAttribute('role', 'group');
+        await expect(page.getByTestId('preact-mobile-build-summary-content')).toHaveAttribute('aria-labelledby', 'preact-mobile-build-summary-title');
+        await expect(page.getByTestId('preact-mobile-build-summary-content')).toHaveAttribute('aria-describedby', 'preact-mobile-build-summary-detail');
+        await expect(page.getByTestId('preact-mobile-build-summary-title')).toHaveAttribute('id', 'preact-mobile-build-summary-title');
+        await expect(page.getByTestId('preact-mobile-build-summary-detail')).toHaveAttribute('id', 'preact-mobile-build-summary-detail');
     }
     await expect(page.locator('#mobile-action-rotate')).toBeAttached();
     await expect(page.locator('#mobile-action-remove')).toBeAttached();
@@ -653,8 +813,20 @@ test('mobile layout exposes action controls without blocking startup', async ({ 
     await expect(page.locator('#mobile-action-defense')).toBeAttached();
     await expect(page.locator('#mobile-action-power')).toBeAttached();
     if (!isShortLandscape(page)) {
-        await expect(page.getByTestId('preact-mobile-action-rotate')).toBeVisible();
-        await expect(page.getByTestId('preact-mobile-action-toolbar')).toHaveAttribute('role', 'toolbar');
+        const preactActionBar = page.getByTestId('preact-mobile-action-bar');
+        const preactToolbar = page.getByTestId('preact-mobile-action-toolbar');
+        const preactRotateAction = page.getByTestId('preact-mobile-action-rotate');
+        await expect(preactActionBar).toHaveAttribute('role', 'region');
+        await expect(preactActionBar).toHaveAttribute('aria-label', /.+/);
+        await expect(preactToolbar).toHaveAttribute('id', 'preact-mobile-action-toolbar');
+        await expect(preactToolbar).toHaveAttribute('role', 'toolbar');
+        await expect(preactToolbar).toHaveAttribute('aria-label', /.+/);
+        await expect(preactRotateAction).toBeVisible();
+        await expect(preactRotateAction).toHaveAttribute('id', 'preact-mobile-action-rotate');
+        await expect(preactRotateAction).toHaveAttribute('data-action-id', 'rotate');
+        await expect(preactRotateAction).toHaveAttribute('aria-labelledby', 'preact-mobile-action-rotate-label');
+        await expect(page.getByTestId('preact-mobile-action-rotate-icon')).toHaveAttribute('aria-hidden', 'true');
+        await expect(page.getByTestId('preact-mobile-action-rotate-label')).toHaveAttribute('id', 'preact-mobile-action-rotate-label');
         await expect(page.getByTestId('preact-mobile-action-power')).toBeVisible();
     }
 
@@ -693,6 +865,7 @@ test('mobile action buttons update gameplay state', async ({ page }, testInfo) =
         await expect(preactCableAction).toHaveAttribute('aria-controls', 'preact-mobile-cable-menu');
         await expect(preactCableAction).toHaveAttribute('aria-haspopup', 'menu');
         await expect(preactCableAction).toHaveAttribute('aria-expanded', 'false');
+        await expect(preactCableAction).toHaveAttribute('aria-labelledby', 'preact-mobile-action-cable-label');
         await expect(preactCableAction).toHaveAttribute('aria-pressed', 'true');
     }
 
@@ -705,19 +878,24 @@ test('mobile action buttons update gameplay state', async ({ page }, testInfo) =
         await page.evaluate(() => {
             const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
             scene.researchManager.loadUnlockedResearch(['TECH_FIBER_OPTIC']);
-            scene.uiManager.updateMobileControls();
+            window.__GRADIUM_EVENT_BUS__?.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
         });
         await page.getByTestId('preact-mobile-action-cable').click();
         await expect(page.getByTestId('preact-mobile-action-cable')).toHaveAttribute('aria-expanded', 'true');
         await expect(page.getByTestId('preact-mobile-cable-menu')).toHaveAttribute('role', 'menu');
+        await expect(page.getByTestId('preact-mobile-cable-menu')).toHaveAttribute('aria-labelledby', 'preact-mobile-action-cable-label');
         await expect(page.getByTestId('preact-mobile-cable-BASIC')).toHaveAttribute('role', 'menuitemradio');
+        await expect(page.getByTestId('preact-mobile-cable-BASIC')).toHaveAttribute('aria-labelledby', 'preact-mobile-cable-BASIC-label');
+        await expect(page.getByTestId('preact-mobile-cable-BASIC-label')).toHaveAttribute('id', 'preact-mobile-cable-BASIC-label');
         await expect(page.getByTestId('preact-mobile-cable-FIBER')).toHaveAttribute('role', 'menuitemradio');
         await expect(page.getByTestId('preact-mobile-cable-FIBER')).toHaveAttribute('aria-checked', 'false');
+        await expect(page.getByTestId('preact-mobile-cable-FIBER')).toHaveAttribute('data-selected', 'false');
         await page.getByTestId('preact-mobile-cable-FIBER').focus();
         await page.getByTestId('preact-mobile-cable-FIBER').press('Enter');
         await expect.poll(async () => (await getMainSceneState(page)).selectedBuildingType).toBe('FIBER');
         await page.getByTestId('preact-mobile-action-cable').click();
         await expect(page.getByTestId('preact-mobile-cable-FIBER')).toHaveAttribute('aria-checked', 'true');
+        await expect(page.getByTestId('preact-mobile-cable-FIBER')).toHaveAttribute('data-selected', 'true');
         await page.getByTestId('preact-mobile-action-cancel').click();
     }
 
@@ -856,13 +1034,23 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     await expect(preactSettings.getByRole('tab', { name: /^(게임|Game)$/ })).toHaveAttribute('aria-controls', 'preact-settings-panel');
     await expect(preactSettings.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'preact-settings-tab-game');
     await preactSettings.getByRole('button', { name: '2x' }).click();
+    await expect(page.getByTestId('preact-settings-speed-option-2')).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(async () => (await getMainSceneState(page)).gameSpeed).toBe(2);
     await preactSettings.getByRole('tab', { name: /^(그래픽|Graphics)$/ }).click();
     await expect(preactSettings.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'preact-settings-tab-graphics');
-    await expect(preactSettings.getByRole('button', { name: /Bloom/ })).toHaveAttribute('aria-pressed', /^(true|false)$/);
+    await expect(page.getByTestId('preact-settings-group-fps')).toHaveAttribute('aria-labelledby', 'preact-settings-label-fps');
+    await expect(page.getByTestId('preact-settings-fps')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-settings-fps')).toHaveAttribute('aria-labelledby', 'preact-settings-label-fps');
+    await expect(page.getByTestId('preact-settings-bloom')).toHaveAttribute('id', 'preact-settings-bloom');
+    await expect(page.getByTestId('preact-settings-bloom')).toHaveAttribute('aria-describedby', 'preact-settings-label-graphics');
+    await expect(page.getByTestId('preact-settings-bloom')).toHaveAttribute('aria-pressed', /^(true|false)$/);
     await preactSettings.getByRole('tab', { name: /^(시스템|System)$/ }).click();
     await expect(preactSettings.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'preact-settings-tab-system');
-    await preactSettings.getByRole('button', { name: /^(저장|Save)$/ }).click();
+    await expect(page.getByTestId('preact-settings-group-save-data')).toHaveAttribute('aria-labelledby', 'preact-settings-label-save-data');
+    await expect(page.getByTestId('preact-settings-save')).toHaveAttribute('aria-describedby', 'preact-settings-label-save-data');
+    await expect(page.getByTestId('preact-settings-load')).toHaveAttribute('aria-describedby', 'preact-settings-label-save-data');
+    await expect(page.getByTestId('preact-settings-reset-tutorial')).toHaveAttribute('aria-describedby', 'preact-settings-label-tutorial');
+    await page.getByTestId('preact-settings-save').click();
     await expect.poll(async () => (await getMainSceneState(page)).savedGameExists).toBe(true);
     await page.getByTestId('preact-settings-close').click();
     await expect(page.locator('#settings-modal')).toBeHidden();
@@ -889,15 +1077,45 @@ test('desktop operates the Preact training lab panel', async ({ page }, testInfo
         scene.buildingManager.place(-192, -160, 'MODEL_TRAINING_LAB', 0, { skipCost: true });
     });
 
+    await page.getByTestId('preact-topbar-research').click();
+    await expect(page.getByTestId('preact-training-lab-modal')).toBeVisible();
+    await expect(page.getByTestId('preact-training-lab-tab-SYSTEM')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('preact-training-lab-panel')).toHaveAttribute('aria-labelledby', 'preact-training-lab-tab-SYSTEM');
+    await page.getByTestId('preact-training-lab-close').click();
+    await expect(page.getByTestId('preact-training-lab-modal')).toHaveCount(0);
+
     await page.getByTestId('preact-topbar-lab').click();
     const labModal = page.getByTestId('preact-training-lab-modal');
     const labPanel = labModal.getByRole('tabpanel');
     await expect(labModal).toBeVisible();
     await expectLegacyTrainingLabShadow(page);
+    await expect(labModal).toHaveAttribute('role', 'dialog');
+    await expect(labModal).toHaveAttribute('aria-labelledby', 'preact-training-lab-title');
+    await expect(labModal).toHaveAttribute('aria-describedby', 'preact-training-lab-overview preact-training-lab-planner preact-training-lab-duration');
+    await expect(page.getByTestId('preact-training-lab-header')).toBeVisible();
+    await expect(page.getByTestId('preact-training-lab-kicker')).toBeVisible();
+    await expect(page.getByTestId('preact-training-lab-title')).toHaveAttribute('id', 'preact-training-lab-title');
+    await expect(page.getByTestId('preact-training-lab-overview')).toHaveAttribute('id', 'preact-training-lab-overview');
+    await expect(page.getByTestId('preact-training-lab-planner')).toHaveAttribute('role', 'status');
+    await expect(page.getByTestId('preact-training-lab-planner')).toHaveAttribute('aria-labelledby', 'preact-training-lab-planner-status');
+    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('id', 'preact-training-lab-auto');
+    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('aria-controls', 'preact-training-lab-planner');
+    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('aria-describedby', 'preact-training-lab-planner-reason');
+    await expect(page.getByTestId('preact-training-lab-tabs')).toHaveAttribute('role', 'tablist');
+    await expect(page.getByTestId('preact-training-lab-tabs')).toHaveAttribute('aria-labelledby', 'preact-training-lab-title');
+    await expect(page.getByTestId('preact-training-lab-close')).toHaveAttribute('id', 'preact-training-lab-close');
+    await expect(page.getByTestId('preact-training-lab-close')).toHaveAttribute('aria-controls', 'preact-training-lab-panel');
+    await expect(page.getByTestId('preact-training-lab-close')).toHaveAttribute('aria-describedby', 'preact-training-lab-planner');
     await expect(page.getByTestId('preact-training-lab-tab-DEFENSE')).toHaveAttribute('aria-controls', 'preact-training-lab-panel');
+    await expect(page.getByTestId('preact-training-lab-panel')).toHaveAttribute('role', 'tabpanel');
+    await expect(page.getByTestId('preact-training-lab-panel')).toHaveAttribute('aria-describedby', 'preact-training-lab-planner');
     await expect(labPanel).toHaveAttribute('aria-labelledby', 'preact-training-lab-tab-DEFENSE');
     await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER')).toHaveAttribute('aria-labelledby', 'preact-training-lab-row-CLASSIFIER-title');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER')).toHaveAttribute('aria-describedby', 'preact-training-lab-row-CLASSIFIER-detail');
+    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER')).toHaveAttribute('aria-describedby', 'preact-training-lab-row-CLASSIFIER-detail preact-training-lab-row-CLASSIFIER-tone');
+    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-tone')).toHaveAttribute('id', 'preact-training-lab-row-CLASSIFIER-tone');
+    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-reward-group')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-reward-group')).toHaveAttribute('aria-labelledby', 'preact-training-lab-row-CLASSIFIER-reward-label');
+    await expect(page.getByTestId('preact-training-lab-reward-CLASSIFIER-accuracy')).toHaveAttribute('aria-describedby', 'preact-training-lab-row-CLASSIFIER-reward-label');
     await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-data-progress')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-data-progress')).toHaveAttribute('aria-valuetext', /%$/);
     await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-work-progress')).toHaveAttribute('role', 'progressbar');
@@ -935,11 +1153,14 @@ test('desktop operates the Preact training lab panel', async ({ page }, testInfo
     await expect(page.getByTestId('preact-training-lab-tab-SYSTEM')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('preact-training-lab-tab-SYSTEM')).toHaveAttribute('aria-controls', 'preact-training-lab-panel');
     await expect(labPanel).toHaveAttribute('aria-labelledby', 'preact-training-lab-tab-SYSTEM');
+    await expect(page.getByTestId('preact-training-lab-duration')).toHaveAttribute('id', 'preact-training-lab-duration');
 
     await page.getByTestId('preact-training-lab-close').click();
     await expect(page.getByTestId('preact-training-lab-modal')).toHaveCount(0);
     await expect(page.locator('#training-lab-modal')).toBeHidden();
     await expect(page.locator('#training-lab-modal')).not.toHaveAttribute('data-preact-shadow', 'true');
+    await expect(page.locator('#btn-close-training-lab')).toBeEnabled();
+    await expect(page.locator('#btn-close-training-lab')).not.toHaveAttribute('tabindex', '-1');
     await expect.poll(async () => page.evaluate(() => document.activeElement?.tagName)).toBe('CANVAS');
 
     expect(runtimeErrors).toEqual([]);

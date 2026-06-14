@@ -63,6 +63,14 @@ export interface TrainingLabDisplayPayload {
     snapshot: TrainingLabSnapshot;
 }
 
+export function normalizeTrainingPercent(current: number, required: number): number {
+    if (!Number.isFinite(current) || !Number.isFinite(required) || required <= 0) {
+        return 0;
+    }
+    const percent = Math.round((current / required) * 100);
+    return Math.max(0, Math.min(100, percent));
+}
+
 export function createTrainingLabShellDisplay({
     gpuUnlocked,
     planner,
@@ -199,9 +207,9 @@ export function createTrainingLabDefenseRows({
         const state = getDefenseModelState(type);
         const selected = activeJobId === getDefenseJobId(type);
         const trainingPercent = state.isTraining
-            ? Math.min(100, Math.round((state.trainingProgressTicks / state.trainingDurationTicks) * 100))
+            ? normalizeTrainingPercent(state.trainingProgressTicks, state.trainingDurationTicks)
             : 0;
-        const dataPercent = Math.min(100, Math.round((state.accumulatedTrainingData / state.currentRequirement) * 100));
+        const dataPercent = normalizeTrainingPercent(state.accumulatedTrainingData, state.currentRequirement);
         const nextReward = getNextTrainingRewardKind(state) === 'accuracy'
             ? textForKey('trainingLab.nextAccuracy', { amount: CONFIG.MODEL_TRAINING.ACCURACY_GAIN })
             : textForKey('trainingLab.nextDamage', { amount: CONFIG.MODEL_TRAINING.DAMAGE_GAIN });
@@ -258,9 +266,9 @@ export function createTrainingLabSystemRows({
         const progress = getJobProgress(node.ID);
         const available = isJobAvailable(node.ID);
         const selected = activeJobId === node.ID;
-        const percent = Math.min(100, Math.round((progress.progress / node.COST) * 100));
+        const percent = normalizeTrainingPercent(progress.progress, node.COST);
         const trainingPercent = progress.isTraining
-            ? Math.min(100, Math.round(((progress.trainingProgressTicks ?? 0) / (progress.trainingDurationTicks ?? 1)) * 100))
+            ? normalizeTrainingPercent(progress.trainingProgressTicks ?? 0, progress.trainingDurationTicks ?? 0)
             : 0;
 
         let statusText = '';

@@ -53,10 +53,7 @@
 
 @media (max-width: 768px), (pointer: coarse), (max-height: 480px) {
     .topBar {
-        top: calc(58px + env(safe-area-inset-top, 0px));
-        left: var(--space-2);
-        width: min(360px, calc(100vw - 16px));
-        opacity: 0.82;
+        display: none;
     }
 
     .stats {

@@ -1,6 +1,5 @@
-import EventBus from './EventBus';
+import EventBus from '../managers/EventBus';
 import type MainScene from '../scenes/MainScene';
-import type UIManager from './UIManager';
 import { getLanguage, isLanguage, setLanguage, t } from '../i18n';
 import {
     getLegacySettingsRefs,
@@ -8,16 +7,19 @@ import {
     setLegacySettingsOpen,
     syncLegacySettingsInputs,
     type LegacySettingsRefs
-} from '../ui/legacySettings';
+} from './legacySettings';
 import {
     DEFAULT_FPS_LIMIT,
     DEFAULT_VOLUME_PERCENT,
     createSettingsDisplayPayload,
     normalizeFpsLimit,
     normalizeVolumePercent
-} from '../ui/settingsDisplay';
+} from './settingsDisplay';
+import { guardDomPointer, restoreGameCanvasFocus } from './domEnvironment';
 
-export default class SettingsUI {
+const OWNER = 'SettingsController';
+
+export default class SettingsController {
     private volumeInput: HTMLInputElement | null = null;
     private mutedInput: HTMLInputElement | null = null;
     private bloomInput: HTMLInputElement | null = null;
@@ -27,13 +29,17 @@ export default class SettingsUI {
     private currentMuted: boolean = false;
     private currentBloomEnabled: boolean = true;
     private settingsOpen: boolean = false;
+    private readonly handleLanguageChange = (): void => {
+        this.syncLanguageButtons();
+        this.publishSnapshot(this.isOpen());
+    };
 
-    constructor(
-        private scene: MainScene,
-        private uiManager: UIManager
-    ) {}
+    constructor(private scene: MainScene) {}
 
     setup(): void {
+        EventBus.offAll(OWNER);
+        window.removeEventListener('languagechange', this.handleLanguageChange);
+
         const refs = getLegacySettingsRefs();
         const audioSettings = this.scene.soundManager?.getSettings?.();
         this.settingsRefs = refs;
@@ -46,7 +52,7 @@ export default class SettingsUI {
         this.currentMuted = audioSettings?.muted ?? this.currentMuted;
         this.currentBloomEnabled = this.scene.bloomEnabled;
 
-        guardLegacySettingsRefs(refs, element => this.uiManager.guardDomPointer(element));
+        guardLegacySettingsRefs(refs, guardDomPointer);
         syncLegacySettingsInputs(refs, {
             bloomEnabled: this.currentBloomEnabled,
             fps: this.currentFps,
@@ -89,13 +95,6 @@ export default class SettingsUI {
             };
         }
 
-        const updateLanguageButtons = () => {
-            syncLegacySettingsInputs(refs, {
-                bloomEnabled: this.currentBloomEnabled,
-                fps: this.currentFps,
-                language: getLanguage()
-            });
-        };
         refs.languageButtons.forEach(button => {
             button.onclick = event => {
                 event.preventDefault();
@@ -103,16 +102,14 @@ export default class SettingsUI {
                 const language = button.dataset.language;
                 if (isLanguage(language)) {
                     setLanguage(language);
-                    updateLanguageButtons();
+                    this.syncLanguageButtons();
                     this.publishSnapshot(this.isOpen());
                 }
             };
         });
-        window.addEventListener('languagechange', () => {
-            updateLanguageButtons();
-            this.publishSnapshot(this.isOpen());
-        });
-        updateLanguageButtons();
+        window.addEventListener('languagechange', this.handleLanguageChange);
+        this.scene.events.once('shutdown', () => this.teardown());
+        this.syncLanguageButtons();
 
         const emitAudioSettings = () => {
             this.currentVolume = this.volumeInput
@@ -163,19 +160,19 @@ export default class SettingsUI {
 
         EventBus.on('SETTINGS_CLOSE_REQUESTED', () => {
             this.closeModal();
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_OPEN_REQUESTED', () => {
             this.openModal();
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_SPEED_REQUESTED', ({ speed }: { speed: number }) => {
             this.setSpeed(speed);
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_FPS_REQUESTED', ({ fps }: { fps: number }) => {
             const clamped = normalizeFpsLimit(fps);
             this.applyFpsLimit(clamped);
             localStorage.setItem('gradium_fps_limit', String(clamped));
             this.publishSnapshot(this.isOpen());
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_AUDIO_REQUESTED', ({ volume, muted }: { volume: number; muted: boolean }) => {
             const clampedVolume = normalizeVolumePercent(volume);
             this.currentVolume = clampedVolume;
@@ -184,22 +181,22 @@ export default class SettingsUI {
             if (this.mutedInput) this.mutedInput.checked = muted;
             EventBus.emit('AUDIO_SETTINGS_CHANGED', { masterVolume: clampedVolume / 100, muted });
             this.publishSnapshot(this.isOpen());
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_BLOOM_REQUESTED', ({ enabled }: { enabled: boolean }) => {
             this.currentBloomEnabled = enabled;
             if (this.bloomInput) this.bloomInput.checked = enabled;
             this.scene.setBloomEnabled(enabled);
             this.publishSnapshot(this.isOpen());
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_LANGUAGE_REQUESTED', ({ language }: { language: string }) => {
             if (!isLanguage(language)) return;
             setLanguage(language);
-            updateLanguageButtons();
+            this.syncLanguageButtons();
             this.publishSnapshot(this.isOpen());
-        }, 'SettingsUI');
+        }, OWNER);
         EventBus.on('SETTINGS_RESET_TUTORIAL_REQUESTED', () => {
             this.resetTutorial();
-        }, 'SettingsUI');
+        }, OWNER);
     }
 
     openModal(): void {
@@ -222,7 +219,7 @@ export default class SettingsUI {
         this.settingsOpen = false;
         if (this.settingsRefs) setLegacySettingsOpen(this.settingsRefs, false);
         this.publishSnapshot(false);
-        this.uiManager.restoreCanvasFocus();
+        restoreGameCanvasFocus();
     }
 
     private setSpeed(speed: number): void {
@@ -247,7 +244,7 @@ export default class SettingsUI {
     private resetTutorial(): void {
         localStorage.setItem('gradium_tutorial_completed', 'false');
         localStorage.setItem('gradium_tutorial_step', '0');
-        this.uiManager.logMessage(t('log.tutorialRestarted'));
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message: t('log.tutorialRestarted') });
         this.publishSnapshot(false);
         this.scene.scene.start('MainScene', {
             mode: 'tutorial',
@@ -257,6 +254,15 @@ export default class SettingsUI {
 
     private isOpen(): boolean {
         return this.settingsOpen;
+    }
+
+    private syncLanguageButtons(): void {
+        if (!this.settingsRefs) return;
+        syncLegacySettingsInputs(this.settingsRefs, {
+            bloomEnabled: this.currentBloomEnabled,
+            fps: this.currentFps,
+            language: getLanguage()
+        });
     }
 
     private publishSnapshot(open: boolean): void {
@@ -274,5 +280,10 @@ export default class SettingsUI {
             syncLegacySettingsInputs(this.settingsRefs, payload.legacySettings.inputs);
         }
         EventBus.emit('SETTINGS_MODAL_UPDATED', payload.snapshot);
+    }
+
+    private teardown(): void {
+        window.removeEventListener('languagechange', this.handleLanguageChange);
+        EventBus.offAll(OWNER);
     }
 }

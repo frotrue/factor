@@ -45,8 +45,14 @@
     transform: translateX(-50%);
 }
 
-.summary strong,
-.summary span {
+.content {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.content strong,
+.content span {
     position: relative;
     display: block;
     overflow: hidden;
@@ -54,14 +60,14 @@
     white-space: nowrap;
 }
 
-.summary strong {
+.content strong {
     color: var(--text-primary);
     font-family: var(--font-display);
     font-size: var(--text-lg);
     line-height: 1.05;
 }
 
-.summary span {
+.content span {
     margin-top: var(--space-1);
     color: var(--text-secondary);
     font-family: var(--font-mono);

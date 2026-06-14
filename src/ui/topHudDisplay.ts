@@ -120,6 +120,10 @@ export function createSiliconHudSnapshot(silicon: number): HudSnapshot {
     return { silicon };
 }
 
+export function formatWaveTimer(timerMs: number): string {
+    return `${Math.max(0, Math.ceil(timerMs / 1000))}s`;
+}
+
 export function createWaveStartedHudSnapshot(wave: number): HudSnapshot {
     return {
         wave,
@@ -129,6 +133,6 @@ export function createWaveStartedHudSnapshot(wave: number): HudSnapshot {
 
 export function createWaveTimerHudSnapshot(timerMs: number): HudSnapshot {
     return {
-        waveTimer: `${Math.max(0, Math.ceil(timerMs / 1000))}s`
+        waveTimer: formatWaveTimer(timerMs)
     };
 }

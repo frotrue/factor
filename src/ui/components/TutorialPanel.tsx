@@ -44,26 +44,32 @@ export default function TutorialPanel() {
     const hiddenCount = Math.max(0, snapshot.steps.length - visibleSteps.length);
     const typedDetail = snapshot.detail.slice(0, typedLength);
     const isTyping = typedLength < snapshot.detail.length;
+    const titleId = 'preact-tutorial-title';
+    const detailId = 'preact-tutorial-detail';
+    const currentLabelId = 'preact-tutorial-current-label';
+    const currentTitleId = 'preact-tutorial-current-title';
 
     return (
         <section
-            aria-labelledby="preact-tutorial-title"
+            aria-describedby={activeStep ? `${detailId} ${currentTitleId}` : detailId}
+            aria-labelledby={titleId}
+            aria-live="polite"
             class={styles.panel}
             data-active-step={snapshot.activeStepId}
             data-testid="preact-tutorial-panel"
-            aria-live="polite"
             role="status"
         >
-            <div class={styles.header}>
+            <div class={styles.header} data-testid="preact-tutorial-header">
                 <div>
-                    <div class={styles.kicker}>{snapshot.kicker}</div>
-                    <div class={styles.title} id="preact-tutorial-title">{snapshot.title}</div>
+                    <div class={styles.kicker} data-testid="preact-tutorial-kicker">{snapshot.kicker}</div>
+                    <div class={styles.title} data-testid="preact-tutorial-title" id={titleId}>{snapshot.title}</div>
                 </div>
                 <div class={styles.headerActions}>
                     <div class={styles.progress} data-testid="preact-tutorial-progress-count">
                         {snapshot.completeCount}/{snapshot.totalCount}
                     </div>
                     <Button
+                        ariaDescribedBy={detailId}
                         className={styles.skip}
                         dataTestId="preact-tutorial-skip"
                         onClick={event => {
@@ -89,14 +95,26 @@ export default function TutorialPanel() {
             >
                 <span style={{ width: `${progressPercent}%` }} />
             </div>
-            <p class={`${styles.detail} ${isTyping ? styles.typing : ''}`} data-testid="preact-tutorial-detail">
+            <p
+                class={`${styles.detail} ${isTyping ? styles.typing : ''}`}
+                data-testid="preact-tutorial-detail"
+                data-typing={isTyping ? 'true' : 'false'}
+                id={detailId}
+            >
                 {typedDetail}
                 {isTyping ? <span class={styles.caret} /> : null}
             </p>
             {activeStep ? (
-                <div class={styles.current} data-testid="preact-tutorial-current">
-                    <span>{snapshot.labels.currentObjective}</span>
-                    <strong>{activeStep.title}</strong>
+                <div
+                    aria-labelledby={`${currentLabelId} ${currentTitleId}`}
+                    class={styles.current}
+                    data-testid="preact-tutorial-current"
+                    role="group"
+                >
+                    <span data-testid="preact-tutorial-current-label" id={currentLabelId}>
+                        {snapshot.labels.currentObjective}
+                    </span>
+                    <strong data-testid="preact-tutorial-current-title" id={currentTitleId}>{activeStep.title}</strong>
                 </div>
             ) : null}
             <div
@@ -113,11 +131,17 @@ export default function TutorialPanel() {
                         key={step.id}
                         role="listitem"
                     >
-                        <span>{step.completed ? snapshot.labels.ok : String(index + 1).padStart(2, '0')}</span>
-                        <strong>{step.title}</strong>
+                        <span data-testid={`preact-tutorial-step-${step.id}-marker`}>
+                            {step.completed ? snapshot.labels.ok : String(index + 1).padStart(2, '0')}
+                        </span>
+                        <strong data-testid={`preact-tutorial-step-${step.id}-title`}>{step.title}</strong>
                     </div>
                 ))}
-                {hiddenCount > 0 ? <div class={styles.more}>+{hiddenCount} {snapshot.labels.moreSteps}</div> : null}
+                {hiddenCount > 0 ? (
+                    <div class={styles.more} data-testid="preact-tutorial-more" role="listitem">
+                        +{hiddenCount} {snapshot.labels.moreSteps}
+                    </div>
+                ) : null}
             </div>
         </section>
     );
