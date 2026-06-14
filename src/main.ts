@@ -1,13 +1,24 @@
 import Phaser from 'phaser';
+import './styles/tokens.css';
 import './styles/main.css';
+import './styles/legacy-ui.css';
 import MainMenuScene from './scenes/MainMenuScene';
 import MainScene from './scenes/MainScene';
+import EventBus from './managers/EventBus';
+import { mountHud } from './ui/mountHud';
 
 declare global {
     interface Window {
-        __NEURAL_FACTORY_GAME__?: Phaser.Game;
+        __GRADIUM_GAME__?: Phaser.Game;
+        __GRADIUM_EVENT_BUS__?: typeof EventBus;
     }
 }
+
+const DEFAULT_FPS_LIMIT = 60;
+const savedFps = parseInt(localStorage.getItem('gradium_fps_limit') || String(DEFAULT_FPS_LIMIT), 10);
+const fpsTarget = Number.isFinite(savedFps)
+    ? Math.max(30, Math.min(240, savedFps))
+    : DEFAULT_FPS_LIMIT;
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
@@ -17,6 +28,10 @@ const config: Phaser.Types.Core.GameConfig = {
     backgroundColor: '#050510',
     pixelArt: false,
     scene: [MainMenuScene, MainScene],
+    fps: {
+        target: fpsTarget,
+        forceSetTimeOut: false
+    },
     scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH
@@ -24,4 +39,6 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
-window.__NEURAL_FACTORY_GAME__ = game;
+window.__GRADIUM_GAME__ = game;
+window.__GRADIUM_EVENT_BUS__ = EventBus;
+mountHud(game);

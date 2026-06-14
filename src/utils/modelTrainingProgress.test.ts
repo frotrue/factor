@@ -1,0 +1,85 @@
+import { describe, expect, test } from 'vitest';
+import {
+    applyCompletedTraining,
+    createDefaultDefenseModelState,
+    getGpuTrainingSpeedMultiplier,
+    getNextTrainingRequirement,
+    getTimeAdjustedModelAccuracy,
+    getTrainingDataValue,
+    getTrainingDurationTicks,
+    isGpuUnlocked,
+    normalizeDefenseModelState
+} from './modelTrainingProgress';
+import { CONFIG } from '../config';
+
+describe('modelTrainingProgress', () => {
+    test('maps training data values', () => {
+        expect(getTrainingDataValue('RAW_DATA')).toBe(1);
+        expect(getTrainingDataValue('LABELED_DATA')).toBe(3);
+        expect(getTrainingDataValue('WEIGHT_UPDATE')).toBe(5);
+        expect(getTrainingDataValue('TRAINED_MODEL')).toBe(0);
+    });
+
+    test('scales requirements by 1.3x rounded up', () => {
+        expect(getNextTrainingRequirement(100)).toBe(130);
+        expect(getNextTrainingRequirement(130)).toBe(169);
+    });
+
+    test('starts default models at 40 accuracy with the first requirement', () => {
+        expect(createDefaultDefenseModelState()).toMatchObject({
+            modelAccuracy: 40,
+            damageBonus: 0,
+            trainingRewardPreference: 'accuracy',
+            currentRequirement: 100,
+            isTraining: false
+        });
+    });
+
+    test('maps legacy modelConfidence to modelAccuracy', () => {
+        expect(normalizeDefenseModelState({ modelConfidence: 55 }).modelAccuracy).toBe(55);
+    });
+
+    test('applies the selected reward mode without capping damage', () => {
+        const state = createDefaultDefenseModelState();
+        state.modelAccuracy = 95;
+        expect(applyCompletedTraining(state)).toEqual({ kind: 'accuracy', accuracyGain: 5, damageGain: 0 });
+        expect(state.modelAccuracy).toBe(100);
+
+        state.trainingRewardPreference = 'damage';
+        expect(applyCompletedTraining(state)).toEqual({ kind: 'damage', accuracyGain: 0, damageGain: 5 });
+        expect(state.damageBonus).toBe(5);
+        state.damageBonus = 995;
+        applyCompletedTraining(state);
+        expect(state.damageBonus).toBe(1000);
+    });
+
+    test('degrades effective model accuracy as game time advances', () => {
+        expect(getTimeAdjustedModelAccuracy(80, 0)).toBe(80);
+        expect(getTimeAdjustedModelAccuracy(80, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS - 1)).toBe(80);
+        expect(getTimeAdjustedModelAccuracy(80, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS)).toBe(79);
+        expect(getTimeAdjustedModelAccuracy(80, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS * 3)).toBe(77);
+        expect(getTimeAdjustedModelAccuracy(2, CONFIG.MODEL_TRAINING.ACCURACY_DECAY_INTERVAL_MS * 10)).toBe(CONFIG.MODEL_TRAINING.MIN_EFFECTIVE_ACCURACY);
+    });
+
+    test('caps active GPU speed bonus at four accelerators', () => {
+        expect(getGpuTrainingSpeedMultiplier(0)).toBe(1);
+        expect(getGpuTrainingSpeedMultiplier(1)).toBe(0.8);
+        expect(getGpuTrainingSpeedMultiplier(4)).toBeCloseTo(0.2);
+        expect(getGpuTrainingSpeedMultiplier(9)).toBeCloseTo(0.2);
+        expect(getTrainingDurationTicks(4)).toBe(Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * 0.2));
+    });
+
+    test('scales training duration by consumed data amount', () => {
+        expect(getTrainingDurationTicks(0, CONFIG.MODEL_TRAINING.INITIAL_DATA_REQUIREMENT)).toBe(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS);
+        expect(getTrainingDurationTicks(0, 130)).toBe(Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * 1.3));
+        expect(getTrainingDurationTicks(1, 130)).toBe(Math.ceil(CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS * 1.3 * 0.8));
+    });
+
+    test('unlocks GPU when any model reaches 100 accuracy', () => {
+        const classifier = createDefaultDefenseModelState();
+        const filter = createDefaultDefenseModelState();
+        expect(isGpuUnlocked({ CLASSIFIER: classifier, FILTER: filter })).toBe(false);
+        filter.modelAccuracy = 100;
+        expect(isGpuUnlocked({ CLASSIFIER: classifier, FILTER: filter })).toBe(true);
+    });
+});

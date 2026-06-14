@@ -23,7 +23,7 @@ export interface ProductionSimulationResult {
     rawProduced: number;
     labeledProduced: number;
     weightUpdatesProduced: number;
-    confidenceScore: number;
+    researchProgressValue: number;
     totalDeliveredToCore: number;
     maxObservedBuffer: number;
     stalledTicks: number;
@@ -102,7 +102,7 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
     let rawProduced = 0;
     let labeledProduced = 0;
     let weightUpdatesProduced = 0;
-    let confidenceScore = 0;
+    let researchProgressValue = 0;
     let totalDeliveredToCore = 0;
     let maxObservedBuffer = 0;
     let stalledTicks = 0;
@@ -133,7 +133,7 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
         trainers.forEach(trainer => {
             while (trainer.output.length > 0) {
                 trainer.output.shift();
-                confidenceScore += 10;
+                researchProgressValue += CONFIG.MODEL_TRAINING.DATA_VALUES.WEIGHT_UPDATE;
                 totalDeliveredToCore++;
             }
         });
@@ -155,10 +155,9 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
         rawProduced,
         labeledProduced,
         weightUpdatesProduced,
-        confidenceScore,
+        researchProgressValue,
         totalDeliveredToCore,
         maxObservedBuffer,
         stalledTicks
     };
 }
-

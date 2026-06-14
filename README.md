@@ -1,4 +1,4 @@
-# Neural Factory
+# Gradium
 
 Phaser 3 + TypeScript + Vite로 만든 2D 공장 자동화/타워 디펜스 게임입니다.
 

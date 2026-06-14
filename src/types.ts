@@ -11,10 +11,15 @@ import type ResearchManager from './managers/ResearchManager';
 import type SaveManager from './managers/SaveManager';
 import type SoundManager from './managers/SoundManager';
 import type TickSystem from './managers/TickSystem';
+import type TrainingPlannerManager from './managers/TrainingPlannerManager';
+import type PerformanceStats from './managers/PerformanceStats';
 import type TutorialManager from './managers/TutorialManager';
-import type UIManager from './managers/UIManager';
+import type UIManager from './ui/UIManager';
 import type WaveManager from './managers/WaveManager';
 import type { Language } from './i18n';
+import type { ThreatLevel } from './utils/waveSimulation';
+
+export type GameMode = 'tutorial' | 'campaign';
 
 // ── 방향 (Direction) ──
 export interface Direction {
@@ -41,7 +46,6 @@ export interface BuildingConfig {
     ID: string;
     NAME: string;
     COLOR: number;
-    TEXTURE?: string;
     DESCRIPTION?: string;
     POWER: PowerConfig;
     PRODUCTION_RATE?: number;
@@ -83,6 +87,75 @@ export interface TerrainConfig {
     BLOCKS_ENEMY: boolean;
 }
 
+export type MapPresetId = 'tutorial' | 'standard';
+export type MapType = 'tutorial' | 'random';
+
+export interface TileArea {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+export interface MapBounds {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+}
+
+export interface ResourcePatchConfig {
+    type: string;
+    x: number;
+    y: number;
+    size: number;
+}
+
+export interface StarterResourceZoneConfig {
+    type: string;
+    area: TileArea;
+    patchSize: number;
+    minTiles: number;
+}
+
+export interface RandomResourceConfig {
+    types: string[];
+    patchCount: { min: number; max: number };
+    patchSize: { min: number; max: number };
+    range: TileArea;
+    exclusionZones: TileArea[];
+}
+
+export interface ResourceRingConfig {
+    minDistance: number;
+    maxDistance: number;
+    patchCount: { min: number; max: number };
+    patchSize: { min: number; max: number };
+    directionalBias?: boolean;
+}
+
+export interface StarterValidationConfig {
+    center: { x: number; y: number };
+    radius: number;
+    maxRepairAttempts: number;
+}
+
+export interface MapPresetConfig {
+    ID: MapPresetId;
+    MAP_TYPE: MapType;
+    WORLD_BOUNDS?: MapBounds;
+    BUILD_BOUNDS?: MapBounds;
+    RESOURCE_BOUNDS?: MapBounds;
+    CAMERA_PADDING_TILES?: number;
+    STARTER_SAFE_AREA?: MapBounds;
+    FIXED_RESOURCES?: ResourcePatchConfig[];
+    STARTER_ZONES?: StarterResourceZoneConfig[];
+    RANDOM_RESOURCES?: RandomResourceConfig;
+    RESOURCE_RINGS?: ResourceRingConfig[];
+    STARTER_VALIDATION?: StarterValidationConfig;
+    TERRAIN_LAYOUTS?: Array<'earlyLaneBlockers' | 'tutorialArenaWalls'>;
+}
+
 // ── 전역 설정용 추가 인터페이스 ──
 export interface CableConfig {
     ID: string;
@@ -90,6 +163,7 @@ export interface CableConfig {
     COLOR: number;
     BANDWIDTH: number;
     COST_PER_TILE: number;
+    MAX_LENGTH_TILES: number;
     MAX_QUEUE: number;
     UNLOCK_REQUIRED?: string;
 }
@@ -125,6 +199,7 @@ export interface GameConfig {
     };
     OPTIMIZATION: {
         GRID_REDRAW_THRESHOLD: number;
+        GRID_CHUNK_TILES: number;
     };
     DIRECTIONS: Direction[];
     BUILDINGS: Record<string, BuildingConfig>;
@@ -134,9 +209,31 @@ export interface GameConfig {
     ITEMS: Record<string, ItemConfig>;
     RESOURCE_PATCHES: Record<string, number>;
     TERRAIN: Record<string, TerrainConfig>;
+    MAP_PRESETS: Record<MapPresetId, MapPresetConfig>;
+    MODEL_TRAINING: ModelTrainingConfig;
     ENEMIES: Record<string, EnemyConfig>;
+    RESEARCH_AXES: ResearchAxis[];
+    RESEARCH_SETTINGS: ResearchSettings;
     RESEARCH: Record<string, ResearchNode>;
+    CORE_ORIGIN: { TILE_X: number; TILE_Y: number };
     DIFFICULTY: Record<string, DifficultyConfig>;
+}
+
+export interface ModelTrainingConfig {
+    TARGET_TYPES: string[];
+    BASE_ACCURACY: number;
+    ACCURACY_GAIN: number;
+    ACCURACY_DECAY_PER_INTERVAL: number;
+    ACCURACY_DECAY_INTERVAL_MS: number;
+    MIN_EFFECTIVE_ACCURACY: number;
+    DAMAGE_GAIN: number;
+    INITIAL_DATA_REQUIREMENT: number;
+    REQUIREMENT_MULTIPLIER: number;
+    BASE_TRAINING_TICKS: number;
+    DATA_VALUES: Record<string, number>;
+    GPU_UNLOCK_ACCURACY: number;
+    GPU_MAX_ACTIVE: number;
+    GPU_SPEED_BONUS: number;
 }
 
 export interface DifficultyConfig {
@@ -156,15 +253,61 @@ export interface ResearchEffects {
     TOWER_FIRE_RATE_MULTIPLIER?: number;
     AP_RANGE_BONUS?: number;
     CABLE_BANDWIDTH_BONUS?: number;
+    CABLE_LENGTH_BONUS?: number;
     FIREWALL_HP_MULTIPLIER?: number;
+}
+
+export type InsightGroup = 'material' | 'tactical' | 'system';
+export type ResearchTag = 'unlock' | 'stat' | 'rule-change' | 'slot' | 'throughput';
+export type ResearchNodeStatus = 'locked' | 'available' | 'active' | 'waiting_resource' | 'completed' | 'gated';
+
+export interface ResearchAxis {
+    id: string;
+    label: string;
+    angle: number;
+    color: string;
+    insightGroup: InsightGroup;
+}
+
+export interface ResearchSettings {
+    BASE_THROUGHPUT: number;
+    GPU_THROUGHPUT_BONUS: number;
+    BUFFER_CAPACITY: Record<InsightGroup, number>;
+    FACILITY_OUTPUT: Record<InsightGroup, number>;
+}
+
+export interface ResearchCosts {
+    insight: Partial<Record<InsightGroup, number>>;
+}
+
+export interface ResearchSlotState {
+    id: string;
+    researchId: string | null;
+}
+
+export interface ResearchProgressState {
+    progress: number;
+}
+
+export interface ResearchState {
+    completed: string[];
+    activeSlots: ResearchSlotState[];
+    progressById: Record<string, ResearchProgressState>;
+    insightBuffers: Record<InsightGroup, number>;
+    unlockedSlots: number;
 }
 
 // ── 연구 노드 (Research) ──
 export interface ResearchNode {
     ID: string;
     NAME: string;
-    COST: number; // Confidence score
+    COST: number; // Legacy total cost facade.
     DESCRIPTION: string;
+    AXIS: string;
+    RING: number;
+    POSITION: number;
+    COSTS: ResearchCosts;
+    TAGS: ResearchTag[];
     UNLOCKS: {
         BUILDINGS?: string[];
         RECIPES?: string[];
@@ -172,16 +315,60 @@ export interface ResearchNode {
     };
     REQUIREMENTS?: string[]; // IDs of required research nodes
     EFFECTS?: ResearchEffects;
+    SLOT_BONUS?: number;
+    THROUGHPUT_BONUS?: number;
+}
+
+export interface ResearchNodeSnapshot {
+    id: string;
+    name: string;
+    description: string;
+    axis: string;
+    ring: number;
+    position: number;
+    status: ResearchNodeStatus;
+    progressPercent: number;
+    costText: string;
+    tagLabels: string[];
+    effectsText: string[];
+}
+
+export interface ResearchPanelSnapshot {
+    open: boolean;
+    title: string;
+    closeLabel: string;
+    throughputText: string;
+    slotsText: string;
+    buffers: Array<{
+        id: InsightGroup;
+        label: string;
+        value: number;
+        capacity: number;
+        percent: number;
+    }>;
+    axes: ResearchAxis[];
+    nodes: ResearchNodeSnapshot[];
+    selectedId: string | null;
+}
+
+export type LabJobCategory = 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL';
+
+export interface LabJobProgress {
+    progress: number;
+    completed: boolean;
+    isTraining?: boolean;
+    trainingProgressTicks?: number;
+    trainingDurationTicks?: number;
 }
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
-export type BuildingType = 
+export type BuildingType =
     | 'MINER' | 'DATA_DOWNLOADER' | 'CORE' | 'PROCESSOR'
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
-    | 'MODEL_TRAINING_LAB'
-    | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE';
+    | 'MODEL_TRAINING_LAB' | 'RESEARCH_LAB' | 'DATA_CENTER' | 'GPU_CLUSTER'
+    | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE' | 'REPEATER';
 
 // ── 케이블 연결 ──
 export interface CableConnection {
@@ -191,6 +378,7 @@ export interface CableConnection {
     bandwidth: number;
     queue: CablePacket[];
     cableType: 'BASIC' | 'FIBER';
+    costPaid?: number;
     flowDirection?: 'FORWARD' | 'BACKWARD';
 }
 
@@ -220,6 +408,8 @@ export interface PowerUpdateData {
     consumption: number;
     net: number;
     isBlackout: boolean;
+    averageSatisfaction?: number;
+    lowPowerNetworks?: number;
     networks?: PowerNetwork[];
     blackoutNetworks?: number;
 }
@@ -229,6 +419,327 @@ export interface CoreDataEvent {
     type: string;
     score: number;
     total: number;
+}
+
+export interface TopHudLabels {
+    aria: string;
+    runtimeStats: string;
+    shortcuts: string;
+    settings: string;
+    research: string;
+    lab: string;
+    stats: {
+        dataReceived: string;
+        power: string;
+        silicon: string;
+        packets: string;
+        wave: string;
+        nextWave: string;
+    };
+}
+
+export interface HudSnapshot {
+    labels?: TopHudLabels;
+    score?: number;
+    power?: PowerUpdateData;
+    silicon?: number;
+    packets?: number;
+    wave?: number;
+    waveTimer?: string;
+}
+
+export interface TacticalPanelSnapshot {
+    labels: {
+        aria: string;
+        expand: string;
+        collapse: string;
+        panelNames: Record<'objective' | 'threat' | 'systems', string>;
+        objective: string;
+        threat: string;
+        systems: string;
+        powerLoad: string;
+    };
+    objective: {
+        title: string;
+        detail: string;
+    };
+    threat: {
+        title: string;
+        detail: string;
+        recommendation: string;
+        threatLevel: ThreatLevel;
+        routeNames: string[];
+        special: string | null;
+    };
+    defense: {
+        title: string;
+        detail: string;
+    };
+    powerStatus: {
+        text: string;
+        tone: 'default' | 'warning' | 'danger';
+    };
+}
+
+export interface BuildConsoleItemSnapshot {
+    key: string;
+    label: string;
+    cost: string;
+    color: string;
+    iconSrc?: string;
+    description?: string;
+    stats?: Array<{
+        label: string;
+        value: string;
+        tone?: 'default' | 'good' | 'warning';
+    }>;
+    hotkey?: string;
+    selected: boolean;
+}
+
+export interface BuildConsoleSnapshot {
+    activeCategory: string;
+    labels: {
+        aria: string;
+        categories: string;
+        tools: string;
+        toolInfo: string;
+        selectedTool: string;
+        more: string;
+        commandSelect: string;
+        commandRotate: string;
+        commandRemove: string;
+    };
+    categories: Array<{
+        id: string;
+        label: string;
+        active: boolean;
+    }>;
+    items: BuildConsoleItemSnapshot[];
+    selectedTool: {
+        type: string;
+        name: string;
+        cost: string;
+        hint: string;
+    };
+}
+
+export interface SettingsModalSnapshot {
+    open: boolean;
+    speed: number;
+    fps: number;
+    volume: number;
+    muted: boolean;
+    bloomEnabled: boolean;
+    language: Language;
+    labels: {
+        aria: string;
+        kicker: string;
+        title: string;
+        close: string;
+        tabs: Record<'game' | 'audio' | 'graphics' | 'system', string>;
+        speed: string;
+        language: string;
+        languageKo: string;
+        languageEn: string;
+        masterVolume: string;
+        muted: string;
+        graphics: string;
+        fps: string;
+        saveData: string;
+        save: string;
+        load: string;
+        tutorial: string;
+        restartTutorial: string;
+        note: string;
+        bloomOn: string;
+        bloomOff: string;
+    };
+}
+
+export interface TrainingLabRowSnapshot {
+    id: string;
+    kind: 'DEFENSE' | 'SYSTEM';
+    title: string;
+    detail: string;
+    progress: string;
+    active: boolean;
+    disabled?: boolean;
+    rewardPreference?: TrainingRewardPreference;
+}
+
+export interface TrainingLabSnapshot {
+    open: boolean;
+    title: string;
+    kicker: string;
+    closeLabel: string;
+    overview: string;
+    plannerStatus: string;
+    plannerReason: string;
+    autoToggleLabel: string;
+    autoEnabled: boolean;
+    activeTab: 'DEFENSE' | 'SYSTEM';
+    tabs: {
+        defense: string;
+        system: string;
+    };
+    rewardModeLabel: string;
+    rewardAccuracyShortLabel: string;
+    rewardDamageShortLabel: string;
+    dataProgressLabel: string;
+    workProgressLabel: string;
+    toneLabels: Record<'active' | 'complete' | 'training' | 'locked' | 'idle', string>;
+    duration: string;
+    rows: TrainingLabRowSnapshot[];
+}
+
+export interface GameOverSnapshot {
+    open: boolean;
+    kicker: string;
+    title: string;
+    failureCode: string;
+    integrityLabel: string;
+    bestModelLabel: string;
+    bestModelDetail: string;
+    restartLabel: string;
+    mainMenuLabel: string;
+    stats: Array<{
+        id: 'wave' | 'core' | 'data' | 'research';
+        label: string;
+        value: string;
+        tone: 'warn' | 'danger' | 'cyan' | 'green';
+    }>;
+    wave: number;
+    coreHpPercent: number;
+    totalDataReceived: number;
+    unlockedResearchCount: number;
+    bestModelName: string;
+    bestModelAccuracy: number;
+    bestModelDamageBonus: number;
+    bestModelVersion: number;
+}
+
+export interface WaveResultSnapshot {
+    open: boolean;
+    token: number;
+    wave: number;
+    kicker: string;
+    title: string;
+    closeLabel: string;
+    integrityLabel: string;
+    integrityTone: 'good' | 'warning' | 'danger';
+    historyLabel: string;
+    historyWaveLabel: string;
+    historyCoreLabel: string;
+    historyKillsLabel: string;
+    stats: Array<{
+        id: 'destroyed' | 'data' | 'integrity' | 'buildings';
+        label: string;
+        value: string;
+        tone: 'default' | 'good' | 'warning' | 'danger';
+    }>;
+    outcome: 'survived' | 'failed';
+    enemiesDestroyed: number;
+    dataProcessed: number;
+    coreHpPercent: number;
+    coreDamage: number;
+    buildingsDamaged: number;
+    buildingsDestroyed: number;
+}
+
+export interface ActivityLogEntrySnapshot {
+    id: number;
+    message: string;
+    isAlert: boolean;
+}
+
+export interface ActivityLogSnapshot {
+    ariaLabel: string;
+    title: string;
+    alertCountLabel: string;
+    historyLabel: string;
+    lessLabel: string;
+    noAlertsLabel: string;
+    entries: ActivityLogEntrySnapshot[];
+}
+
+export interface TooltipSnapshot {
+    open: boolean;
+    title: string;
+    closeLabel: string;
+    lines: string[];
+    x: number;
+    y: number;
+}
+
+export interface TutorialPanelSnapshot {
+    open: boolean;
+    kicker: string;
+    title: string;
+    labels: {
+        skip: string;
+        progress: string;
+        currentObjective: string;
+        steps: string;
+        ok: string;
+        moreSteps: string;
+    };
+    detail: string;
+    activeStepId: string;
+    completeCount: number;
+    totalCount: number;
+    steps: Array<{
+        id: string;
+        title: string;
+        completed: boolean;
+        active: boolean;
+    }>;
+}
+
+export interface MobileActionSnapshot {
+    open: boolean;
+    labels: {
+        aria: string;
+        toolbar: string;
+        cableMenu: string;
+    };
+    summaryTitle: string;
+    summaryDetail: string;
+    cableMenuOpen: boolean;
+    cableOptions: Array<{
+        id: string;
+        label: string;
+        selected: boolean;
+    }>;
+    actions: Array<{
+        id: string;
+        label: string;
+        active: boolean;
+    }>;
+}
+
+export interface MainMenuSnapshot {
+    open: boolean;
+    labels: {
+        aria: string;
+    };
+    title: string;
+    subtitle: string;
+    difficultyLabel: string;
+    startLabel: string;
+    continueLabel: string;
+    tutorialStatusLabel: string;
+    saveStatusLabel: string;
+    keyHints: string[];
+    selectedDifficulty: string;
+    difficulties: Array<{
+        id: string;
+        label: string;
+        description: string;
+        selected: boolean;
+    }>;
+    tutorialCompleted: boolean;
+    saveExists: boolean;
 }
 
 // ── 전력망 노드 ──
@@ -246,6 +757,8 @@ export interface PowerNetwork {
     consumption: number;
     net: number;
     isBlackout: boolean;
+    lowPower: boolean;
+    satisfaction: number;
     color: number;
 }
 
@@ -268,10 +781,34 @@ export interface DefenseTowerConfig {
     IS_AOE?: boolean;
 }
 
+export type TrainingRewardPreference = 'accuracy' | 'damage';
+export type TrainingPlannerMode = 'AUTO_DECIDE' | 'MANUAL_LOCK';
+
+export interface TrainingPlannerState {
+    activeJobId: string | null;
+    autoEnabled: boolean;
+    mode: TrainingPlannerMode;
+    lastDecisionReason?: string | null;
+}
+
+export interface TrainingPlannerDecision {
+    jobId: string | null;
+    rewardPreference?: TrainingRewardPreference;
+    score: number;
+    reason: string;
+}
+
 export interface DefenseModelState {
-    modelConfidence: number;
+    modelAccuracy: number;
+    damageBonus: number;
+    trainingRewardPreference: TrainingRewardPreference;
     modelVersion: number;
     inferenceCharge: number;
+    accumulatedTrainingData: number;
+    currentRequirement: number;
+    isTraining: boolean;
+    trainingProgressTicks: number;
+    trainingDurationTicks: number;
 }
 
 export interface IMainScene extends Phaser.Scene {
@@ -289,15 +826,23 @@ export interface IMainScene extends Phaser.Scene {
     inventoryManager: InventoryManager;
     saveManager: SaveManager;
     soundManager: SoundManager;
-    tutorialManager: TutorialManager;
+    tutorialManager?: TutorialManager;
+    trainingPlanner: TrainingPlannerManager;
+    performanceStats: PerformanceStats;
     defenseModelStates: Record<string, DefenseModelState>;
+    mode: GameMode;
     gameSpeed: number;
     difficultyId: string;
     isMobileLayout: boolean;
     getDefenseModelState(type: string): DefenseModelState;
-    trainDefenseModelType(type: string, itemType: string): boolean;
+    addTrainingData(type: string, itemType: string): number;
+    startTrainingIfReady(type: string, durationTicks?: number): boolean;
+    completeTraining(type: string): TrainingRewardPreference;
+    isGpuUnlocked(): boolean;
     syncDefenseModelType(type: string): void;
     setGameSpeed(speed: number): void;
+    bloomEnabled: boolean;
+    setBloomEnabled(enabled: boolean): void;
 }
 
 // ── 적 (Enemy) ──
@@ -343,6 +888,7 @@ export interface SavedCable {
     toKey: string;
     cableType: string;
     queue: Array<string | CablePacket>;
+    costPaid?: number;
 }
 
 export interface SaveData {
@@ -360,22 +906,28 @@ export interface SaveData {
     core: {
         hp: number;
         totalDataReceived: number;
-        confidenceScore: number;
     };
     buildings: SavedBuilding[];
     defenseModelStates?: Record<string, DefenseModelState>;
+    labJobProgress?: Record<string, LabJobProgress>;
+    researchState?: ResearchState;
+    trainingPlanner?: TrainingPlannerState;
     items: SavedItem[];
     cables?: SavedCable[];
     settings: {
         gameSpeed: number;
         showPowerGrid: boolean;
         showDefenseRange: boolean;
+        bloomEnabled?: boolean;
         difficulty?: string;
         language?: Language;
         masterVolume: number;
         muted?: boolean;
         tutorialCompleted?: boolean;
         tutorialStep?: number;
+        mapType?: MapType;
+        mapPresetId?: MapPresetId;
+        mapSeed?: number;
     };
     resourceMap: { key: string; type: string }[];
     terrainMap: { key: string; type: string }[];

@@ -7,8 +7,8 @@ export default class SoundManager {
     private unlocked = false;
 
     constructor() {
-        this.masterVolume = this.readNumber('neural_factory_master_volume', 0.6);
-        this.muted = localStorage.getItem('neural_factory_muted') === 'true';
+        this.masterVolume = this.readNumber('gradium_master_volume', 0.6);
+        this.muted = localStorage.getItem('gradium_muted') === 'true';
 
         window.addEventListener('pointerdown', () => this.unlock(), { once: true });
         window.addEventListener('keydown', () => this.unlock(), { once: true });
@@ -32,8 +32,8 @@ export default class SoundManager {
     setSettings(masterVolume: number, muted: boolean): void {
         this.masterVolume = Math.max(0, Math.min(1, masterVolume));
         this.muted = muted;
-        localStorage.setItem('neural_factory_master_volume', String(this.masterVolume));
-        localStorage.setItem('neural_factory_muted', String(this.muted));
+        localStorage.setItem('gradium_master_volume', String(this.masterVolume));
+        localStorage.setItem('gradium_muted', String(this.muted));
     }
 
     unlock(): void {

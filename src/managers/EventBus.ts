@@ -1,5 +1,24 @@
-import { PowerUpdateData, CoreDataEvent } from '../types';
+import {
+    PowerUpdateData,
+    CoreDataEvent,
+    HudSnapshot,
+    TacticalPanelSnapshot,
+    BuildConsoleSnapshot,
+    SettingsModalSnapshot,
+    TrainingLabSnapshot,
+    ResearchPanelSnapshot,
+    GameOverSnapshot,
+    WaveResultSnapshot,
+    ActivityLogSnapshot,
+    TooltipSnapshot,
+    TutorialPanelSnapshot,
+    MobileActionSnapshot,
+    MainMenuSnapshot,
+    TrainingRewardPreference
+} from '../types';
 import type { WaveBriefing } from '../utils/waveSimulation';
+import type { WaveResultSummary } from '../utils/waveResultSummary';
+import type ModelTrainingLab from '../buildings/ModelTrainingLab';
 
 export interface EventMap {
     'BUILDING_SELECTED': { type: string };
@@ -21,9 +40,68 @@ export interface EventMap {
     'SAVE_REQUESTED': void;
     'LOAD_REQUESTED': void;
     'RESEARCH_UNLOCKED': { id: string };
-    'RESEARCH_OPENED': void;
+    'RESEARCH_OPEN_REQUESTED': void;
+    'RESEARCH_CLOSE_REQUESTED': void;
+    'RESEARCH_SELECT_REQUESTED': { id: string };
+    'RESEARCH_SLOT_ASSIGN_REQUESTED': { id: string };
+    'RESEARCH_PANEL_UPDATED': ResearchPanelSnapshot;
+    'RESEARCH_PANEL_OPEN_CHANGED': { open: boolean };
+    'RESEARCH_STATE_CHANGED': void;
+    'SETTINGS_OPEN_REQUESTED': void;
+    'TRAINING_LAB_OPEN_REQUESTED': { lab?: ModelTrainingLab; tab?: 'DEFENSE' | 'SYSTEM' };
+    'LAB_JOB_PROGRESS': { id: string; progress: number; required: number };
+    'MODEL_TRAINING_TARGET_SET': { targetType: string | null };
     'TUTORIAL_RESET': void;
     'AUDIO_SETTINGS_CHANGED': { masterVolume: number; muted: boolean };
+    'BLOOM_SETTINGS_CHANGED': { enabled: boolean };
+    'HUD_STATE_UPDATED': HudSnapshot;
+    'HUD_SHELL_SYNC_REQUESTED': void;
+    'TACTICAL_PANELS_UPDATED': TacticalPanelSnapshot;
+    'TACTICAL_PANELS_REFRESH_REQUESTED': void;
+    'BUILD_CONSOLE_REFRESH_REQUESTED': void;
+    'BUILD_CONSOLE_UPDATED': BuildConsoleSnapshot;
+    'BUILD_CATEGORY_SELECT_REQUESTED': { category: string };
+    'BUILD_TOOL_SELECT_REQUESTED': { type: string };
+    'UI_FRAME_REFRESH_REQUESTED': { itemCount: number };
+    'SETTINGS_MODAL_UPDATED': SettingsModalSnapshot;
+    'SETTINGS_MODAL_OPEN_CHANGED': { open: boolean };
+    'SETTINGS_CLOSE_REQUESTED': void;
+    'SETTINGS_SPEED_REQUESTED': { speed: number };
+    'SETTINGS_FPS_REQUESTED': { fps: number };
+    'SETTINGS_AUDIO_REQUESTED': { volume: number; muted: boolean };
+    'SETTINGS_BLOOM_REQUESTED': { enabled: boolean };
+    'SETTINGS_LANGUAGE_REQUESTED': { language: string };
+    'SETTINGS_RESET_TUTORIAL_REQUESTED': void;
+    'TRAINING_LAB_UPDATED': TrainingLabSnapshot;
+    'TRAINING_LAB_RENDER_REQUESTED': void;
+    'TRAINING_LAB_OPEN_CHANGED': { open: boolean };
+    'TRAINING_LAB_CLOSE_REQUESTED': void;
+    'TRAINING_LAB_TAB_REQUESTED': { tab: 'DEFENSE' | 'SYSTEM' };
+    'TRAINING_LAB_AUTO_REQUESTED': { enabled: boolean };
+    'TRAINING_LAB_JOB_SELECT_REQUESTED': { kind: 'DEFENSE' | 'SYSTEM'; id: string };
+    'TRAINING_LAB_REWARD_REQUESTED': { type: string; reward: TrainingRewardPreference };
+    'GAME_OVER_UPDATED': GameOverSnapshot;
+    'GAME_OVER_ACTION_REQUESTED': { action: 'restart' | 'main-menu' };
+    'WAVE_RESULT_SUMMARY_REQUESTED': WaveResultSummary;
+    'WAVE_RESULT_UPDATED': WaveResultSnapshot;
+    'WAVE_RESULT_CLOSE_REQUESTED': void;
+    'ACTIVITY_LOG_ENTRY_REQUESTED': { message: string; isAlert?: boolean };
+    'ACTIVITY_LOG_UPDATED': ActivityLogSnapshot;
+    'TOOLTIP_SHOW_REQUESTED': { x: number; y: number; title: string; content: string };
+    'TOOLTIP_UPDATED': TooltipSnapshot;
+    'TOOLTIP_CLOSE_REQUESTED': void;
+    'TUTORIAL_PANEL_UPDATED': TutorialPanelSnapshot;
+    'TUTORIAL_SKIP_REQUESTED': void;
+    'MOBILE_ACTION_UPDATED': MobileActionSnapshot;
+    'MOBILE_ACTION_REQUESTED': { id: string };
+    'MOBILE_ACTION_REFRESH_REQUESTED': void;
+    'MOBILE_BUILD_SUMMARY_REFRESH_REQUESTED': void;
+    'MOBILE_UI_REBUILD_REQUESTED': void;
+    'MOBILE_ACTION_CANCEL_REQUESTED': void;
+    'MOBILE_ACTION_STATUS_REQUESTED': { status: string | null };
+    'MAIN_MENU_UPDATED': MainMenuSnapshot;
+    'MAIN_MENU_DIFFICULTY_REQUESTED': { id: string };
+    'MAIN_MENU_START_REQUESTED': { loadSave?: boolean };
 }
 
 type EventCallback<T = any> = (data: T) => void;

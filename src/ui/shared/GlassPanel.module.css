@@ -1,0 +1,89 @@
+.panel {
+    --panel-accent: var(--holo-cyan);
+    position: relative;
+    border: 1px solid rgba(152, 176, 204, 0.1);
+    border-radius: var(--radius-md);
+    background:
+        linear-gradient(135deg, rgba(77, 216, 255, 0.06), transparent 34%),
+        rgba(8, 12, 20, 0.82);
+    box-sizing: border-box;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+    contain: layout paint style;
+    overflow: hidden;
+    box-shadow: var(--shadow-panel);
+}
+
+.panel::before,
+.panel::after {
+    position: absolute;
+    content: "";
+    pointer-events: none;
+}
+
+.panel::before {
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 24%, transparent 76%, rgba(255, 255, 255, 0.035)),
+        repeating-linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.035) 0,
+            rgba(255, 255, 255, 0.035) 1px,
+            transparent 1px,
+            transparent 8px
+        );
+    opacity: 0.38;
+    mix-blend-mode: screen;
+}
+
+.panel::after {
+    top: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    border-top: 1px solid color-mix(in srgb, var(--panel-accent), transparent 22%);
+    border-right: 1px solid color-mix(in srgb, var(--panel-accent), transparent 22%);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--panel-accent), transparent 62%);
+}
+
+.panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+.alert {
+    --panel-accent: var(--holo-red);
+    border-color: rgba(255, 102, 118, 0.26);
+    background:
+        linear-gradient(135deg, rgba(255, 102, 118, 0.12), transparent 38%),
+        rgba(32, 12, 18, 0.72);
+    animation: panel-alert-pulse 2.4s ease-in-out infinite;
+}
+
+.success {
+    --panel-accent: var(--holo-green);
+    border-color: rgba(100, 245, 141, 0.22);
+    background:
+        linear-gradient(135deg, rgba(100, 245, 141, 0.1), transparent 38%),
+        rgba(10, 26, 18, 0.72);
+}
+
+@keyframes panel-alert-pulse {
+    0%,
+    100% {
+        box-shadow: var(--shadow-panel);
+    }
+
+    50% {
+        box-shadow: var(--shadow-panel), 0 0 18px rgba(255, 102, 118, 0.2);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .alert {
+        animation: none;
+    }
+
+    .panel::before {
+        opacity: 0.22;
+    }
+}

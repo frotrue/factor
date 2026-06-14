@@ -1,0 +1,7 @@
+.hudRoot {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+}

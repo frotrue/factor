@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { simulateProductionLoop } from './productionSimulation';
 
 describe('production loop simulation', () => {
-    it('produces confidence over a long data-processing run', () => {
+    it('produces lab progress value over a long data-processing run', () => {
         const result = simulateProductionLoop({
             ticks: 2000,
             dataDownloaders: 2,
@@ -15,7 +15,7 @@ describe('production loop simulation', () => {
         expect(result.rawProduced).toBeGreaterThan(100);
         expect(result.labeledProduced).toBeGreaterThan(100);
         expect(result.weightUpdatesProduced).toBeGreaterThan(40);
-        expect(result.confidenceScore).toBe(result.weightUpdatesProduced * 10);
+        expect(result.researchProgressValue).toBe(result.weightUpdatesProduced * 5);
         expect(result.maxObservedBuffer).toBeLessThanOrEqual(20);
     });
 
@@ -30,8 +30,7 @@ describe('production loop simulation', () => {
         });
 
         expect(result.totalDeliveredToCore).toBeGreaterThan(250);
-        expect(result.confidenceScore).toBeGreaterThan(2500);
+        expect(result.researchProgressValue).toBeGreaterThan(1250);
         expect(result.stalledTicks / result.ticks).toBeLessThan(0.95);
     });
 });
-
