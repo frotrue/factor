@@ -6,7 +6,7 @@
 
 Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디펜스 게임입니다. 현재 빌드는 기본 FPS target 60을 기준으로 하며, UI objective/defense 패널과 웨이브 타이머 DOM 갱신은 dirty/throttle 기반 작업으로 처리합니다.
 
-핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, 방어 모델 훈련과 독립 연구 시스템으로 공장을 성장시키는 흐름입니다. Neural Operations Lab은 방어 모델 훈련과 Tactical Insight 생산을 담당하고, 연구는 별도 Research Panel의 전역 슬롯에서 진행됩니다. 전력망은 네트워크 만족도 기반 `powerEfficiency`로 건물 작업 속도를 낮추며, 연구는 `Material/Tactical/System Insight`와 GPU 기반 throughput을 소비합니다. 현재 빌드는 난이도 선택, 건물 역할 중심 튜토리얼, 일반 캠페인과 분리된 작은 건물 학습용 튜토리얼 arena 맵, 큰 유한 캠페인 맵 bounds, 자원/지형 생성, 건물 배치/철거/회전, 컨베이어와 거리/장애물 제한이 있는 케이블/AP/Repeater 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
+핵심 플레이는 `Signal Packet -> Labeled Data -> Weight Update` 데이터 생산 라인을 만들고, 침입 포트에서 들어오는 적을 방어하며, 방어 모델 훈련과 독립 연구 시스템으로 공장을 성장시키는 흐름입니다. Neural Operations Lab은 방어 모델 훈련과 Tactical Insight 생산을 담당하고, 연구는 별도 Research Panel의 전역 슬롯에서 진행됩니다. 전력망은 네트워크 만족도 기반 `powerEfficiency`로 건물 작업 속도를 낮추며, 연구는 `Material/Tactical/System Insight`와 GPU 기반 throughput을 소비합니다. 현재 빌드는 난이도 선택, 건물 역할 중심 튜토리얼, 일반 캠페인과 분리된 작은 건물 학습용 튜토리얼 arena 맵, 큰 유한 캠페인 맵 bounds, 자원/지형 생성, 건물 배치/철거/회전, 거리/장애물 제한이 있는 케이블/AP/Repeater 물류, 전력망, 웨이브, 저장/불러오기, 한국어/영어 UI, 데스크톱/모바일 조작을 포함합니다.
 
 ## 주요 기술 스택
 
@@ -86,12 +86,15 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
 npm install
 npm run dev
 npm run build
+npm run typecheck
 npm test
 npm run test:e2e
+npm run test:e2e:desktop
+npm run test:e2e:mobile
 npm run test:e2e -- --workers=1
 ```
 
-Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.0.0.1 --port 5174`를 띄웁니다. 로컬 안정 기준은 `--workers=1`입니다.
+Playwright는 `playwright.config.ts`가 자동으로 `npm run dev -- --host 127.0.0.1 --port 5174`를 띄웁니다. 로컬 안정 기준은 `--workers=1`입니다. 전체 E2E가 시간 제한에 걸리면 `test:e2e:desktop`과 `test:e2e:mobile`로 나누어 실행합니다.
 
 ## AI가 먼저 읽어야 할 파일 목록
 

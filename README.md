@@ -15,6 +15,7 @@ npm run dev
 
 ```powershell
 npm test
+npm run typecheck
 npm run test:e2e
 npm run build
 ```
@@ -34,9 +35,8 @@ Silicon / Energy 패치 확인
 ## 현재 주요 기능
 
 - 건물 배치, 철거, 회전, 카테고리형 빌드바
-- 물리 자원용 Conveyor / Fast Link
-- 데이터 전송용 Ethernet / Fiber Cable
-- AP Access Point 무선 세션 릴레이
+- 케이블 중심 물류: Ethernet / Fiber Cable / AP / Repeater
+- Silicon과 데이터 아이템의 케이블 기반 저장/전송
 - 전력망, 블랙아웃, 전력/방어 범위 오버레이
 - 고정 침입 포트 기반 웨이브 예고와 방어 경로 시각화
 - 모든 건물 내구도, 적의 건물 공격, 파괴 시 케이블 정리
@@ -73,8 +73,8 @@ Silicon / Energy 패치 확인
 
 | 분류 | 건물 |
 | --- | --- |
-| 추출 | Extractor, Data Downloader, Unloader |
-| 물류 | Conveyor, Fast Link, Storage, Data Cache, AP |
+| 추출 | Extractor, Data Downloader |
+| 물류 | Storage, Data Cache, AP, Repeater |
 | 생산 | Data Processor, Weight Trainer, Neural Trainer, Model Training Lab, Recycler |
 | 전력 | Neural Core, Power Plant, Power Node, Solar Panel |
 | 방어 | Classifier, Anomaly Engine, Firewall |

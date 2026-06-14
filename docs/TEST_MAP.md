@@ -7,9 +7,11 @@
 | 범위 | 명령 |
 |---|---|
 | 타입 | `npx tsc --noEmit` |
+| 타입 npm script | `npm run typecheck` |
 | 유닛/통합 | `npm test` |
 | 번들 | `npm run build` |
 | 브라우저 smoke | `npm run test:e2e` |
+| 브라우저 smoke 분할 | `npm run test:e2e:desktop`, `npm run test:e2e:mobile` |
 
 ## UI 테스트
 
@@ -30,11 +32,12 @@
 | 변경 영역 | 우선 테스트 |
 |---|---|
 | 설정/config | `src/config.test.ts`, `npm run build` |
-| 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |
+| 저장/로드 | `src/managers/SaveManager.test.ts`, `src/utils/saveMigration.test.ts`, E2E save smoke |
 | 전력 효율 | `src/managers/PowerManager.test.ts`, `src/utils/powerPreview.test.ts`, 생산/케이블 관련 테스트 |
 | 독립 연구 | `src/managers/ResearchManager.test.ts`, `src/config.test.ts`, E2E research panel smoke |
 | 튜토리얼 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
-| 웨이브/적/경로 | `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |
+| 웨이브/적/경로 | `src/managers/WaveManager.test.ts`, `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |
+| MainScene 초기화 순서 | `src/managers/SaveManager.test.ts`, `src/managers/WaveManager.test.ts`, E2E startup/save/tutorial smoke |
 | 모델 훈련/GPU | `src/managers/TrainingPlannerManager.test.ts`, `src/utils/modelTrainingProgress.test.ts`, `src/utils/modelTrainingSummary.test.ts`, E2E Training Lab, 연구 throughput smoke |
 | 성능/대형 공장 | `npm test`, `npm run build`, `tests/e2e/performance.spec.ts` |
 
@@ -43,3 +46,4 @@
 - Phaser는 game world 렌더링을 유지하고, Preact는 DOM overlay만 담당합니다.
 - DOM ID를 바꾸면 같은 단계에서 E2E selector도 같이 바꿉니다.
 - 모바일은 일부 legacy compact HUD fallback을 호환 표면으로 유지합니다.
+- 전체 E2E가 로컬 시간 제한에 걸리면 desktop/mobile 분할 명령을 먼저 신뢰하고, 실패한 project만 좁혀 재실행합니다.
