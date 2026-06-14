@@ -1,0 +1,76 @@
+:root {
+    --holo-cyan: #4dd8ff;
+    --holo-cyan-dim: rgba(77, 216, 255, 0.12);
+    --holo-magenta: #f06cff;
+    --holo-green: #64f58d;
+    --holo-amber: #f6c453;
+    --holo-red: #ff6676;
+
+    --bg-void: #030508;
+    --bg-surface: rgba(8, 12, 20, 0.94);
+    --bg-panel: rgba(12, 17, 28, 0.88);
+    --bg-panel-hover: rgba(36, 46, 66, 0.92);
+    --bg-elevated: rgba(18, 24, 38, 0.82);
+
+    --border-subtle: rgba(152, 176, 204, 0.12);
+    --border-active: rgba(77, 216, 255, 0.55);
+    --border-danger: rgba(255, 102, 118, 0.5);
+
+    --text-primary: #f3f7fb;
+    --text-secondary: #9aa8ba;
+    --text-dim: #64748b;
+
+    --font-display: 'Rajdhani', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
+
+    --text-xs: 10px;
+    --text-sm: 12px;
+    --text-base: 14px;
+    --text-lg: 16px;
+    --text-xl: 20px;
+    --text-2xl: 28px;
+    --text-3xl: 40px;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+
+    --shadow-panel: 0 16px 40px rgba(0, 0, 0, 0.48);
+    --shadow-glow-cyan: 0 0 14px rgba(77, 216, 255, 0.45);
+    --shadow-glow-red: 0 0 14px rgba(255, 102, 118, 0.45);
+
+    --transition-fast: 0.12s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.35s ease;
+
+    /* Compatibility aliases for legacy fallback CSS while migration is in progress. */
+    --neon-cyan: var(--holo-cyan);
+    --neon-magenta: var(--holo-magenta);
+    --neon-green: var(--holo-green);
+    --bg-dark: var(--bg-void);
+    --surface-strong: var(--bg-surface);
+    --surface-panel: var(--bg-panel);
+    --surface-panel-soft: var(--bg-elevated);
+    --surface-hover: var(--bg-panel-hover);
+    --text-main: var(--text-primary);
+    --text-muted: var(--text-secondary);
+    --state-warning: var(--holo-amber);
+    --state-danger: var(--holo-red);
+    --state-success: var(--holo-green);
+}
+
+#preact-hud {
+    position: fixed;
+    inset: 0;
+    z-index: 2200;
+    pointer-events: none;
+}

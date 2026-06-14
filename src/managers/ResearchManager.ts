@@ -47,9 +47,13 @@ export default class ResearchManager {
             completed: true
         };
         EventBus.emit('RESEARCH_UNLOCKED', { id: researchId });
-        
-        this.scene.uiManager.logMessage(t('log.researchComplete', { name: textForKey(`research.${researchId}.name`) }));
+
+        this.logMessage(t('log.researchComplete', { name: textForKey(`research.${researchId}.name`) }));
         return true;
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
     }
 
     isJobAvailable(researchId: string): boolean {

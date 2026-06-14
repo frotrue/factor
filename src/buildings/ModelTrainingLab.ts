@@ -151,7 +151,7 @@ export default class ModelTrainingLab extends BaseBuilding {
             return false;
         });
         if (accepted > 0) {
-            scene.uiManager?.renderTrainingLab();
+            EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
         }
     }
 

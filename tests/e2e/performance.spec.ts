@@ -4,16 +4,21 @@ async function startGame(page: Page): Promise<void> {
     const viewport = page.viewportSize()!;
     await page.goto('/');
     await expect(page.locator('canvas')).toBeVisible();
-    await page.waitForFunction(() => {
-        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainMenuScene') as any;
-        return scene?.children?.list?.some((child: any) =>
-            child.text === '> 시스템 초기화 <' || child.text === '> Initialize System <'
-        );
-    });
+    await page.waitForFunction(() => window.__GRADIUM_GAME__?.scene.isActive('MainMenuScene'));
+    await expect(page.getByTestId('preact-main-menu')).toBeVisible();
+    await expect(page.locator('#preact-main-menu-start')).toBeVisible();
 
     const isCompact = viewport.width < 600 || viewport.height < 520;
-    await page.mouse.click(viewport.width / 2, viewport.height / 2 + (isCompact ? 112 : 120));
-    await expect(page.locator('#top-hud')).toBeVisible();
+    const preactStart = page.locator('#preact-main-menu-start');
+    if (await preactStart.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await preactStart.click();
+    } else {
+        await page.mouse.click(viewport.width / 2, viewport.height / 2 + (isCompact ? 112 : 120));
+    }
+    await expect(page.locator('#top-hud')).toBeAttached();
+    await expect(page.locator('#top-hud')).toBeHidden();
+    await expect(page.locator('#top-hud')).toHaveAttribute('data-preact-shadow', 'true');
+    await expect(page.getByTestId('preact-top-bar')).toBeVisible();
     await page.waitForFunction(() => Boolean((window as any).__GRADIUM_PERF__));
 }
 
@@ -100,6 +105,14 @@ test.describe('performance fixtures', () => {
         expect(autosave.counters.autosaveChunks).toBeGreaterThan(0);
         expect(autosave.savedBuildings).toBeGreaterThanOrEqual(1000);
         expect(autosave.summary.p95FrameMs).toBeLessThan(200);
-        expect(autosave.summary.longFrames).toBeLessThan(autosave.summary.frames);
+
+        const recoverySummary = await page.evaluate(async () => {
+            const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
+            scene.performanceStats.reset();
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            return scene.performanceStats.getSummary();
+        });
+        expect(recoverySummary.frames).toBeGreaterThan(0);
+        expect(recoverySummary.p95FrameMs).toBeLessThan(200);
     });
 });

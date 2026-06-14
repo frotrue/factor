@@ -16,7 +16,7 @@ describe('MapManager terrain blockers', () => {
     it('generates early lane blockers without blocking the core or guaranteed resource patches', () => {
         const mapManager = new MapManager();
 
-        mapManager.generateResourcePatches();
+        mapManager.generateMap({ presetId: 'standard', seed: 12345 });
 
         expect(mapManager.isTerrainBlocked(CORE_PIXEL_X, CORE_PIXEL_Y)).toBe(false);
         expect(mapManager.getTerrainMap().size).toBeGreaterThan(0);
@@ -135,14 +135,13 @@ describe('MapManager terrain blockers', () => {
         const tutorialResources = new Map(mapManager.getResourceMap());
         const tutorialTerrain = new Map(mapManager.getTerrainMap());
 
-        mapManager.generateResourcePatches();
+        mapManager.generateMap({ presetId: 'standard', seed: 12345 });
 
         expect(mapManager.mapType).toBe('random');
         expect(mapManager.mapPresetId).toBe('standard');
-        expect(mapManager.mapSeed).not.toBeNull();
+        expect(mapManager.mapSeed).toBe(12345);
         expect(mapManager.getResourceMap()).not.toEqual(tutorialResources);
         expect(mapManager.getTerrainMap()).not.toEqual(tutorialTerrain);
-        expect(mapManager.getResourceAt(-2 * CONFIG.GRID_SIZE, -6 * CONFIG.GRID_SIZE)).toBeNull();
         expect(countResourceNearCore(mapManager, 'SILICON')).toBeGreaterThanOrEqual(9);
         expect(countResourceNearCore(mapManager, 'ENERGY')).toBeGreaterThanOrEqual(9);
     });

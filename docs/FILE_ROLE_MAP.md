@@ -1,73 +1,68 @@
 # 파일 역할 맵
 
-프로젝트 이해와 구현에 중요한 파일만 압축 정리했습니다. 전체 구조는 [PROJECT_MAP.md](./PROJECT_MAP.md), 런타임 흐름은 [ARCHITECTURE.md](./ARCHITECTURE.md)를 참고하세요.
+다음 세션이 소유 경계를 빠르게 잡기 위한 요약입니다. 세부 구현은 코드와 인접 테스트를 우선 확인하세요.
 
-| 파일 | 역할 | 관련 흐름 | 수정 시 주의점 | 관련 테스트 |
-|---|---|---|---|---|
-| `src/main.ts` | Phaser 게임 생성, `window.__GRADIUM_GAME__` 노출, 기본 FPS target 설정 | 앱 시작, Playwright 상태 조회, 성능 기본값 | Scene 배열 순서가 메뉴->게임 흐름을 결정. 저장된 FPS 설정은 clamp되며 기본값은 60 FPS | `tests/e2e/app-smoke.spec.ts` |
-| `src/scenes/MainMenuScene.ts` | 난이도 선택 메뉴 | 메뉴 UI, 난이도 전달 | 시작 버튼 좌표/텍스트는 E2E가 기다림 | `tests/e2e/app-smoke.spec.ts` |
-| `src/scenes/MainScene.ts` | 게임 런타임 조립, 매니저 초기화, 프레임 update, 이벤트 연결 | 거의 모든 게임 흐름의 중심 | 매니저 초기화 순서, EventBus owner cleanup, 모바일 layout 상태 주의. `PowerManager` owner cleanup 포함 | E2E 전반 |
-| `src/config.ts` | 건물/아이템/레시피/적/연구/난이도/타이밍 설정 | 밸런스, UI, 팩토리, 테스트의 단일 원천 | 새 ID 추가 시 `types.ts`, `BuildingFactory`, i18n, 테스트 동시 갱신 | `src/config.test.ts`, 다수 utils 테스트 |
-| `src/types.ts` | 핵심 타입, 저장 포맷, Scene 인터페이스 | 타입 계약, GameMode, SaveData, manager 접근 | SaveData 변경 시 `SaveManager`와 migration 필수. `mode`는 튜토리얼/캠페인 실행 경계, `settings.mapType`은 저장 맵 복원 힌트 | `src/utils/saveMigration.test.ts` |
-| `src/i18n.ts` | 한국어/영어 번역과 언어 저장 | 메뉴, HUD, 툴팁, 테스트 텍스트 | 새 UI 키 추가 시 ko/en 모두 추가 | `src/i18n.test.ts`, E2E language smoke |
-| `src/styles/main.css` | DOM UI와 모바일 레이아웃 | PC HUD shell, 우측 정보 레일, 하단 빌드 콘솔, 모달, 모바일 액션바 | DOM id/class와 Playwright 셀렉터 영향. 모바일에서는 HUD가 터치 배치를 가로막지 않게 pointer-events 주의 | `tests/e2e/app-smoke.spec.ts` |
-| `src/visuals/visualTheme.ts` | 캔버스 그래픽 패치 팔레트 | 월드, 건물 카테고리, 아이템, 적, 케이블, 오버레이 색상 | 색상만 바꿔도 UI swatch와 캔버스 의미 색이 어긋날 수 있어 `config.ts`와 함께 확인 | build, E2E visual smoke |
-| `src/managers/BuildingManager.ts` | 건물 배치/철거/조회, 비용 차감, 멀티타일 등록, 타입별 index, 제거/파괴 이벤트 분리 | 입력 배치, 저장 복원, 적 공격, 인벤토리, UI count | 멀티타일 건물은 모든 타일 key에 같은 객체 등록. 타입 index는 origin 건물 단위 Set으로 유지. 수동 철거는 `BUILDING_REMOVED`, 전투 파괴는 `BUILDING_DESTROYED`로 유지 | E2E placement, `src/utils/buildingLifecycle.test.ts` |
-| `src/buildings/BuildingFactory.ts` | 건물 ID -> 클래스 매핑 | 모든 건물 생성 | 새 건물 추가 시 registry 누락 위험 | `src/config.test.ts` 간접 |
-| `src/buildings/BaseBuilding.ts` | 모든 건물 공통 상태, 버퍼, HP, 감염, 코드 기반 렌더 기본. 공통 정적 바디는 타입/크기/색상별 텍스처 캐시로 재사용하고 동적 장식/상태 표시는 별도 graphics에 유지 | 생산, 전투, 저장, UI tooltip, 건물 패널 그래픽 | `takeDamage()`는 전투 파괴 경로로 BuildingManager에 위임. 그래픽 변경 시 배경/카테고리 팔레트와 식별성을 같이 확인. subclass가 `this.graphics.clear()`로 자체 바디를 다시 그릴 수 있음. `shouldUseAnimatedVisuals()`가 대형 공장 장식 tween 생성을 제한 | `src/buildings/BaseBuilding.test.ts` |
-| `src/buildings/AbstractProcessor.ts` | 레시피 기반 입력 소비/가공/출력 공통 로직 | Processor, WeightTrainer, NeuralTrainer, Recycler | 연구 속도 배율과 진행바 계산 영향. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | `src/utils/productionSimulation.test.ts` 간접 |
-| `src/buildings/Miner.ts` | 자원 타일에서 Silicon/Energy 생산 | 자원 추출, 컨베이어 물류 | 자원 타일 위에 있어야 실제 생산. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | 추정: `productionSimulation`은 Downloader 중심 |
-| `src/buildings/DataDownloader.ts` | 전력 기반 RAW_DATA 생산 | 초반 데이터 라인 시작 | `MINING_RATE_MULTIPLIER` 효과를 함께 받음. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | `src/utils/productionSimulation.test.ts` |
-| `src/buildings/Processor.ts` | RAW_DATA -> LABELED_DATA | 핵심 데이터 라인 | `CONFIG.RECIPES.LABELLING` 의존 | `src/utils/productionSimulation.test.ts` |
-| `src/buildings/WeightTrainer.ts` | LABELED_DATA 2개 -> WEIGHT_UPDATE | 고가치 Lab 작업 재료 | Neural Operations Lab 작업 진행도 +5 입력 | `src/utils/productionSimulation.test.ts` |
-| `src/buildings/NeuralTrainer.ts` | MODEL_TRAINING / INFERENCE_UNIT_PRODUCTION 레시피 전환 | 후반 생산, 고급 연구 | 클릭 시 레시피 전환하며 버퍼 초기화 | E2E는 간접 |
-| `src/buildings/ModelTrainingLab.ts` | Neural Operations Lab 입력/처리 노드. 데이터 아이템을 전역 `TrainingPlannerManager` active job에 투입하고, Lab/GPU power를 학습 진행에 기여 | 방어 모델 성장, 시스템 프로토콜 해금, 튜토리얼 최종 Lab 단계 | Lab별 active job 저장은 전역 planner로 이전. 방어 모델 진행 상태와 정확도/공격력 보상 선택은 `MainScene.defenseModelStates`, 시스템 프로토콜 진행도는 `ResearchManager.jobProgress`, 자동/수동 작업 선택은 `TrainingPlannerManager`에 저장. 전투에는 `DefenseTower`가 시간 감소를 적용한 실효 정확도를 사용 | `src/managers/TrainingPlannerManager.test.ts`, `src/utils/modelTrainingSummary.test.ts`, `src/utils/modelTrainingProgress.test.ts` |
-| `src/buildings/GpuCluster.ts` | Neural Operations Lab 인접 고전력 가속기 | 정확도 100 이후 학습 시간 단축 | Research 해금이 아니라 모델 정확도 기반 UI gating을 사용. 전력이 없으면 가속에 기여하지 않음. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | `src/utils/modelTrainingProgress.test.ts` 간접 |
-| `src/buildings/DefenseTower.ts` | Classifier/Filter/Firewall 공격, 명중률, 연구 보정, 모델 정확도/공격력 상태 적용 및 실시간 타겟 추적/배리어/방화벽 요동 등 커스텀 벡터 비주얼 탑재 | 방어 전투, 적 제거 | Classifier/Filter/Firewall 드로잉 및 누수 없는 트윈 클린업 구현. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | E2E 방어 배치 smoke |
-| `src/buildings/Core.ts` | Core HP와 수신 데이터 총량 집계 | 게임오버, 런 통계 | 데이터 수신 시 `totalDataReceived`만 증가하며 연구 화폐는 만들지 않음 | E2E, save smoke |
-| `src/buildings/Conveyor.ts` | Silicon 물리 물류, 방향 기반 pull/push 및 스크롤 갈매기(Chevron) 벡터 렌더링 | 자원 라인 | 3중 네온 쉐브론 흐름선 및 레일 외곽선 효과, 누수 없는 트윈 적용 (FastLink 공통). 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | E2E placement smoke |
-| `src/buildings/Storage.ts` | 단일 타입 저장, inputBuffer를 출력으로도 사용 및 실시간 잔여량 게이지 렌더링 | 인벤토리, 케이블/컨베이어 버퍼 | 저장 용량 비율(inputBuffer.length / maxBufferSize)에 연동되어 갱신되는 2중 원형 네온 아크(Arc) 게이지 탑재 | E2E storage placement |
-| `src/buildings/DataCache.ts` | 데이터 아이템 전용 Storage | 케이블/AP 데이터 버퍼 | RAW/Labeled/Weight/Trained/Inference 허용 및 용량 맞춤형 원형 네온 아크 게이지 연계 | AP relay 테스트 간접 |
-| `src/buildings/Unloader.ts` | Storage 뒤쪽에서 아이템 추출 및 진행 방향 피스톤 피드백 렌더링 | 저장고 -> 라인 연결 | 진행 방향 피스톤 피드백 렌더링 및 누수 없는 트윈 탑재. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | E2E early gating |
-| `src/buildings/PowerPlant.ts` | Energy 자원 위 발전소 활성 여부 및 융합 제어 코어 렌더링 | 전력 생산 | 액티브/인액티브 드로잉과 누수 없는 트윈 탑재. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | PowerManager 간접 |
-| `src/buildings/PowerNode.ts`, `SolarPanel.ts` | 전력 범위 노드 및 솔라 표면 네온 그리드/반사광 연출 | 전력망 확장 | PowerNode/SolarPanel 비주얼 탑재. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | `src/utils/powerPreview.test.ts` |
-| `src/buildings/AccessPoint.ts` | AP 시각/기본 범위/대역폭 상태 | 무선 데이터 릴레이 | 전송 정책은 `CableManager`와 `utils/apRelay.ts`. 대형 공장에서는 장식 tween 대신 정적 visual fallback 사용 | `src/utils/apRelay.test.ts` |
-| `src/buildings/Repeater.ts` | 무버퍼 유선 케이블 중계 노드 | 긴/우회 케이블망, 전력 의존 데이터 경유 | `CableManager`가 powered Repeater를 투명 relay endpoint로 처리. Repeater 파괴/제거 시 연결 케이블도 제거 | `src/managers/CableManager.test.ts` |
-| `src/managers/TickSystem.ts` | 고정 틱 실행, dirty 전력 갱신, 케이블/건물 onTick 순서 | 생산, 전력, AP, 케이블 | `gameSpeed`가 tick interval을 나눔. 전력망은 full tick마다 조건부 `updateIfDirty()`만 호출 | 생산/파워 관련 테스트 간접 |
-| `src/managers/CableManager.ts` | 케이블 연결, 거리 비용/환불, 최대 길이, BLOCKER 충돌, 큐, 데이터 이동, Repeater 경유, AP 자동 릴레이, 케이블/패킷 펄스 렌더 | 데이터 물류, 저장 복원 | `canConnect()`가 UI preview와 실제 연결의 단일 검증 경로. Repeater는 무버퍼라 relay 실패 시 incoming cable queue에 packet이 남음. AP 자동 릴레이는 타입 index와 tile bucket cache로 주변 후보만 조회. pulse/AP wave는 active 상한과 object pool로 생성량/GC를 제한 | `src/managers/CableManager.test.ts`, `src/utils/cablePath.test.ts`, `src/utils/apRelay.test.ts`, E2E cable |
-| `src/managers/EffectsManager.ts` | 빌드/피해/웨이브/경고/락온/훈련 이펙트와 경고 마커 | 시각 피드백, 전력/버퍼 경고, 적/방어 효과 | 전력/버퍼 경고는 BuildingManager 타입 index와 기존 marker set을 조합해 후보만 갱신. 이펙트 생성량 변경 시 pooling/cleanup 확인 | `src/managers/EffectsManager.test.ts` |
-| `src/managers/PowerManager.ts` | 전력 노드 네트워크 구성, 풋프린트 중심 범위 계산, 소비자 할당, blackout 적용, dirty rebuild 제어, node spatial overlap 탐색 | 생산/방어/케이블 활성 조건 | `hasPower` 적용 순서와 멀티타일 건물 중심 범위가 전체 런타임에 영향. 안정 상태에서는 `TickSystem`이 `updateIfDirty()`로 rebuild를 건너뜀. rebuild 시에도 전력 관련 타입 index와 spatial bucket 후보 비교를 사용 | `src/managers/PowerManager.test.ts`, `src/utils/powerPreview.test.ts`, `src/utils/geometry.test.ts` 보조 |
-| `src/managers/WaveManager.ts` | 웨이브 타이머, 적 스폰, 코어 중심 target 전달, 보상, boss aura, next-wave briefing 발행, 적 spatial range query | 방어 압박, 연구 개방 신호, 튜토리얼 mock wave, 타워 타겟 검색 | 튜토리얼 중 FIRST_WAVE 이전에는 웨이브를 동결하고, FIRST_WAVE 단계에서 북쪽 gate mock wave를 사용. 웨이브 계산은 `utils/waveSimulation.ts`와 분리되어 있음. `WAVE_UPDATE`는 남은 초가 바뀔 때만 발행해 DOM 갱신 이벤트를 줄임. 타워 range query는 적 spatial bucket을 사용 | `src/utils/waveSimulation.test.ts`, `src/utils/waveBriefingKey.test.ts`, `src/utils/gridPath.test.ts`, E2E threat panel |
-| `src/enemies/BaseEnemy.ts` | 적 HP/이동/pathfinding/건물 공격/특수 효과/적 실루엣 렌더 | 코어 피해, 건물 파괴, 감염, 보스 오라 | pathfinding 방문 제한과 blocking 규칙 변경 주의. 경로 계산은 `utils/gridPath.ts`로 분리. 런타임은 start/target tile path cache와 id 기반 initial stagger로 A* spike를 줄이고, 적 상태 tween은 active 상한을 사용 | `src/utils/gridPath.test.ts`, `src/utils/enemyBuildingInteraction.test.ts` |
-| `src/managers/MapManager.ts` | organic 자원 패치와 BLOCKER boundary/cluster 지형 생성, enemy lane 예약/BFS 복구, map/build/camera bounds 조회, 작은 튜토리얼 arena 맵, 캠페인 seed 맵 | 초기 맵, 튜토리얼 맵, 저장 복원, 적 경로 차단, 배치/카메라 제한 | standard preset은 `-64..64` world/build bounds와 `-60..60` resource bounds를 가진 큰 유한 맵. `RESOURCE_RINGS`가 있으면 중반 거리대에 랜덤 자원을 집중하고, standard 자원은 dense center/irregular edge blob으로 배치. `earlyLaneBlockers`는 먼저 outer boundary terrain pass로 외곽을 더 조밀하게 만들고, 예약된 적 통로를 피하는 blob/rough-line/cluster BLOCKER 군집을 만든 뒤 작은 파편 cleanup과 BFS로 주요 route 경로를 보장. bounds 필드는 `MainScene.isBlocked()`와 `CameraController`가 사용 | `src/managers/MapManager.test.ts` |
-| `src/managers/GridRenderer.ts` | 배경, 섹터 그리드, 자원 패치, BLOCKER 지형 렌더. 보이는 월드 영역은 `CONFIG.OPTIMIZATION.GRID_CHUNK_TILES` 단위 텍스처 청크로 캐시 | 카메라 이동/줌 중 월드 시각화 | forced redraw는 캐시를 비워 map/load stale texture를 방지. 일반 pan은 기존 청크 이미지를 재사용하고, zoom detail tier가 바뀌면 별도 청크 키를 사용 | `src/managers/GridRenderer.test.ts`, build, E2E startup |
-| `src/managers/SaveManager.ts` | localStorage 저장/로드, 런타임 재구성, dirty autosave gate, deferred chunk autosave | 자동 저장, 설정, 연구, 케이블/적/건물/맵 복원 | 포맷 변경 시 migration과 SaveData 갱신. 튜토리얼 모드에서는 일반 캠페인 저장 슬롯을 쓰지 않고, 캠페인에서는 `settings.mapType`과 resource/terrain map 데이터를 복원. 변경 없는 안정 상태에서는 autosave가 전체 JSON 생성을 건너뛰고, 필요한 autosave는 buildings/items/cables/enemies/resource/terrain snapshot 수집을 여러 macrotask로 나눔 | `src/utils/saveMigration.test.ts`, `src/utils/enemyRestore.ts`, E2E save, `tests/e2e/performance.spec.ts` |
-| `src/utils/saveMigration.ts` | 구버전 저장 데이터 기본값 보정 | 로드 안정성 | 새 필드는 기본값과 버전 처리 필요 | `src/utils/saveMigration.test.ts` |
-| `src/managers/ResearchManager.ts` | 시스템 프로토콜 작업 진행도, 완료 상태, 효과 누적 | Neural Operations Lab, 건물 해금, 밸런스 보정 | Lab에서 데이터 아이템 가치만큼 진행도를 올리며 multiplier 효과는 곱하고 bonus는 더함. timed training은 `TrainingPlannerManager`가 Lab/GPU power amount를 넘겨 진행할 수 있음 | `src/managers/ResearchManager.test.ts` |
-| `src/managers/TrainingPlannerManager.ts` | 전역 자동 학습 planner. Lab 간 active job 공유, 자동/수동 모드, 방어 모델/시스템 프로토콜 후보 점수, Lab/GPU power 합산 진행 처리 | Neural Operations Lab 자동화, 방어 모델 성장, 시스템 프로토콜 해금 | AUTO_DECIDE에서만 선택을 덮어쓰며, 학습 중 또는 90% 이상 준비된 작업은 유지. pressure가 낮을 때 시스템 프로토콜을 우선하고, pressure가 높거나 실효 정확도가 낮으면 방어 모델 정확도/공격력 후보를 선택 | `src/managers/TrainingPlannerManager.test.ts` |
-| `src/managers/PerformanceStats.ts` | frame sample, p95/long frame, entity count, 최적화 counter 수집 | 성능 fixture, 수동 디버깅, 회귀 비교 | `window.__GRADIUM_PERF__`와 `scene.performanceStats.getSummary()`로 조회. `autosaveChunks`는 autosave snapshot 분산 수집 검증에 사용. counter 이름 변경 시 Playwright perf fixture와 문서 갱신 | `tests/e2e/performance.spec.ts` |
-| `src/managers/UIManager.ts` | 상단 HUD, 우측 정보 레일, 하단 빌드 콘솔/선택 도구 요약, 툴팁, 모달 위임 | 모든 DOM UI | DOM id/text는 E2E와 연결. 빌드 버튼 id는 유지해야 hotkey/E2E 회귀가 적음. Objective/defense 패널은 dirty/throttle 기반이며 Silicon HUD는 250ms throttle로 resource scan을 제한 | E2E 전반 |
-| `src/managers/SettingsUI.ts` | 설정 모달, 저장/로드/언어/속도/FPS 버튼 | 설정 UI | 닫기 후 canvas focus 복원 기대. 저장된 FPS는 `30..240`으로 clamp하고 기본값은 `main.ts`와 같은 60 FPS로 유지 | E2E focus/language/save |
-| `src/managers/ResearchUI.ts` | 레거시 연구 모달 비활성 no-op | 이전 DOM 호환 | 설정 옆 연구 버튼/모달은 더 이상 플레이어에게 노출하지 않음 | E2E smoke |
-| `src/managers/TrainingLabUI.ts` | Neural Operations Lab DOM UI | AUTO/MANUAL planner 상태, 방어 모델/시스템 프로토콜 작업 선택, 정확도/공격력 보상 모드, 진행도, 학습/GPU 상태 표시 | `TrainingPlannerManager`, `ModelTrainingLab`, `DefenseModelState`, `ResearchManager.jobProgress` 상태를 함께 렌더링 | E2E 간접 |
-| `src/managers/MobileUIManager.ts` | 모바일 액션바/케이블 메뉴/빌드 요약 | 모바일 조작 | touch gesture와 DOM guard 영향 | E2E mobile |
-| `src/managers/TutorialManager.ts` | 튜토리얼 패널, 단계별 건물 잠금, 데이터 기반 월드 고스트/흐름/범위 힌트 렌더링, 튜토리얼 완료 조건 검사, 튜토리얼 웨이브/모델 학습 이벤트 처리 | 건물 역할 온보딩, 빌드 버튼 갱신, WaveManager mock wave 연동, 튜토리얼 완료 시 새 캠페인 전환 | 완료 조건은 `tutorialFlow.completion` 메타를 따름. 자동 진행, 특정 건물 생산, 케이블 연결, 전력 온라인, `WAVE_ENDED`, `MODEL_TRAINING_TARGET_SET`을 모두 처리. 힌트 렌더는 `tutorialFlow.ts`가 단일 원천 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
-| `src/controllers/InputController.ts` | 캔버스 입력, 배치/케이블/철거/툴팁/모바일 탭, cursor dirty cache | 실 조작의 중심 | DOM UI guard 셀렉터, 좌표 snap, unlock 체크 주의. ghost/tooltip은 signature/throttle 기반으로 갱신하므로 상태 변경 이벤트에서 cache invalidation 유지 | E2E interaction |
-| `src/controllers/OverlayController.ts` | 방어 범위/전력망 오버레이 그리기 | F1/F2, 모바일 토글 | 연구 보너스 반영 | E2E overlay |
-| `src/managers/EventBus.ts` | typed pub/sub와 owner cleanup | 매니저 간 결합 완화 | owner 이름 누락 시 shutdown 누수 가능 | `src/managers/EventBus.test.ts` |
-| `src/utils/waveSimulation.ts` | 웨이브 수량/HP/경로/브리핑 순수 계산 | WaveManager, UI threat panel, tests | 난이도/경로 정책의 기준 파일 | `src/utils/waveSimulation.test.ts` |
-| `src/utils/gridPath.ts` | 적 경로 A* 순수 계산 | BaseEnemy 이동/pathfinding | no-path는 빈 배열로 유지해 런타임이 blocked fallback을 결정. 마지막 점은 정확한 target world 좌표를 보존 | `src/utils/gridPath.test.ts` |
-| `src/utils/geometry.ts` | 멀티타일 건물 footprint center와 테두리 기반 범위 tile 계산 | WaveManager target, EffectsManager route guide, PowerManager coverage | grid size와 건물 WIDTH/HEIGHT 변경 시 중심/테두리 좌표 기대값 확인 | `src/utils/geometry.test.ts` |
-| `src/utils/buildingLifecycle.ts` | 건물 수동 제거/전투 파괴 이벤트 매핑 | BuildingManager lifecycle events | 이벤트 의미가 웨이브 통계와 피드백에 연결됨 | `src/utils/buildingLifecycle.test.ts` |
-| `src/utils/enemyRestore.ts` | 저장된 적 HP/maxHP 복원 계산 | SaveManager active wave load | difficulty multiplier 누락 방지 | `src/utils/saveMigration.test.ts` |
-| `src/utils/waveBriefingKey.ts` | next-wave briefing 중복 발행 방지 key | WaveManager -> UIManager briefing | countdown-only 변경은 `WAVE_UPDATE`로 처리 | `src/utils/waveBriefingKey.test.ts` |
-| `src/utils/progressionGates.ts` | 초반 목표와 고급 시스템 숨김 정책 | UI 빌드바/목표 패널 | 초반 AP/Fast/Fiber/Unloader 노출 정책 | `src/utils/progressionGates.test.ts` |
-| `src/utils/productionSimulation.ts` | 생산 라인 장기 시뮬레이션 | 밸런스 검증용 순수 모델 | 실제 CableManager와 완전 동일하지 않을 수 있음 | `src/utils/productionSimulation.test.ts` |
-| `src/utils/apRelay.ts` | AP 소스/타겟 선택 정책 | CableManager 무선 릴레이 | Storage/DataCache를 자동 source에서 제외 | `src/utils/apRelay.test.ts` |
-| `src/utils/cablePath.ts` | 자유각 케이블 거리와 타일 교차 샘플링 | 케이블 비용/최대 길이/BLOCKER 충돌 | 샘플링 판정과 화면에 보이는 선이 어긋나면 케이블 UX가 나빠짐 | `src/utils/cablePath.test.ts` |
-| `src/utils/enemyBuildingInteraction.ts` | 적의 건물 공격 우선순위 | BaseEnemy 공격 타겟 | Core/Firewall/일반 건물 우선순위 확인 | `src/utils/enemyBuildingInteraction.test.ts` |
-| `src/utils/tutorialFlow.ts` | 건물 역할 튜토리얼 단계/진행/허용 건물/완료 메타/시각 힌트 정의 | TutorialManager, UI copy, 월드 고스트/흐름 힌트 | i18n 키와 단계 순서 연결. `completion` 메타가 실제 진행 조건이므로 새 단계 추가 시 TutorialManager 검사와 E2E를 함께 갱신. 좌표는 튜토리얼 맵의 자원/전력/빈 칸 조건과 함께 유지 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
-| `tests/e2e/app-smoke.spec.ts` | 실제 브라우저 smoke, 배치/케이블/모바일/저장/언어 | 회귀 최종 방어선 | Phaser canvas 좌표 테스트라 viewport 변경 영향 큼. 시작 Core/Storage footprint와 겹치지 않는 타일만 클릭해야 함 | Playwright |
-| `tests/e2e/tutorial-guidance.spec.ts` | 실제 브라우저 튜토리얼 힌트/완료 smoke | 튜토리얼 고스트 좌표, 리소스 정합성, 모델 훈련소 가중치 입력, 완료 후 새 캠페인 전환 | `tutorialFlow.ts` 좌표와 `WaveManager` 튜토리얼 완료 이벤트 변경 시 함께 갱신. 캠페인 전환 검증은 Core footprint가 아닌 튜토리얼 전용 건물 좌표로 확인 | Playwright |
-| `tests/e2e/performance.spec.ts` | desktop Chromium에서 100/500/1000 건물 perf fixture 생성, `PerformanceStats` summary, 1000 건물 autosave chunk 검증 | 대형 공장 성능 회귀 기준선 | 직접 scene API로 STORAGE를 대량 배치한다. threshold 강화 시 환경별 변동성을 고려. autosave 검증은 campaign mode로 고정해야 저장이 활성화됨 | Playwright desktop |
-| `index.html` | Phaser mount와 `#game-hud-shell` DOM UI 컨테이너 | UIManager가 id 기반으로 제어 | 기존 HUD/패널/빌드 id 변경은 E2E와 manager 코드 영향 | E2E 전반 |
+## App/Scene
+
+| 파일 | 역할 | 주의 |
+|---|---|---|
+| `src/main.ts` | Phaser Game 생성, Preact HUD mount, 디버그 전역 노출 | Phaser 생성 뒤 `mountHud()` 호출 유지 |
+| `src/scenes/MainMenuScene.ts` | Phaser 메뉴 배경/입력 fallback, Preact menu snapshot/request 처리 | 보이는 메뉴 UI는 Preact가 담당 |
+| `src/scenes/MainScene.ts` | 게임 runtime 조립, manager/controller 생성, scene lifecycle | simulation 변경과 DOM UI 변경을 섞지 않음 |
+
+## Core Runtime
+
+| 파일 | 역할 | 주의 |
+|---|---|---|
+| `src/managers/BuildingManager.ts` | 건물 배치/생산/runtime 상태 | UI 표시 목적 변경 금지 |
+| `src/managers/WaveManager.ts` | 웨이브 진행/브리핑/적 스폰 | HUD는 EventBus snapshot으로만 연결 |
+| `src/managers/CableManager.ts` | 케이블 연결/전력망 | UI overlay와 직접 결합 금지 |
+| `src/managers/EventBus.ts` | Scene/UI 간 이벤트 경계 | owner cleanup 유지 |
+| `src/controllers/InputController.ts` | canvas/world 입력, DOM pointer guard | DOM 조작 대신 request 이벤트 사용 |
+| `src/managers/TrainingPlannerManager.ts` | 모델 훈련 planner 상태 | Training Lab UI는 controller 경유 |
+
+## UI Shell
+
+| 파일 | 역할 | 주의 |
+|---|---|---|
+| `src/ui/UIManager.ts` | legacy DOM 보장, HUD controller 조립 shell | 세부 DOM 로직을 다시 키우지 않음 |
+| `src/ui/mountHud.tsx` | Preact HUD root mount/unmount, signal bridge 연결 | remount/destroy cleanup 유지 |
+| `src/ui/HudApp.tsx` | Preact overlay surface 조합 | main menu open 중 gameplay HUD 숨김 유지 |
+| `src/ui/signals/*` | EventBus snapshot -> Preact signals bridge | simulation 직접 읽기 금지 |
+| `src/ui/domEnvironment.ts` | mobile layout, focus, pointer guard helper | E2E/mobile selector 영향 큼 |
+
+## UI Controllers
+
+| 파일 | 역할 |
+|---|---|
+| `src/ui/TopHudController.ts` | resource/power/wave HUD 이벤트와 snapshot 발행 |
+| `src/ui/TacticalPanelController.ts` | objective/wave/power/right rail snapshot 발행 |
+| `src/ui/BuildConsoleController.ts` | build category/tool/hotkey/refresh request 처리 |
+| `src/ui/SettingsController.ts` | settings modal request, legacy mirror, snapshot 발행 |
+| `src/ui/TrainingLabController.ts` | Training Lab open/tab/job/reward request 처리 |
+| `src/ui/MobileActionController.ts` | mobile actions, cable menu, build summary 처리 |
+| `src/ui/NotificationController.ts` | tooltip, activity log, wave result 표시 처리 |
+| `src/ui/GameOverController.ts` | game-over event/action request 처리 |
+| `src/ui/HudShellController.ts` | legacy shadow, ESC, speed mirror, build hotkey shell |
+| `src/ui/HudLocalizationController.ts` | static DOM translation, language refresh fanout |
+
+## UI Display/Legacy Helpers
+
+| 범위 | 역할 |
+|---|---|
+| `src/ui/*Display.ts`, `src/ui/buildConsoleSnapshot.ts` | controller 입력을 legacy payload와 Preact snapshot으로 변환 |
+| `src/ui/legacy*.ts` | 기존 DOM ID 호환 fallback 생성/동기화 |
+| `src/ui/components/*` | 실제 Preact DOM overlay surface |
+| `src/ui/shared/*` | GlassPanel, buttons, stat/progress 같은 공통 UI |
+
+## Styles/Docs
+
+| 파일 | 역할 | 주의 |
+|---|---|---|
+| `src/styles/main.css` | reset과 Phaser mount 기본 스타일 | UI 세부 스타일 추가 금지 |
+| `src/styles/tokens.css` | Preact/legacy 공용 디자인 토큰, `#preact-hud` root | `pointer-events: none` root 유지 |
+| `src/styles/legacy-ui.css` | legacy fallback과 모바일 compact layout | DOM ID/E2E selector 영향 큼 |
+| `docs/ARCHITECTURE.md` | 구조/flow 설명 | 큰 구조 변경 때만 갱신 |
+| `docs/PROJECT_MAP.md` | 프로젝트 구성 요약 | 새 subsystem 추가 때 갱신 |
+| `docs/TEST_MAP.md` | 변경별 테스트 선택 지도 | 테스트 파일 추가/삭제 때 갱신 |
+| `docs/GAME_BALANCE_MAP.md` | 밸런스/수치 영향 지도 | 밸런스 변경 때 갱신 |

@@ -1,0 +1,125 @@
+.log {
+    position: fixed;
+    left: 16px;
+    bottom: 292px;
+    width: min(340px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    pointer-events: none;
+    z-index: 1420;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    color: var(--holo-cyan);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+}
+
+.header small {
+    color: var(--text-dim);
+    font-size: 9px;
+}
+
+.controls {
+    display: flex;
+    gap: 6px;
+}
+
+.entries {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.toggle {
+    min-height: 24px;
+    padding: 4px var(--space-2);
+    font-size: var(--text-xs);
+    pointer-events: auto;
+}
+
+.entry {
+    position: relative;
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: var(--space-1);
+    min-height: 34px;
+    padding: var(--space-2) var(--space-3);
+    border-left: 2px solid var(--holo-cyan);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: rgba(8, 12, 20, 0.78);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: 1.3;
+    animation: entryIn 0.16s ease-out both;
+    overflow: hidden;
+}
+
+.entry::before {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(77, 216, 255, 0.08), transparent 44%);
+    content: "";
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.entry span {
+    position: relative;
+    color: var(--holo-cyan);
+}
+
+.entry p {
+    position: relative;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.alert {
+    border-left-color: var(--holo-red);
+    color: #ffb9c0;
+}
+
+.alert span {
+    color: var(--holo-red);
+}
+
+.alert::before {
+    background: linear-gradient(90deg, rgba(255, 102, 118, 0.12), transparent 48%);
+}
+
+.empty {
+    color: var(--text-dim);
+    opacity: 0.72;
+}
+
+@keyframes entryIn {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 980px) {
+    .log {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .entry {
+        animation: none;
+    }
+}

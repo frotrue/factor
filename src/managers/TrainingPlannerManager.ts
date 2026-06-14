@@ -14,6 +14,7 @@ import {
     getTimeAdjustedModelAccuracy
 } from '../utils/modelTrainingProgress';
 import { getBuildingName, textForKey } from '../i18n';
+import EventBus from './EventBus';
 
 const HOLD_PROGRESS_RATIO = 0.9;
 const HIGH_PRESSURE = 0.65;
@@ -78,7 +79,7 @@ export default class TrainingPlannerManager {
             this.mode = 'MANUAL_LOCK';
             this.lastDecisionReason = 'player selected';
         }
-        this.scene.uiManager?.renderTrainingLab();
+        EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
     }
 
     setManualDefenseJob(type: string): void {
@@ -98,7 +99,7 @@ export default class TrainingPlannerManager {
         this.mode = 'MANUAL_LOCK';
         this.lastDecisionReason = 'player selected';
         this.scene.syncDefenseModelType(type);
-        this.scene.uiManager?.renderTrainingLab();
+        EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
     }
 
     getActiveJobCategory(jobId: string | null = this.activeJobId): 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL' | null {
@@ -182,19 +183,21 @@ export default class TrainingPlannerManager {
         state.trainingDurationTicks = CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS;
         state.currentRequirement = getNextTrainingRequirement(state.currentRequirement);
         this.scene.syncDefenseModelType(targetType);
-        this.scene.uiManager?.createBuildingButtons();
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
 
         const displayName = getBuildingName(targetType);
         const rewardText = reward.kind === 'accuracy'
             ? `accuracy ${Math.round(state.modelAccuracy)}%`
             : `damage +${Math.round(state.damageBonus)}%`;
-        this.scene.uiManager?.logMessage(`Training: ${displayName} model complete. ${rewardText}.`);
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+            message: `Training: ${displayName} model complete. ${rewardText}.`
+        });
         this.scene.buildingManager.forEach(building => {
             if (building.type === targetType) {
                 this.scene.effectsManager?.playModelTrainingPulse(building, reward.kind);
             }
         });
-        this.scene.uiManager?.renderTrainingLab();
+        EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
         this.maybeAutoSelect(true);
         return true;
     }
@@ -212,7 +215,7 @@ export default class TrainingPlannerManager {
         }
 
         this.scene.researchManager.advanceJobTraining(researchId, power);
-        this.scene.uiManager?.renderTrainingLab();
+        EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
         this.maybeAutoSelect(true);
         return true;
     }
@@ -245,9 +248,11 @@ export default class TrainingPlannerManager {
         }
 
         if (changed) {
-            this.scene.uiManager?.logMessage(`Auto Training: ${this.getJobLabel(decision.jobId)} selected. ${decision.reason}.`);
+            EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+                message: `Auto Training: ${this.getJobLabel(decision.jobId)} selected. ${decision.reason}.`
+            });
         }
-        this.scene.uiManager?.renderTrainingLab();
+        EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
     }
 
     private getBestDecision(readyOnly: boolean): TrainingPlannerDecision | null {

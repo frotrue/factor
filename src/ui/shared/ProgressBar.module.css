@@ -1,0 +1,46 @@
+.wrap {
+    display: grid;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.1;
+}
+
+.track {
+    height: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+}
+
+.fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--holo-cyan);
+    box-shadow: var(--shadow-glow-cyan);
+    transition: width var(--transition-base);
+}
+
+.warning .fill {
+    background: var(--holo-amber);
+    box-shadow: 0 0 14px rgba(246, 196, 83, 0.4);
+}
+
+.danger .fill {
+    background: var(--holo-red);
+    box-shadow: var(--shadow-glow-red);
+}
+
+.success .fill {
+    background: var(--holo-green);
+    box-shadow: 0 0 14px rgba(100, 245, 141, 0.38);
+}
