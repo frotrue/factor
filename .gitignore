@@ -23,6 +23,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 vite-*.log
+chrome.log
+debug_*.cjs
+launch_chrome.cjs
+playtest_game.cjs
+run_inspect.cjs
+.codegraph/daemon.pid
 
 # Environment variables
 .env
