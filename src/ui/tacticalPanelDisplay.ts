@@ -146,10 +146,19 @@ export function createLegacyPowerStatusDisplay(data: PowerUpdateData | null): Le
         };
     }
 
-    if (data.isBlackout || data.net < 0) {
+    if (data.isBlackout || (data.averageSatisfaction ?? 1) <= 0) {
         return {
             text: textForKey('powerStatus.blackout', { net: data.net }),
             tone: 'danger'
+        };
+    }
+
+    if ((data.lowPowerNetworks ?? 0) > 0 || (data.averageSatisfaction ?? 1) < 1) {
+        return {
+            text: textForKey('powerStatus.lowEfficiency', {
+                percent: Math.round((data.averageSatisfaction ?? 1) * 100)
+            }),
+            tone: 'warning'
         };
     }
 

@@ -7,6 +7,7 @@ import MainMenu from './components/MainMenu';
 import MobileActionBar from './components/MobileActionBar';
 import MobileBuildSummary from './components/MobileBuildSummary';
 import RightRail from './components/RightRail';
+import ResearchPanel from './components/ResearchPanel';
 import SettingsModal from './components/SettingsModal';
 import TopBar from './components/TopBar';
 import Tooltip from './components/Tooltip';
@@ -34,6 +35,7 @@ export default function HudApp({ game }: HudAppProps) {
                     <BuildConsole />
                     <SettingsModal />
                     <TrainingLabModal />
+                    <ResearchPanel />
                     <GameOverScreen />
                     <WaveResultCard />
                     <ActivityLog />

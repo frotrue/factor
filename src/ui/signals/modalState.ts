@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import type { GameOverSnapshot, SettingsModalSnapshot, TrainingLabSnapshot } from '../../types';
+import type { GameOverSnapshot, ResearchPanelSnapshot, SettingsModalSnapshot, TrainingLabSnapshot } from '../../types';
 
 export const settingsModal = signal<SettingsModalSnapshot>({
     open: false,
@@ -68,6 +68,18 @@ export const trainingLabModal = signal<TrainingLabSnapshot>({
     },
     duration: '',
     rows: []
+});
+
+export const researchPanel = signal<ResearchPanelSnapshot>({
+    open: false,
+    title: 'Research',
+    closeLabel: 'Close',
+    throughputText: '',
+    slotsText: '',
+    buffers: [],
+    axes: [],
+    nodes: [],
+    selectedId: null
 });
 
 export const gameOverScreen = signal<GameOverSnapshot>({

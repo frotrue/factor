@@ -95,6 +95,10 @@ export default class Conveyor extends BaseBuilding {
         return this.inputBuffer;
     }
 
+    canPhysicalEndpointTransfer(building: BaseBuilding): boolean {
+        return building.type !== 'REPEATER' || building.hasPower;
+    }
+
     onTick(tickCount: number): void {
         super.onTick(tickCount);
         if (this.isInfected(tickCount) && tickCount % 2 !== 0) return;
@@ -112,7 +116,7 @@ export default class Conveyor extends BaseBuilding {
         const backY = this.y - dir.y * CONFIG.GRID_SIZE;
         const buildingManager = (this.scene as IMainScene).buildingManager;
         const source = buildingManager.get(`${backX},${backY}`);
-        if (!source || !source.hasPower) return;
+        if (!source || !this.canPhysicalEndpointTransfer(source)) return;
 
         const sourceOutput = source.getOutputSource();
         const item = sourceOutput[0];
@@ -131,7 +135,7 @@ export default class Conveyor extends BaseBuilding {
         const dest = buildingManager.get(`${frontX},${frontY}`);
         const item = this.inputBuffer[0];
 
-        if (dest && dest.hasPower && dest.canAcceptItem(item)) {
+        if (dest && this.canPhysicalEndpointTransfer(dest) && dest.canAcceptItem(item)) {
             dest.acceptItem(this.inputBuffer.shift()!);
             this.createPacketPulse(frontX, frontY, item);
         }

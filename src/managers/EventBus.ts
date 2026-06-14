@@ -6,6 +6,7 @@ import {
     BuildConsoleSnapshot,
     SettingsModalSnapshot,
     TrainingLabSnapshot,
+    ResearchPanelSnapshot,
     GameOverSnapshot,
     WaveResultSnapshot,
     ActivityLogSnapshot,
@@ -39,6 +40,13 @@ export interface EventMap {
     'SAVE_REQUESTED': void;
     'LOAD_REQUESTED': void;
     'RESEARCH_UNLOCKED': { id: string };
+    'RESEARCH_OPEN_REQUESTED': void;
+    'RESEARCH_CLOSE_REQUESTED': void;
+    'RESEARCH_SELECT_REQUESTED': { id: string };
+    'RESEARCH_SLOT_ASSIGN_REQUESTED': { id: string };
+    'RESEARCH_PANEL_UPDATED': ResearchPanelSnapshot;
+    'RESEARCH_PANEL_OPEN_CHANGED': { open: boolean };
+    'RESEARCH_STATE_CHANGED': void;
     'SETTINGS_OPEN_REQUESTED': void;
     'TRAINING_LAB_OPEN_REQUESTED': { lab?: ModelTrainingLab; tab?: 'DEFENSE' | 'SYSTEM' };
     'LAB_JOB_PROGRESS': { id: string; progress: number; required: number };

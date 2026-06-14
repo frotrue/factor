@@ -212,6 +212,8 @@ export interface GameConfig {
     MAP_PRESETS: Record<MapPresetId, MapPresetConfig>;
     MODEL_TRAINING: ModelTrainingConfig;
     ENEMIES: Record<string, EnemyConfig>;
+    RESEARCH_AXES: ResearchAxis[];
+    RESEARCH_SETTINGS: ResearchSettings;
     RESEARCH: Record<string, ResearchNode>;
     CORE_ORIGIN: { TILE_X: number; TILE_Y: number };
     DIFFICULTY: Record<string, DifficultyConfig>;
@@ -255,12 +257,57 @@ export interface ResearchEffects {
     FIREWALL_HP_MULTIPLIER?: number;
 }
 
+export type InsightGroup = 'material' | 'tactical' | 'system';
+export type ResearchTag = 'unlock' | 'stat' | 'rule-change' | 'slot' | 'throughput';
+export type ResearchNodeStatus = 'locked' | 'available' | 'active' | 'waiting_resource' | 'completed' | 'gated';
+
+export interface ResearchAxis {
+    id: string;
+    label: string;
+    angle: number;
+    color: string;
+    insightGroup: InsightGroup;
+}
+
+export interface ResearchSettings {
+    BASE_THROUGHPUT: number;
+    GPU_THROUGHPUT_BONUS: number;
+    BUFFER_CAPACITY: Record<InsightGroup, number>;
+    FACILITY_OUTPUT: Record<InsightGroup, number>;
+}
+
+export interface ResearchCosts {
+    insight: Partial<Record<InsightGroup, number>>;
+}
+
+export interface ResearchSlotState {
+    id: string;
+    researchId: string | null;
+}
+
+export interface ResearchProgressState {
+    progress: number;
+}
+
+export interface ResearchState {
+    completed: string[];
+    activeSlots: ResearchSlotState[];
+    progressById: Record<string, ResearchProgressState>;
+    insightBuffers: Record<InsightGroup, number>;
+    unlockedSlots: number;
+}
+
 // ── 연구 노드 (Research) ──
 export interface ResearchNode {
     ID: string;
     NAME: string;
-    COST: number; // Lab progress required
+    COST: number; // Legacy total cost facade.
     DESCRIPTION: string;
+    AXIS: string;
+    RING: number;
+    POSITION: number;
+    COSTS: ResearchCosts;
+    TAGS: ResearchTag[];
     UNLOCKS: {
         BUILDINGS?: string[];
         RECIPES?: string[];
@@ -268,6 +315,40 @@ export interface ResearchNode {
     };
     REQUIREMENTS?: string[]; // IDs of required research nodes
     EFFECTS?: ResearchEffects;
+    SLOT_BONUS?: number;
+    THROUGHPUT_BONUS?: number;
+}
+
+export interface ResearchNodeSnapshot {
+    id: string;
+    name: string;
+    description: string;
+    axis: string;
+    ring: number;
+    position: number;
+    status: ResearchNodeStatus;
+    progressPercent: number;
+    costText: string;
+    tagLabels: string[];
+    effectsText: string[];
+}
+
+export interface ResearchPanelSnapshot {
+    open: boolean;
+    title: string;
+    closeLabel: string;
+    throughputText: string;
+    slotsText: string;
+    buffers: Array<{
+        id: InsightGroup;
+        label: string;
+        value: number;
+        capacity: number;
+        percent: number;
+    }>;
+    axes: ResearchAxis[];
+    nodes: ResearchNodeSnapshot[];
+    selectedId: string | null;
 }
 
 export type LabJobCategory = 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL';
@@ -286,7 +367,7 @@ export type BuildingType =
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
-    | 'MODEL_TRAINING_LAB' | 'GPU_CLUSTER'
+    | 'MODEL_TRAINING_LAB' | 'RESEARCH_LAB' | 'DATA_CENTER' | 'GPU_CLUSTER'
     | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE' | 'REPEATER';
 
 // ── 케이블 연결 ──
@@ -327,6 +408,8 @@ export interface PowerUpdateData {
     consumption: number;
     net: number;
     isBlackout: boolean;
+    averageSatisfaction?: number;
+    lowPowerNetworks?: number;
     networks?: PowerNetwork[];
     blackoutNetworks?: number;
 }
@@ -674,6 +757,8 @@ export interface PowerNetwork {
     consumption: number;
     net: number;
     isBlackout: boolean;
+    lowPower: boolean;
+    satisfaction: number;
     color: number;
 }
 
@@ -825,6 +910,7 @@ export interface SaveData {
     buildings: SavedBuilding[];
     defenseModelStates?: Record<string, DefenseModelState>;
     labJobProgress?: Record<string, LabJobProgress>;
+    researchState?: ResearchState;
     trainingPlanner?: TrainingPlannerState;
     items: SavedItem[];
     cables?: SavedCable[];

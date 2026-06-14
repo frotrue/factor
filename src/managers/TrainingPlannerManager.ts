@@ -39,6 +39,7 @@ const SYSTEM_PROTOCOL_PRIORITIES: Record<string, number> = {
 interface TrainingPowerSource {
     type?: string;
     hasPower?: boolean;
+    getPowerEfficiency?: () => number;
     countAdjacentGpuClusters(requirePower: boolean): number;
 }
 
@@ -89,9 +90,8 @@ export default class TrainingPlannerManager {
     }
 
     setManualSystemJob(researchId: string): void {
-        this.activeJobId = researchId;
-        this.mode = 'MANUAL_LOCK';
-        this.lastDecisionReason = 'player selected';
+        this.scene.researchManager.assignResearch(researchId);
+        EventBus.emit('RESEARCH_OPEN_REQUESTED');
     }
 
     setManualRewardPreference(type: string, preference: TrainingRewardPreference): void {
@@ -115,7 +115,8 @@ export default class TrainingPlannerManager {
 
     getTrainingPower(lab: TrainingPowerSource): number {
         if (lab.hasPower === false) return 0;
-        return 1 / getGpuTrainingSpeedMultiplier(lab.countAdjacentGpuClusters(true));
+        const efficiency = lab.getPowerEfficiency?.() ?? 1;
+        return efficiency / getGpuTrainingSpeedMultiplier(lab.countAdjacentGpuClusters(true));
     }
 
     getTotalTrainingPower(): number {
@@ -151,9 +152,6 @@ export default class TrainingPlannerManager {
         const category = this.getActiveJobCategory();
         if (category === 'DEFENSE_MODEL') {
             return this.advanceDefenseTraining(power);
-        }
-        if (category === 'SYSTEM_PROTOCOL') {
-            return this.advanceSystemProtocolTraining(power);
         }
         return false;
     }
@@ -299,26 +297,12 @@ export default class TrainingPlannerManager {
     }
 
     private getSystemProtocolDecisions(pressure: number): TrainingPlannerDecision[] {
-        const growthWeight = 1 - this.lerp(0.35, 0.85, pressure);
-        const pressureGate = pressure >= HIGH_PRESSURE ? 0.1 : pressure <= LOW_PRESSURE ? 1 : 0.45;
-
-        return Object.values(CONFIG.RESEARCH)
-            .filter(node => this.scene.researchManager.isJobAvailable(node.ID))
-            .map(node => {
-                const progress = this.scene.researchManager.getJobProgress(node.ID);
-                const priority = SYSTEM_PROTOCOL_PRIORITIES[node.ID] ?? 35;
-                const progressRatio = Math.min(1, progress.progress / node.COST);
-                const readyMultiplier = progress.progress >= node.COST ? 1.35 : 0.75 + progressRatio * 0.35;
-                return {
-                    jobId: node.ID,
-                    score: growthWeight * pressureGate * priority * readyMultiplier,
-                    reason: pressure <= LOW_PRESSURE ? 'low threat, protocol ready' : 'protocol available'
-                };
-            });
+        void pressure;
+        return [];
     }
 
     private hasAnyReadyCandidate(): boolean {
-        return [...this.getDefenseJobIds(), ...Object.keys(CONFIG.RESEARCH)].some(jobId => this.canStartJob(jobId));
+        return this.getDefenseJobIds().some(jobId => this.canStartJob(jobId));
     }
 
     private getDefenseJobIds(): string[] {

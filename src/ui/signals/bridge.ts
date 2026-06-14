@@ -15,7 +15,7 @@ import { withWaveResultOpenState } from '../waveResultDisplay';
 import { buildConsole } from './buildState';
 import * as gameState from './gameState';
 import { mainMenu } from './menuState';
-import { gameOverScreen, settingsModal, trainingLabModal } from './modalState';
+import { gameOverScreen, researchPanel, settingsModal, trainingLabModal } from './modalState';
 import { mobileActions } from './mobileState';
 import { activityLog, tooltip, waveResult, waveResultHistory } from './notificationState';
 import { tutorialPanel } from './tutorialState';
@@ -49,6 +49,12 @@ export function connectGameStateBridge(): () => void {
     }, OWNER);
     EventBus.on('TRAINING_LAB_OPEN_CHANGED', ({ open }) => {
         trainingLabModal.value = withTrainingLabOpenState(trainingLabModal.value, open);
+    }, OWNER);
+    EventBus.on('RESEARCH_PANEL_UPDATED', snapshot => {
+        researchPanel.value = snapshot;
+    }, OWNER);
+    EventBus.on('RESEARCH_PANEL_OPEN_CHANGED', ({ open }) => {
+        researchPanel.value = { ...researchPanel.value, open };
     }, OWNER);
     EventBus.on('GAME_OVER_UPDATED', snapshot => {
         gameOverScreen.value = snapshot;
@@ -134,6 +140,8 @@ function applyPowerUpdate(data: PowerUpdateData): void {
         gameState.powerNet.value = data.net;
         gameState.powerNetworkCount.value = data.networks?.length ?? 0;
         gameState.isBlackout.value = data.isBlackout;
+        gameState.powerSatisfaction.value = data.averageSatisfaction ?? 1;
+        gameState.lowPowerNetworkCount.value = data.lowPowerNetworks ?? 0;
     });
 }
 

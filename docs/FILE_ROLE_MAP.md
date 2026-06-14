@@ -16,8 +16,10 @@
 |---|---|---|
 | `src/managers/BuildingManager.ts` | 건물 배치/생산/runtime 상태 | UI 표시 목적 변경 금지 |
 | `src/managers/WaveManager.ts` | 웨이브 진행/브리핑/적 스폰 | HUD는 EventBus snapshot으로만 연결 |
-| `src/managers/CableManager.ts` | 케이블 연결/전력망 | UI overlay와 직접 결합 금지 |
+| `src/managers/CableManager.ts` | 케이블 연결/큐 전송, 전력과 분리된 buffered item 이동, Repeater/AP 릴레이 | UI overlay와 직접 결합 금지 |
 | `src/managers/EventBus.ts` | Scene/UI 간 이벤트 경계 | owner cleanup 유지 |
+| `src/managers/PowerManager.ts` | 네트워크 전력 생산/소비, satisfaction, 건물 powerEfficiency 주입 | 저전력은 효율 저하로 처리 |
+| `src/managers/ResearchManager.ts` | 독립 연구 슬롯, Insight buffer, throughput, 완료 효과 facade | Training Lab 시스템 연구와 분리 |
 | `src/controllers/InputController.ts` | canvas/world 입력, DOM pointer guard | DOM 조작 대신 request 이벤트 사용 |
 | `src/managers/TrainingPlannerManager.ts` | 모델 훈련 planner 상태 | Training Lab UI는 controller 경유 |
 
@@ -40,6 +42,7 @@
 | `src/ui/BuildConsoleController.ts` | build category/tool/hotkey/refresh request 처리 |
 | `src/ui/SettingsController.ts` | settings modal request, legacy mirror, snapshot 발행 |
 | `src/ui/TrainingLabController.ts` | Training Lab open/tab/job/reward request 처리 |
+| `src/ui/ResearchPanelController.ts` | Research Panel open/select/start request 처리 |
 | `src/ui/MobileActionController.ts` | mobile actions, cable menu, build summary 처리 |
 | `src/ui/NotificationController.ts` | tooltip, activity log, wave result 표시 처리 |
 | `src/ui/GameOverController.ts` | game-over event/action request 처리 |
@@ -52,7 +55,7 @@
 |---|---|
 | `src/ui/*Display.ts`, `src/ui/buildConsoleSnapshot.ts` | controller 입력을 legacy payload와 Preact snapshot으로 변환 |
 | `src/ui/legacy*.ts` | 기존 DOM ID 호환 fallback 생성/동기화 |
-| `src/ui/components/*` | 실제 Preact DOM overlay surface |
+| `src/ui/components/*` | 실제 Preact DOM overlay surface. ResearchPanel은 큰 내부 맵 캔버스를 스크롤해 노드 겹침 없이 표시 |
 | `src/ui/shared/*` | GlassPanel, buttons, stat/progress 같은 공통 UI |
 
 ## Styles/Docs

@@ -84,10 +84,10 @@ flowchart TD
 | 건물 목록 | `BuildingManager.buildings: Map<string, BaseBuilding>`, 타입별 index |
 | 아이템 목록 | `ItemManager.items` |
 | 케이블/큐 | `CableManager.cables`, `CableManager.apConnections` |
-| 전력망 | `PowerManager.networks`, `buildingNetworkMap`, 각 건물 `hasPower` |
+| 전력망 | `PowerManager.networks`, `buildingNetworkMap`, 각 건물 `hasPower`, `powerEfficiency` |
 | 웨이브/적 | `WaveManager.currentWave`, `enemies`, timer/counter |
 | Core 수신/HP | `Core.totalDataReceived`, `hp` |
-| 시스템 프로토콜 | `ResearchManager.unlockedResearch`, `ResearchManager.jobProgress` |
+| 연구 | `ResearchManager`의 completed set, active slots, 3종 Insight buffer, research progress |
 | 방어 모델 | `MainScene.defenseModelStates` (`modelAccuracy`, `damageBonus`, 누적 학습 데이터, 학습 진행 상태) |
 | UI 선택/모달 | `src/ui/UIManager.ts`, Preact components, 하위 UI controllers/signals |
 | 튜토리얼 진행/실행 모드/맵 타입 | `TutorialManager`, `MainScene.mode`, `localStorage.gradium_tutorial_*`, `MapManager.mapType` |
@@ -95,12 +95,19 @@ flowchart TD
 
 전역 상태 저장소는 없고, `MainScene`이 매니저들을 직접 들고 있습니다. 순수 로직은 `utils`로 분리되어 테스트됩니다.
 
+## 전력/연구 현재 구조
+
+- 전력망은 더 이상 부족분을 즉시 전체 정지로만 처리하지 않습니다. `PowerManager`가 네트워크별 `satisfaction`을 계산하고 각 소비 건물에 `powerEfficiency`를 주입합니다. 생산/처리/방어/네트워크/연구 관련 건물은 이 효율로 작업 속도나 처리량을 낮춥니다.
+- 독립 연구 시스템은 `ResearchManager`가 전역 슬롯과 3종 Insight buffer(`material`, `tactical`, `system`)를 관리합니다. 연구 시설은 연구를 직접 맡지 않고 Insight를 생산하며, 활성 연구 슬롯이 매 tick Insight와 throughput을 소비합니다.
+- `Research Lab`은 `MATERIAL_SAMPLE`을 `Material Insight`로, `ModelTrainingLab`은 `TACTICAL_DATA`를 `Tactical Insight`로, `Data Center`는 시스템 작동 로그를 `System Insight`로 전환합니다. GPU Cluster는 전역 research throughput 보너스를 제공합니다.
+- Preact `ResearchPanel`은 TopBar research shortcut에서 열리며, 기존 TrainingLab SYSTEM 연구 경로는 전역 연구 패널로 이관되었습니다. TrainingLab은 방어 모델 훈련 중심으로 남습니다.
+
 ## 데이터/config 로딩 흐름
 
 - `CONFIG.BUILDINGS`는 건물 크기, 비용, 전력, HP, 생산률, 방어 수치, 해금 조건을 정의합니다.
 - `CONFIG.RECIPES`는 `AbstractProcessor` 계열이 사용하는 입력/출력/시간입니다.
 - `CONFIG.ENEMIES`, `CONFIG.DIFFICULTY`는 `WaveManager`와 `waveSimulation`이 사용합니다.
-- `CONFIG.RESEARCH`는 시스템 프로토콜 필요 진행도, 선행 조건, 해금, 효과를 정의하고 `ResearchManager.getEffectValue()`가 누적합니다. 진행도는 Neural Operations Lab이 데이터 아이템을 소비해 올립니다.
+- `CONFIG.RESEARCH_AXES`, `CONFIG.RESEARCH_SETTINGS`, `CONFIG.RESEARCH`는 방사형 연구 축, Insight buffer/throughput, 연구 노드 비용/해금/효과를 정의합니다. `ResearchManager.getEffectValue()`는 완료 연구의 수치 효과 facade를 제공합니다.
 - `CONFIG.CABLES`와 `CONFIG.ACCESS_POINT`는 `CableManager`, `AccessPoint`, UI 입력 로직이 공유합니다. 케이블은 `COST_PER_TILE`, `MAX_LENGTH_TILES`, bandwidth, queue를 갖고, `TECH_DISTRIBUTED_AP`의 연구 효과가 bandwidth와 length를 보정합니다.
 
 새 config 키를 추가하면 타입, 팩토리, i18n, UI, 테스트까지 연결되는지 확인해야 합니다.
@@ -145,7 +152,7 @@ flowchart TD
 - 케이블과 큐, 각 케이블의 `costPaid`
 - 설정: 속도, 오버레이, 난이도, 언어, 사운드, 튜토리얼, 맵 타입, 맵 preset/seed
 - 자원/지형 맵
-- 연구 해금 목록
+- 연구 상태: 완료 연구, 활성 슬롯, 진행도, Insight buffer, 슬롯 수
 
 `SaveManager.loadGame()`은 `migrateSaveData()`로 기본값을 보정한 뒤 기존 Phaser 객체를 정리하고, 저장된 resource/terrain map과 `settings.mapType`을 복원한 다음 Core/연구/방어모델/건물/아이템/케이블/웨이브/설정을 재생성합니다. 저장된 active wave 적은 현재 wave HP 배율과 난이도 HP 배율을 합친 effective multiplier로 max HP를 복원하고, 저장 HP를 그 범위로 clamp합니다.
 

@@ -69,22 +69,23 @@ describe('TrainingPlannerManager', () => {
         expect(scene.defenseModelStates.CLASSIFIER.trainingRewardPreference).toBe('accuracy');
     });
 
-    test('allows ready system protocols to outrank defense during low threat', () => {
+    test('keeps research protocols out of the defense training planner', () => {
         const scene = createSceneStub();
         scene.researchManager.addJobProgress('TECH_EFFICIENT_MINING', 75);
 
         scene.trainingPlanner.prepareLabTick({} as any);
 
-        expect(scene.trainingPlanner.activeJobId).toBe('TECH_EFFICIENT_MINING');
+        expect(scene.trainingPlanner.activeJobId).toBe('DEFENSE_CLASSIFIER');
     });
 
     test('converts adjacent powered GPUs into lab training power', () => {
         const scene = createSceneStub();
         const lab = {
             hasPower: true,
+            getPowerEfficiency: () => 0.5,
             countAdjacentGpuClusters: () => 2
         };
 
-        expect(scene.trainingPlanner.getTrainingPower(lab as any)).toBeCloseTo(1 / 0.6);
+        expect(scene.trainingPlanner.getTrainingPower(lab as any)).toBeCloseTo(0.5 / 0.6);
     });
 });

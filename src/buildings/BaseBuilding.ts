@@ -37,6 +37,7 @@ export default class BaseBuilding {
     outputBuffer: string[];
     maxBufferSize: number;
     hasPower: boolean;
+    powerEfficiency: number;
     hp: number;
     maxHp: number;
     hpBar?: Phaser.GameObjects.Graphics;
@@ -79,6 +80,7 @@ export default class BaseBuilding {
         this.outputBuffer = [];
         this.maxBufferSize = bConfig.MAX_BUFFER || config.maxBufferSize || 5;
         this.hasPower = true;
+        this.powerEfficiency = 1;
         this.maxHp = bConfig.HP || 100;
         this.hp = this.maxHp;
         this.destroyed = false;
@@ -111,6 +113,14 @@ export default class BaseBuilding {
 
     onTick(_tickCount: number, _occupiedPositions?: Set<string>): void {
         this.updateStatusMarkers(_tickCount);
+    }
+
+    getPowerEfficiency(): number {
+        return Math.max(0, Math.min(1, this.powerEfficiency ?? (this.hasPower === false ? 0 : 1)));
+    }
+
+    isOperational(): boolean {
+        return this.getPowerEfficiency() > 0;
     }
 
     drawBody(color: number, w: number, h: number): void {

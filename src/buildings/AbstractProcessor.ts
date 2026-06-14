@@ -140,7 +140,7 @@ export default class AbstractProcessor extends BaseBuilding {
         }
 
         if (this.isProcessing) {
-            this.processingTimer++;
+            this.processingTimer += this.getPowerEfficiency();
             const researchManager = (this.scene as IMainScene).researchManager;
             const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
             const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
@@ -184,7 +184,7 @@ export default class AbstractProcessor extends BaseBuilding {
         const researchManager = (this.scene as IMainScene).researchManager;
         const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
         const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
-        const progress = this.isProcessing ? this.processingTimer / requiredTime : 0;
+        const progress = this.isProcessing ? Math.min(1, this.processingTimer / requiredTime) : 0;
         this.progressBar.width = CONFIG.GRID_SIZE * progress;
         this.progressBg.setVisible(this.isProcessing);
         this.progressBar.setVisible(this.isProcessing);

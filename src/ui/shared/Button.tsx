@@ -11,6 +11,7 @@ interface ButtonProps {
     ariaSelected?: boolean;
     className?: string;
     dataTestId?: string;
+    disabled?: boolean;
     id?: string;
     onBlur?: JSX.FocusEventHandler<HTMLButtonElement>;
     onClick?: JSX.MouseEventHandler<HTMLButtonElement>;
@@ -21,7 +22,7 @@ interface ButtonProps {
     role?: JSX.AriaRole;
     tabIndex?: number;
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'tab' | 'tool' | 'ghost';
+    variant?: 'tab' | 'tool' | 'ghost' | 'primary';
 }
 
 export default function Button({
@@ -34,6 +35,7 @@ export default function Button({
     ariaSelected,
     className = '',
     dataTestId,
+    disabled = false,
     id,
     onBlur,
     onClick,
@@ -55,6 +57,7 @@ export default function Button({
             aria-selected={ariaSelected}
             class={`${styles.button} ${styles[variant]} ${active ? styles.active : ''} ${className}`}
             data-testid={dataTestId}
+            disabled={disabled}
             id={id}
             onBlur={onBlur}
             onClick={onClick}

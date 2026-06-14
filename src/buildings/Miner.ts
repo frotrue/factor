@@ -6,6 +6,8 @@ import { BuildingOptions, IMainScene } from '../types';
 export default class Miner extends BaseBuilding {
     productionRate: number;
     resourceType: string | null;
+    productionWork: number;
+    sampleCounter: number;
     scanGraphics: Phaser.GameObjects.Graphics;
     scanY: number;
     scanTween: Phaser.Tweens.Tween | null;
@@ -13,6 +15,8 @@ export default class Miner extends BaseBuilding {
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
         super(scene, x, y, 'MINER', { ...config, color: CONFIG.BUILDINGS.MINER.COLOR });
         this.productionRate = CONFIG.BUILDINGS.MINER.PRODUCTION_RATE || 2;
+        this.productionWork = 0;
+        this.sampleCounter = 0;
         const mapManager = (scene as IMainScene).mapManager;
         this.resourceType = mapManager?.getResourceAt(x, y) || null;
 
@@ -76,7 +80,10 @@ export default class Miner extends BaseBuilding {
         const researchManager = (this.scene as IMainScene).researchManager;
         const multiplier = researchManager?.getEffectValue('MINING_RATE_MULTIPLIER', 1) ?? 1;
         const effectiveRate = Math.max(1, Math.round(this.productionRate * multiplier));
-        return tickCount % effectiveRate === 0;
+        this.productionWork += this.getPowerEfficiency();
+        if (this.productionWork < effectiveRate) return false;
+        this.productionWork -= effectiveRate;
+        return true;
     }
 
     onTick(tickCount: number): void {
@@ -90,6 +97,11 @@ export default class Miner extends BaseBuilding {
                 this.outputBuffer.push('SILICON');
             } else if (resourceType === 'ENERGY') {
                 this.outputBuffer.push('ENERGY');
+            }
+            this.sampleCounter++;
+            if (this.sampleCounter >= 4 && this.outputBuffer.length < this.maxBufferSize) {
+                this.sampleCounter = 0;
+                this.outputBuffer.push('MATERIAL_SAMPLE');
             }
         }
     }

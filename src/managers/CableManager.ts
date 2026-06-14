@@ -10,7 +10,16 @@ import { getAvailableInputSpace, isAPAutoRelaySource, selectAPRelayTarget } from
 import { getItemColor, VISUAL_THEME } from '../visuals/visualTheme';
 import { getCableDistanceTiles, getTouchedCableTiles, isPointInsideFootprint } from '../utils/cablePath';
 
-const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT', 'SILICON']);
+const DATA_ITEMS = new Set([
+    'RAW_DATA',
+    'LABELED_DATA',
+    'WEIGHT_UPDATE',
+    'TRAINED_MODEL',
+    'INFERENCE_UNIT',
+    'SILICON',
+    'MATERIAL_SAMPLE',
+    'TACTICAL_DATA'
+]);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
 const WIRELESS_RELAY_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => type !== 'ACCESS_POINT');
 const MAX_ACTIVE_CABLE_PULSES = 120;
@@ -277,6 +286,14 @@ export default class CableManager {
         return Boolean(itemType && DATA_ITEMS.has(itemType));
     }
 
+    canCableEndpointSend(building: BaseBuilding): boolean {
+        return building.type !== 'REPEATER' || building.hasPower;
+    }
+
+    canCableEndpointReceive(building: BaseBuilding): boolean {
+        return building.type !== 'REPEATER' || building.hasPower;
+    }
+
     getCableTravelTicks(): number {
         const gameSpeed = Math.max(0.1, this.scene.gameSpeed || 1);
         const tickMs = (CONFIG.TICK_RATE * CONFIG.TIMING.TICK_RATE_MULTIPLIER) / gameSpeed;
@@ -301,6 +318,7 @@ export default class CableManager {
 
     processCableArrivals(cable: CableConnection, buildingA: BaseBuilding, buildingB: BaseBuilding): void {
         cable.queue = cable.queue.map(packet => this.normalizeQueuedPacket(packet, cable.flowDirection || 'FORWARD'));
+        const effectiveBandwidth = this.getEffectiveBandwidth(cable.bandwidth);
 
         for (const packet of cable.queue) {
             if (packet.ticksRemaining > 0) {
@@ -327,7 +345,12 @@ export default class CableManager {
                 continue;
             }
 
-            if (delivered < cable.bandwidth && this.isDataItem(packet.itemType) && dest.canAcceptItem(packet.itemType)) {
+            if (
+                delivered < effectiveBandwidth
+                && this.isDataItem(packet.itemType)
+                && this.canCableEndpointReceive(dest)
+                && dest.canAcceptItem(packet.itemType)
+            ) {
                 dest.acceptItem(packet.itemType);
                 delivered++;
             } else {
@@ -375,7 +398,7 @@ export default class CableManager {
             const buildingB = buildingManager.get(cable.toKey);
 
             if (!buildingA || !buildingB) continue;
-            if (!buildingA.hasPower || !buildingB.hasPower) continue;
+            if (!this.canCableEndpointSend(buildingA) && !this.canCableEndpointSend(buildingB)) continue;
 
             this.processCableArrivals(cable, buildingA, buildingB);
 
@@ -385,9 +408,23 @@ export default class CableManager {
                 const aOut = buildingA.getOutputSource();
                 const bOut = buildingB.getOutputSource();
 
-                if (this.isDataItem(aOut[0]) && (buildingB.type === 'REPEATER' || buildingB.canAcceptItem(aOut[0]))) {
+                if (
+                    this.canCableEndpointSend(buildingA)
+                    && this.isDataItem(aOut[0])
+                    && (
+                        (buildingB.type === 'REPEATER' && buildingB.hasPower)
+                        || (this.canCableEndpointReceive(buildingB) && buildingB.canAcceptItem(aOut[0]))
+                    )
+                ) {
                     flowDir = 'FORWARD';
-                } else if (this.isDataItem(bOut[0]) && (buildingA.type === 'REPEATER' || buildingA.canAcceptItem(bOut[0]))) {
+                } else if (
+                    this.canCableEndpointSend(buildingB)
+                    && this.isDataItem(bOut[0])
+                    && (
+                        (buildingA.type === 'REPEATER' && buildingA.hasPower)
+                        || (this.canCableEndpointReceive(buildingA) && buildingA.canAcceptItem(bOut[0]))
+                    )
+                ) {
                     flowDir = 'BACKWARD';
                 }
                 cable.flowDirection = flowDir;
@@ -395,14 +432,19 @@ export default class CableManager {
 
             const currentSource = flowDir === 'FORWARD' ? buildingA : buildingB;
             const currentDest = flowDir === 'FORWARD' ? buildingB : buildingA;
+            if (!this.canCableEndpointSend(currentSource)) continue;
             const sourceOutput = currentSource.getOutputSource();
             const maxQueue = CONFIG.CABLES[cable.cableType]?.MAX_QUEUE || 10;
+            const effectiveBandwidth = this.getEffectiveBandwidth(cable.bandwidth);
             let launched = 0;
 
-            while (sourceOutput.length > 0 && cable.queue.length < maxQueue && launched < cable.bandwidth) {
+            while (sourceOutput.length > 0 && cable.queue.length < maxQueue && launched < effectiveBandwidth) {
                 const item = sourceOutput[0];
                 if (!this.isDataItem(item)) break;
-                if (currentDest.type === 'REPEATER' || currentDest.canAcceptItem(item) || cable.queue.length > 0) {
+                const destinationReady = currentDest.type === 'REPEATER'
+                    ? currentDest.hasPower
+                    : this.canCableEndpointReceive(currentDest);
+                if (destinationReady && (currentDest.type === 'REPEATER' || currentDest.canAcceptItem(item) || cable.queue.length > 0)) {
                     cable.queue.push({
                         itemType: currentSource.popOutput()!,
                         flowDirection: flowDir,
@@ -436,11 +478,12 @@ export default class CableManager {
         for (const ap of accessPoints) {
             ap.relaysThisTick = 0;
             const apRange = ap.range + rangeBonus;
+            const effectiveBandwidth = this.getEffectiveBandwidth(ap.bandwidth, ap);
             let relayed = 0;
             const inRange = this.getWirelessBuildingsInRange(ap, apRange);
 
             for (const source of inRange) {
-                if (relayed >= ap.bandwidth) break;
+                if (relayed >= effectiveBandwidth) break;
                 if (!isAPAutoRelaySource(source, itemType => this.isDataItem(itemType))) continue;
 
                 const item = source.outputBuffer[0];
@@ -458,6 +501,15 @@ export default class CableManager {
                 this.createAPWirelessWave(ap.x + CONFIG.GRID_SIZE, ap.y + CONFIG.GRID_SIZE, item);
             }
         }
+    }
+
+    private getEffectiveBandwidth(baseBandwidth: number, ...buildings: BaseBuilding[]): number {
+        const efficiency = buildings.reduce(
+            (min, building) => Math.min(min, building.getPowerEfficiency()),
+            1
+        );
+        if (efficiency <= 0 || baseBandwidth <= 0) return 0;
+        return Math.max(1, Math.floor(baseBandwidth * efficiency));
     }
 
     private rebuildWirelessCache(buildingManager: BuildingManager): void {

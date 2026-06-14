@@ -2,100 +2,78 @@ import { describe, expect, test } from 'vitest';
 import ResearchManager from './ResearchManager';
 
 function createManager(): ResearchManager {
-    return new ResearchManager({
-        uiManager: {
-            logMessage: () => {}
+    const scene: any = {
+        buildingManager: {
+            getByType: () => []
         }
-    } as any);
+    };
+    return new ResearchManager(scene);
 }
 
-describe('ResearchManager lab jobs', () => {
-    test('adds progress but does not immediately unlock without training', () => {
+describe('ResearchManager global research', () => {
+    test('consumes Insight from the active slot and unlocks completed research', () => {
         const manager = createManager();
 
-        manager.addJobProgress('TECH_EFFICIENT_MINING', 74);
-        expect(manager.isUnlocked('TECH_EFFICIENT_MINING')).toBe(false);
-        expect(manager.getJobProgress('TECH_EFFICIENT_MINING')).toMatchObject({
-            progress: 74,
-            completed: false
-        });
+        expect(manager.assignResearch('CORE_BASIC_RESEARCH')).toBe(true);
+        manager.addInsight('material', 20);
+        manager.addInsight('tactical', 20);
+        manager.addInsight('system', 20);
 
-        // Reaching the cost (75) does not immediately unlock anymore.
-        // It remains completed: false, isTraining undefined/false.
-        manager.addJobProgress('TECH_EFFICIENT_MINING', 1);
-        expect(manager.isUnlocked('TECH_EFFICIENT_MINING')).toBe(false);
-        expect(manager.getJobProgress('TECH_EFFICIENT_MINING')).toMatchObject({
-            progress: 75,
-            completed: false
-        });
-    });
+        for (let i = 0; i < 20; i++) manager.onTick();
 
-    test('manages timed training phase and completes available system protocol jobs', () => {
-        const manager = createManager();
-
-        manager.addJobProgress('TECH_EFFICIENT_MINING', 75);
-        expect(manager.isUnlocked('TECH_EFFICIENT_MINING')).toBe(false);
-
-        // Start training with duration 10 ticks
-        manager.startJobTraining('TECH_EFFICIENT_MINING', 10);
-        expect(manager.getJobProgress('TECH_EFFICIENT_MINING')).toMatchObject({
-            progress: 75,
-            completed: false,
-            isTraining: true,
-            trainingProgressTicks: 0,
-            trainingDurationTicks: 10
-        });
-
-        // Advance 5 ticks
-        for (let i = 0; i < 5; i++) {
-            manager.advanceJobTraining('TECH_EFFICIENT_MINING');
-        }
-        expect(manager.getJobProgress('TECH_EFFICIENT_MINING')).toMatchObject({
-            progress: 75,
-            completed: false,
-            isTraining: true,
-            trainingProgressTicks: 5
-        });
-        expect(manager.isUnlocked('TECH_EFFICIENT_MINING')).toBe(false);
-
-        // Advance remaining 5 ticks
-        for (let i = 0; i < 5; i++) {
-            manager.advanceJobTraining('TECH_EFFICIENT_MINING');
-        }
-        expect(manager.getJobProgress('TECH_EFFICIENT_MINING')).toMatchObject({
-            progress: 75,
+        expect(manager.isUnlocked('CORE_BASIC_RESEARCH')).toBe(true);
+        expect(manager.getJobProgress('CORE_BASIC_RESEARCH')).toMatchObject({
             completed: true,
-            isTraining: false
+            progress: 60
         });
-        expect(manager.isUnlocked('TECH_EFFICIENT_MINING')).toBe(true);
     });
 
-    test('does not progress jobs until prerequisite protocols are complete', () => {
+    test('does not assign or progress locked research until prerequisites complete', () => {
         const manager = createManager();
 
+        expect(manager.assignResearch('TECH_STREAMLINED_PROCESSING')).toBe(false);
         manager.addJobProgress('TECH_STREAMLINED_PROCESSING', 500);
         expect(manager.getJobProgress('TECH_STREAMLINED_PROCESSING').progress).toBe(0);
 
-        // Complete prerequisite protocol
-        manager.addJobProgress('TECH_EFFICIENT_MINING', 75);
-        manager.startJobTraining('TECH_EFFICIENT_MINING', 1);
-        manager.advanceJobTraining('TECH_EFFICIENT_MINING');
-        expect(manager.isUnlocked('TECH_EFFICIENT_MINING')).toBe(true);
-
+        manager.loadUnlockedResearch(['CORE_BASIC_RESEARCH', 'TECH_EFFICIENT_MINING', 'TECH_RECYCLING', 'CORE_RESEARCH_SLOT_I', 'CORE_THROUGHPUT_I', 'CORE_TIER_2_GATE']);
+        expect(manager.assignResearch('TECH_STREAMLINED_PROCESSING')).toBe(true);
         manager.addJobProgress('TECH_STREAMLINED_PROCESSING', 3);
         expect(manager.getJobProgress('TECH_STREAMLINED_PROCESSING').progress).toBe(3);
     });
 
-    test('restores completed legacy research as completed job progress', () => {
+    test('preserves progress when research is paused or reassigned', () => {
         const manager = createManager();
 
-        manager.loadUnlockedResearch(['TECH_FAST_CONVEYOR']);
-        manager.loadJobProgress({});
+        manager.loadUnlockedResearch(['CORE_BASIC_RESEARCH']);
+        manager.addInsight('material', 80);
+        manager.assignResearch('TECH_EFFICIENT_MINING');
+        manager.onTick();
+
+        const progress = manager.getJobProgress('TECH_EFFICIENT_MINING').progress;
+        expect(progress).toBeGreaterThan(0);
+
+        manager.clearResearch('TECH_EFFICIENT_MINING');
+        manager.assignResearch('TECH_EFFICIENT_MINING');
+        expect(manager.getJobProgress('TECH_EFFICIENT_MINING').progress).toBe(progress);
+    });
+
+    test('restores saved research state', () => {
+        const manager = createManager();
+
+        manager.loadState({
+            completed: ['TECH_FAST_CONVEYOR'],
+            activeSlots: [{ id: 'slot-1', researchId: 'CORE_BASIC_RESEARCH' }],
+            progressById: { CORE_BASIC_RESEARCH: { progress: 12 } },
+            insightBuffers: { material: 10, tactical: 11, system: 12 },
+            unlockedSlots: 1
+        });
 
         expect(manager.isUnlocked('TECH_FAST_CONVEYOR')).toBe(true);
         expect(manager.getJobProgress('TECH_FAST_CONVEYOR')).toMatchObject({
-            progress: 50,
+            progress: 80,
             completed: true
         });
+        expect(manager.getSavedState().insightBuffers).toEqual({ material: 10, tactical: 11, system: 12 });
+        expect(manager.getJobProgress('CORE_BASIC_RESEARCH').progress).toBe(12);
     });
 });

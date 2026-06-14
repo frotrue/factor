@@ -11,7 +11,7 @@ export interface LegacyPowerDisplay {
     production: number;
     consumption: number;
     isDeficit: boolean;
-    networks?: unknown[];
+    networks?: Array<{ satisfaction?: number }>;
 }
 
 export function getLegacyTopHudRefs(): LegacyTopHudRefs {
@@ -33,7 +33,11 @@ export function updateLegacyPower(refs: LegacyTopHudRefs, data: LegacyPowerDispl
     if (!refs.powerEl) return;
 
     const networkText = data.networks ? ` | ${data.networks.length} grids` : '';
-    refs.powerEl.textContent = `${data.production} / ${data.consumption} W${networkText}`;
+    const average = data.consumption > 0 && data.networks?.length
+        ? data.networks.reduce((sum, network) => sum + (network.satisfaction ?? 1), 0) / data.networks.length
+        : 1;
+    const efficiencyText = data.consumption > 0 ? ` | ${Math.round(average * 100)}%` : '';
+    refs.powerEl.textContent = `${data.production} / ${data.consumption} W${efficiencyText}${networkText}`;
     refs.powerEl.style.color = data.isDeficit ? '#ef4444' : '#fde047';
     refs.powerEl.style.textShadow = data.isDeficit ? '0 0 10px #ef4444' : '0 0 10px #fde047';
 }

@@ -48,6 +48,7 @@ export default class SaveManager {
             'GAME_SPEED_CHANGED',
             'MODEL_TRAINING_TARGET_SET',
             'RESEARCH_UNLOCKED',
+            'RESEARCH_STATE_CHANGED',
             'WAVE_STARTED',
             'WAVE_ENDED'
         ].forEach(event => {
@@ -345,6 +346,7 @@ export default class SaveManager {
             buildings: payload.buildings,
             defenseModelStates: this.scene.defenseModelStates,
             labJobProgress: this.scene.researchManager.getSavedJobProgress(),
+            researchState: this.scene.researchManager.getSavedState(),
             trainingPlanner: this.scene.trainingPlanner.getState(),
             items: payload.items,
             cables: payload.cables,
@@ -432,12 +434,13 @@ export default class SaveManager {
             }
 
             // Load Research
-            if (data.research) {
-                this.scene.researchManager.loadUnlockedResearch(data.research);
-            } else {
-                this.scene.researchManager.loadUnlockedResearch([]);
-            }
-            this.scene.researchManager.loadJobProgress(data.labJobProgress || {});
+            this.scene.researchManager.loadState(data.researchState ?? {
+                completed: data.research ?? [],
+                activeSlots: [],
+                progressById: {},
+                insightBuffers: { material: 0, tactical: 0, system: 0 },
+                unlockedSlots: 1
+            });
             this.scene.trainingPlanner.loadState(data.trainingPlanner || {});
 
             this.scene.initializeDefenseModelStates();

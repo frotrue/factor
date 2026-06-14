@@ -1078,11 +1078,12 @@ test('desktop operates the Preact training lab panel', async ({ page }, testInfo
     });
 
     await page.getByTestId('preact-topbar-research').click();
-    await expect(page.getByTestId('preact-training-lab-modal')).toBeVisible();
-    await expect(page.getByTestId('preact-training-lab-tab-SYSTEM')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByTestId('preact-training-lab-panel')).toHaveAttribute('aria-labelledby', 'preact-training-lab-tab-SYSTEM');
-    await page.getByTestId('preact-training-lab-close').click();
-    await expect(page.getByTestId('preact-training-lab-modal')).toHaveCount(0);
+    await expect(page.getByTestId('preact-research-panel')).toBeVisible();
+    await expect(page.getByTestId('preact-research-map')).toBeVisible();
+    await expect(page.getByTestId('preact-research-buffer-material')).toHaveAttribute('role', 'progressbar');
+    await expect(page.getByTestId('preact-research-node-CORE_BASIC_RESEARCH')).toBeVisible();
+    await page.getByTestId('preact-research-close').click();
+    await expect(page.getByTestId('preact-research-panel')).toHaveCount(0);
 
     await page.getByTestId('preact-topbar-lab').click();
     const labModal = page.getByTestId('preact-training-lab-modal');

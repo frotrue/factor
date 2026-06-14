@@ -31,9 +31,11 @@
 |---|---|
 | 설정/config | `src/config.test.ts`, `npm run build` |
 | 저장/로드 | `src/utils/saveMigration.test.ts`, E2E save smoke |
+| 전력 효율 | `src/managers/PowerManager.test.ts`, `src/utils/powerPreview.test.ts`, 생산/케이블 관련 테스트 |
+| 독립 연구 | `src/managers/ResearchManager.test.ts`, `src/config.test.ts`, E2E research panel smoke |
 | 튜토리얼 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | 웨이브/적/경로 | `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |
-| 모델 훈련/GPU | `src/managers/TrainingPlannerManager.test.ts`, `src/utils/modelTrainingProgress.test.ts`, `src/utils/modelTrainingSummary.test.ts`, E2E Training Lab |
+| 모델 훈련/GPU | `src/managers/TrainingPlannerManager.test.ts`, `src/utils/modelTrainingProgress.test.ts`, `src/utils/modelTrainingSummary.test.ts`, E2E Training Lab, 연구 throughput smoke |
 | 성능/대형 공장 | `npm test`, `npm run build`, `tests/e2e/performance.spec.ts` |
 
 ## 주의

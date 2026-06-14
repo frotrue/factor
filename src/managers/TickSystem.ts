@@ -66,6 +66,7 @@ export default class TickSystem {
 
         if (isFullTick) {
             this.processBuildings(occupiedPositions);
+            this.scene.researchManager?.onTick?.();
         }
     }
 

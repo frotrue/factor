@@ -11,6 +11,8 @@ export const powerConsumption = signal(0);
 export const powerNet = signal(0);
 export const powerNetworkCount = signal(0);
 export const isBlackout = signal(false);
+export const powerSatisfaction = signal(1);
+export const lowPowerNetworkCount = signal(0);
 export const silicon = signal(0);
 export const packets = signal(0);
 export const wave = signal(0);
@@ -54,7 +56,8 @@ export const tacticalPanels = signal<TacticalPanelSnapshot>({
 
 export const powerDisplay = computed(() => {
     const networks = powerNetworkCount.value > 0 ? ` | ${powerNetworkCount.value} grids` : '';
-    return `${powerProduction.value} / ${powerConsumption.value} W${networks}`;
+    const efficiency = powerConsumption.value > 0 ? ` | ${Math.round(powerSatisfaction.value * 100)}%` : '';
+    return `${powerProduction.value} / ${powerConsumption.value} W${efficiency}${networks}`;
 });
 
-export const isLowPower = computed(() => isBlackout.value || powerNet.value < 0);
+export const isLowPower = computed(() => isBlackout.value || lowPowerNetworkCount.value > 0 || powerSatisfaction.value < 1);

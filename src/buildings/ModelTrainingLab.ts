@@ -29,6 +29,7 @@ export default class ModelTrainingLab extends BaseBuilding {
     targetType: string | null;
     activeJobId: string | null;
     autoTrain: boolean;
+    tacticalAnalyzeWork: number;
     statusText: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {
@@ -37,6 +38,7 @@ export default class ModelTrainingLab extends BaseBuilding {
         this.targetType = savedTarget && CONFIG.BUILDINGS[savedTarget]?.DEFENSE ? savedTarget : null;
         this.activeJobId = config.customState?.activeJobId ?? (this.targetType ? this.getDefenseJobId(this.targetType) : null);
         this.autoTrain = config.customState?.autoTrain ?? true;
+        this.tacticalAnalyzeWork = 0;
 
         this.statusText = scene.add.text(0, CONFIG.GRID_SIZE * 0.35, 'NO TARGET', {
             fontFamily: 'Share Tech Mono, monospace',
@@ -49,7 +51,7 @@ export default class ModelTrainingLab extends BaseBuilding {
     }
 
     canAcceptItem(type: string): boolean {
-        return TRAINING_ITEMS.has(type) && this.inputBuffer.length < this.maxBufferSize;
+        return (TRAINING_ITEMS.has(type) || type === 'TACTICAL_DATA') && this.inputBuffer.length < this.maxBufferSize;
     }
 
     onTick(tickCount: number): void {
@@ -59,6 +61,7 @@ export default class ModelTrainingLab extends BaseBuilding {
         const planner = (this.scene as IMainScene).trainingPlanner;
         planner.prepareLabTick(this);
         this.drainInputBufferToActiveJob();
+        this.analyzeTacticalData();
         planner.advanceFromLab(this);
         this.refreshStatusText();
     }
@@ -153,6 +156,21 @@ export default class ModelTrainingLab extends BaseBuilding {
         if (accepted > 0) {
             EventBus.emit('TRAINING_LAB_RENDER_REQUESTED');
         }
+    }
+
+    analyzeTacticalData(): void {
+        if (!this.inputBuffer.includes('TACTICAL_DATA')) return;
+        this.tacticalAnalyzeWork += this.getPowerEfficiency();
+        if (this.tacticalAnalyzeWork < 1) return;
+        this.tacticalAnalyzeWork -= 1;
+
+        const index = this.inputBuffer.indexOf('TACTICAL_DATA');
+        if (index < 0) return;
+        this.inputBuffer.splice(index, 1);
+        (this.scene as IMainScene).researchManager.addInsight(
+            'tactical',
+            CONFIG.RESEARCH_SETTINGS.FACILITY_OUTPUT.tactical
+        );
     }
 
     advanceTraining(): boolean {

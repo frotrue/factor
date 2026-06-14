@@ -1,0 +1,287 @@
+.panel {
+    position: fixed;
+    inset: 72px 18px 24px auto;
+    z-index: 1460;
+    display: grid;
+    width: min(900px, calc(100vw - 36px));
+    max-height: calc(100vh - 96px);
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid rgba(77, 216, 255, 0.16);
+    border-radius: var(--radius-lg);
+    background: rgba(8, 12, 20, 0.9);
+    box-shadow: var(--shadow-panel);
+    box-sizing: border-box;
+    color: var(--text-primary);
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.header,
+.meta,
+.detailHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.header strong,
+.detailHeader strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    line-height: 1.1;
+}
+
+.kicker,
+.meta,
+.cost,
+.detailHeader span,
+.tags span,
+.effects {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.3;
+}
+
+.kicker {
+    color: var(--holo-cyan);
+    text-transform: uppercase;
+}
+
+.close {
+    min-height: 28px;
+    padding: 5px var(--space-2);
+    border: 1px solid rgba(77, 216, 255, 0.22);
+    border-radius: var(--radius-sm);
+    background: rgba(77, 216, 255, 0.055);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    pointer-events: auto;
+}
+
+.status {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.meta {
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.buffers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-2);
+}
+
+.body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 270px;
+    gap: var(--space-3);
+    min-height: 0;
+}
+
+.map {
+    position: relative;
+    min-height: min(58vh, 620px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.025);
+    overflow: auto;
+    pointer-events: auto;
+    scrollbar-color: rgba(77, 216, 255, 0.36) rgba(255, 255, 255, 0.035);
+    scrollbar-width: thin;
+}
+
+.mapCanvas {
+    position: relative;
+    width: var(--map-size);
+    height: var(--map-size);
+    min-width: var(--map-size);
+    min-height: var(--map-size);
+    background:
+        radial-gradient(circle at 50% 50%, rgba(77, 216, 255, 0.08), transparent 34%),
+        linear-gradient(rgba(77, 216, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77, 216, 255, 0.055) 1px, transparent 1px);
+    background-size: auto, 80px 80px, 80px 80px;
+}
+
+.core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 60px;
+    height: 32px;
+    border: 1px solid rgba(99, 255, 177, 0.38);
+    border-radius: var(--radius-sm);
+    background: rgba(99, 255, 177, 0.08);
+    color: var(--holo-green);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 32px;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+
+.axis {
+    position: absolute;
+    left: calc(50% + var(--axis-x));
+    top: calc(50% + var(--axis-y));
+    color: var(--axis-color);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    transform: translate(-50%, -50%);
+}
+
+.node {
+    position: absolute;
+    left: calc(50% + var(--node-x));
+    top: calc(50% + var(--node-y));
+    display: grid;
+    width: 118px;
+    min-height: 46px;
+    place-items: center;
+    padding: 6px 8px;
+    border: 1px solid color-mix(in srgb, var(--node-color), transparent 58%);
+    border-radius: var(--radius-sm);
+    background: rgba(10, 16, 26, 0.9);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.15;
+    pointer-events: auto;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+
+.node span {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.node:hover,
+.selected {
+    border-color: var(--node-color);
+    color: var(--text-primary);
+}
+
+.active {
+    background: rgba(100, 245, 141, 0.09);
+}
+
+.completed {
+    color: var(--holo-green);
+}
+
+.locked,
+.gated {
+    opacity: 0.45;
+}
+
+.waiting_resource {
+    color: var(--holo-amber);
+}
+
+.detail {
+    display: grid;
+    align-content: start;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.025);
+    pointer-events: auto;
+}
+
+.detail p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.tags span {
+    padding: 2px 6px;
+    border: 1px solid rgba(77, 216, 255, 0.14);
+    border-radius: var(--radius-sm);
+    color: var(--holo-cyan);
+}
+
+.cost {
+    color: var(--text-secondary);
+}
+
+.effects {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-left: 16px;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+    .panel {
+        inset: auto 8px 8px 8px;
+        width: auto;
+        max-height: min(76vh, 680px);
+        overflow: auto;
+    }
+
+    .buffers,
+    .body {
+        grid-template-columns: 1fr;
+    }
+
+    .map {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+        min-height: 0;
+        max-height: min(42vh, 360px);
+        padding: var(--space-2);
+        overflow: auto;
+    }
+
+    .mapCanvas {
+        display: grid;
+        width: auto;
+        height: auto;
+        min-width: 0;
+        min-height: 0;
+        gap: var(--space-2);
+        background: none;
+    }
+
+    .core,
+    .axis,
+    .node {
+        position: static;
+        transform: none;
+    }
+
+    .axis {
+        display: none;
+    }
+
+    .core,
+    .node {
+        width: auto;
+        min-height: 32px;
+    }
+}

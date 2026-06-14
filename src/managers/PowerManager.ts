@@ -87,6 +87,7 @@ export default class PowerManager {
         const powerNodes = this.collectPowerNodes();
         this.networks = this.buildNetworks(powerNodes);
         this.assignConsumersToNetworks();
+        this.updateNetworkSatisfaction();
         this.applyPowerState();
 
         this.totalProduction = this.networks.reduce((sum, network) => sum + network.production, 0);
@@ -94,13 +95,19 @@ export default class PowerManager {
         this.availablePower = this.totalProduction - this.totalConsumption;
 
         const blackoutNetworks = this.networks.filter(network => network.isBlackout).length;
+        const lowPowerNetworks = this.networks.filter(network => network.lowPower).length;
+        const averageSatisfaction = this.totalConsumption > 0
+            ? this.networks.reduce((sum, network) => sum + network.satisfaction * network.consumption, 0) / this.totalConsumption
+            : 1;
         EventBus.emit('POWER_UPDATED', {
             production: this.totalProduction,
             consumption: this.totalConsumption,
             net: this.availablePower,
             isBlackout: blackoutNetworks > 0,
             networks: this.networks,
-            blackoutNetworks
+            blackoutNetworks,
+            lowPowerNetworks,
+            averageSatisfaction
         });
     }
 
@@ -148,6 +155,8 @@ export default class PowerManager {
                 consumption: 0,
                 net: 0,
                 isBlackout: false,
+                lowPower: false,
+                satisfaction: 1,
                 color: NETWORK_COLORS[(networkId - 1) % NETWORK_COLORS.length]
             };
 
@@ -194,14 +203,21 @@ export default class PowerManager {
             const chosen = this.chooseNetworkForConsumer(candidateNetworks, pConfig.CONSUMPTION);
             chosen.consumption += pConfig.CONSUMPTION;
             chosen.net = chosen.production - chosen.consumption;
-            chosen.isBlackout = chosen.net < 0;
             chosen.buildings.push(key);
             this.buildingNetworkMap.set(key, chosen);
         });
 
+        this.updateNetworkSatisfaction();
+    }
+
+    updateNetworkSatisfaction(): void {
         this.networks.forEach(network => {
             network.net = network.production - network.consumption;
-            network.isBlackout = network.net < 0;
+            network.satisfaction = network.consumption <= 0
+                ? 1
+                : Math.max(0, Math.min(1, network.production / network.consumption));
+            network.lowPower = network.consumption > 0 && network.satisfaction < 1;
+            network.isBlackout = network.consumption > 0 && network.satisfaction <= 0;
         });
     }
 
@@ -212,12 +228,14 @@ export default class PowerManager {
 
             if (pConfig.CONSUMPTION <= 0) {
                 building.hasPower = true;
+                building.powerEfficiency = 1;
                 return;
             }
 
             const key = `${building.x},${building.y}`;
             const network = this.buildingNetworkMap.get(key);
-            building.hasPower = Boolean(network && !network.isBlackout);
+            building.powerEfficiency = network ? network.satisfaction : 0;
+            building.hasPower = building.powerEfficiency > 0;
         });
     }
 

@@ -99,7 +99,7 @@ export function createLegacyPowerDisplay(data: PowerUpdateData): LegacyPowerDisp
     return {
         production: data.production,
         consumption: data.consumption,
-        isDeficit: data.isBlackout || data.net < 0,
+        isDeficit: data.isBlackout || (data.lowPowerNetworks ?? 0) > 0 || (data.averageSatisfaction ?? 1) < 1,
         networks: data.networks
     };
 }

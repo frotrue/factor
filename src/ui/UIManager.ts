@@ -4,6 +4,7 @@ import SettingsController from './SettingsController';
 import MobileActionController from './MobileActionController';
 import NotificationController from './NotificationController';
 import TopHudController from './TopHudController';
+import ResearchPanelController from './ResearchPanelController';
 import TacticalPanelController from './TacticalPanelController';
 import BuildConsoleController from './BuildConsoleController';
 import HudShellController from './HudShellController';
@@ -26,6 +27,7 @@ export default class UIManager {
     private notifications: NotificationController;
     private gameOver: GameOverController;
     private topHud: TopHudController;
+    private researchPanel: ResearchPanelController;
     private tacticalPanels: TacticalPanelController;
     private buildConsole: BuildConsoleController;
     private hudShell: HudShellController;
@@ -43,6 +45,7 @@ export default class UIManager {
         this.notifications = new NotificationController(scene);
         this.gameOver = new GameOverController(scene);
         this.topHud = new TopHudController(scene, this.topHudRefs);
+        this.researchPanel = new ResearchPanelController(scene);
         this.tacticalPanels = new TacticalPanelController(scene, this.topHudRefs);
         this.buildConsole = new BuildConsoleController(scene);
         this.hudShell = new HudShellController(scene, this.buildConsole);
@@ -56,6 +59,7 @@ export default class UIManager {
         this.notifications.setupEvents();
         this.gameOver.setupEvents();
         this.topHud.setupEvents();
+        this.researchPanel.setup();
         this.tacticalPanels.setupEvents();
         this.buildConsole.setupEvents();
         this.hudShell.setupEvents();

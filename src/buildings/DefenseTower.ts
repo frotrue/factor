@@ -223,7 +223,7 @@ export default class DefenseTower extends BaseBuilding {
         const fireMultiplier = researchManager?.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1) ?? 1;
         const fireRate = Math.max(1, Math.round(dConfig.FIRE_RATE * fireMultiplier));
 
-        this.fireTimer++;
+        this.fireTimer += this.getPowerEfficiency();
         if (this.fireTimer >= fireRate) {
             this.tryFire(dConfig);
         }
