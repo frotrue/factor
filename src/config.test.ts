@@ -68,6 +68,7 @@ describe('CONFIG integrity', () => {
         expect(CONFIG.RESEARCH.TECH_FIBER_OPTIC).toBeDefined();
         expect(CONFIG.CABLES.FIBER.UNLOCK_REQUIRED).toBe('TECH_FIBER_OPTIC');
         expect(CONFIG.RESOURCE_PATCHES.ENERGY).toBeDefined();
+        expect(CONFIG.RESOURCE_PATCHES.MATERIAL_SAMPLE).toBeDefined();
         expect(CONFIG.RECIPES.INFERENCE_UNIT_PRODUCTION.OUTPUT).toBe('INFERENCE_UNIT');
     });
 

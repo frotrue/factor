@@ -26,7 +26,7 @@ export interface ObjectiveState {
     detailKey: string;
 }
 
-const ADVANCED_EARLY_SYSTEMS = new Set(['ACCESS_POINT', 'FAST_LINK', 'FIBER', 'UNLOADER']);
+const ADVANCED_EARLY_SYSTEMS = new Set(['ACCESS_POINT', 'FIBER']);
 
 export function shouldHideEarlyAdvancedSystem(type: string, firstDefenseDone: boolean): boolean {
     return !firstDefenseDone && ADVANCED_EARLY_SYSTEMS.has(type);

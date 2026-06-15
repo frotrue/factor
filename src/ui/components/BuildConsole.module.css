@@ -1,18 +1,19 @@
 .wrap {
     position: absolute;
     left: 50%;
-    bottom: 184px;
-    width: min(760px, calc(100vw - 680px));
-    min-width: 600px;
+    bottom: var(--hud-edge, 24px);
+    width: clamp(520px, calc(100% - 720px), 920px);
+    min-width: 0;
     transform: translateX(-50%);
     pointer-events: none;
+    z-index: 1510;
 }
 
 .console {
     display: grid;
-    grid-template-columns: 104px minmax(220px, 1fr) 210px;
+    grid-template-columns: 96px minmax(180px, 1fr) minmax(150px, 190px);
     gap: var(--space-3);
-    min-height: 132px;
+    min-height: 122px;
     padding: var(--space-3);
 }
 
@@ -32,7 +33,7 @@
     grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
     gap: var(--space-2);
     align-content: start;
-    max-height: 128px;
+    max-height: 112px;
     padding-right: 4px;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -250,7 +251,7 @@
 
 @media (max-width: 768px) and (min-height: 560px), (pointer: coarse) and (min-height: 560px) {
     .wrap {
-        position: fixed;
+        position: absolute;
         left: 8px;
         right: 8px;
         bottom: env(safe-area-inset-bottom, 0px);

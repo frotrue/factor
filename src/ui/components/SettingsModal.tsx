@@ -2,6 +2,7 @@ import { signal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 import EventBus from '../../managers/EventBus';
 import { settingsModal } from '../signals/modalState';
+import { RENDER_RESOLUTION_PRESETS } from '../renderResolution';
 import Button from '../shared/Button';
 import ModalOverlay from '../shared/ModalOverlay';
 import styles from './SettingsModal.module.css';
@@ -151,6 +152,22 @@ export default function SettingsModal() {
 
                     {activeTab.value === 'graphics' ? (
                         <>
+                            <SettingGroup id="render-resolution" label={settings.labels.renderResolution}>
+                                {labelId => (
+                                <Segmented
+                                    dataTestId="preact-settings-render-resolution"
+                                    labelledBy={labelId}
+                                    optionTestIdPrefix="preact-settings-render-resolution-option"
+                                    options={RENDER_RESOLUTION_PRESETS.map(preset => ({
+                                        label: settings.labels.renderResolutionOptions[preset],
+                                        value: preset
+                                    }))}
+                                    value={settings.renderResolutionPreset}
+                                    onChange={value => EventBus.emit('SETTINGS_RENDER_RESOLUTION_REQUESTED', { preset: value })}
+                                />
+                                )}
+                            </SettingGroup>
+
                             <SettingGroup id="fps" label={settings.labels.fps}>
                                 {labelId => (
                                 <Segmented

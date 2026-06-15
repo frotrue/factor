@@ -7,12 +7,10 @@ import Core from './Core';
 import PowerPlant from './PowerPlant';
 import PowerNode from './PowerNode';
 import Storage from './Storage';
-import Unloader from './Unloader';
 import DefenseTower, { Classifier, Filter, Firewall } from './DefenseTower';
 import SolarPanel from './SolarPanel';
 import NeuralTrainer from './NeuralTrainer';
 import AccessPoint from './AccessPoint';
-import Conveyor, { FastLink } from './Conveyor';
 import DataDownloader from './DataDownloader';
 import Recycler from './Recycler';
 import DataCache from './DataCache';
@@ -33,7 +31,6 @@ const REGISTRY: Record<string, BuildingClass> = {
     POWER_PLANT: PowerPlant,
     POWER_NODE: PowerNode,
     STORAGE: Storage,
-    UNLOADER: Unloader,
     CLASSIFIER: Classifier,
     FILTER: Filter,
     FIREWALL: Firewall,
@@ -47,8 +44,6 @@ const REGISTRY: Record<string, BuildingClass> = {
     RECYCLER: Recycler,
     ACCESS_POINT: AccessPoint,
     REPEATER: Repeater,
-    CONVEYOR: Conveyor,
-    FAST_LINK: FastLink,
     DATA_CACHE: DataCache
 };
 

@@ -76,11 +76,10 @@ describe('getObjectiveState', () => {
 describe('shouldHideEarlyAdvancedSystem', () => {
     test('hides advanced logistics before the first defense success', () => {
         expect(shouldHideEarlyAdvancedSystem('ACCESS_POINT', false)).toBe(true);
-        expect(shouldHideEarlyAdvancedSystem('FAST_LINK', false)).toBe(true);
         expect(shouldHideEarlyAdvancedSystem('FIBER', false)).toBe(true);
-        expect(shouldHideEarlyAdvancedSystem('UNLOADER', false)).toBe(true);
-        expect(shouldHideEarlyAdvancedSystem('CONVEYOR', false)).toBe(false);
+        expect(shouldHideEarlyAdvancedSystem('BASIC', false)).toBe(false);
+        expect(shouldHideEarlyAdvancedSystem('DATA_CACHE', false)).toBe(false);
         expect(shouldHideEarlyAdvancedSystem('ACCESS_POINT', true)).toBe(false);
-        expect(shouldHideEarlyAdvancedSystem('UNLOADER', true)).toBe(false);
+        expect(shouldHideEarlyAdvancedSystem('FIBER', true)).toBe(false);
     });
 });

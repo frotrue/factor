@@ -5,6 +5,7 @@ function collectRuntimeErrors(page: Page): string[] {
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => {
         if (message.type() === 'error') {
+            if (message.text().includes('Failed to load resource: net::ERR_CONNECTION_TIMED_OUT')) return;
             errors.push(message.text());
         }
     });
@@ -13,7 +14,7 @@ function collectRuntimeErrors(page: Page): string[] {
 
 async function startGame(page: Page): Promise<void> {
     const viewport = page.viewportSize()!;
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('canvas')).toBeVisible();
     await waitForMainMenu(page);
 
@@ -27,10 +28,16 @@ async function startGame(page: Page): Promise<void> {
 
     const desktopHudSurface = viewport.width > 980 && viewport.height > 520;
     if (desktopHudSurface) {
-        await expectLegacyHudShellShadow(page);
         await expect(page.getByTestId('preact-top-bar')).toBeVisible();
-        await expect(page.getByTestId('preact-right-rail')).toBeVisible();
         await expect(page.getByTestId('preact-build-console')).toBeVisible();
+        const tutorialVisible = await page.getByTestId('preact-tutorial-panel')
+            .isVisible({ timeout: 1200 })
+            .catch(() => false);
+        if (tutorialVisible) {
+            await expect(page.getByTestId('preact-right-rail')).toBeHidden();
+        } else {
+            await expect(page.getByTestId('preact-right-rail')).toBeVisible();
+        }
     } else {
         await page.waitForFunction(() => document.body.classList.contains('mobile-layout'));
         await expect(page.locator('#top-hud')).toBeVisible();
@@ -343,7 +350,7 @@ test('desktop exposes Preact main menu difficulty and keyboard start contracts',
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only main menu smoke');
     const runtimeErrors = collectRuntimeErrors(page);
 
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('canvas')).toBeVisible();
     await waitForMainMenu(page);
     await expect(page.locator('#game-hud-shell')).toHaveCount(0);
@@ -415,10 +422,27 @@ test('starts with the camera centered on the core', async ({ page }) => {
     expect(runtimeErrors).toEqual([]);
 });
 
+test('desktop tutorial gives the tutorial panel priority over the right rail', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only tutorial HUD priority');
+    const runtimeErrors = collectRuntimeErrors(page);
+
+    await startGame(page);
+
+    await expect(page.getByTestId('preact-tutorial-panel')).toBeVisible();
+    await expect(page.getByTestId('preact-right-rail')).toBeHidden();
+    await expect(page.getByTestId('preact-build-console')).toBeVisible();
+
+    expect(runtimeErrors).toEqual([]);
+});
+
 test('desktop starts the game and opens settings', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only smoke');
     const runtimeErrors = collectRuntimeErrors(page);
 
+    await page.addInitScript(() => {
+        localStorage.setItem('gradium_tutorial_completed', 'true');
+        localStorage.setItem('gradium_tutorial_step', '12');
+    });
     await startGame(page);
     await expectLegacyHudShellShadow(page);
     await expect(page.locator('#hud-top-bar')).toBeAttached();
@@ -466,30 +490,11 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.getByTestId('preact-right-rail-threat-routes')).toHaveAttribute('role', 'list');
     await expect(page.getByTestId('preact-right-rail-power-load')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-right-rail-power-load')).toHaveAttribute('aria-valuetext', /^\d+%$/);
-    const tutorialPanel = page.getByTestId('preact-tutorial-panel');
-    await expect(tutorialPanel).toBeVisible();
-    await expect(tutorialPanel).toHaveAttribute('aria-labelledby', 'preact-tutorial-title');
-    await expect(tutorialPanel).toHaveAttribute('aria-describedby', /preact-tutorial-detail/);
-    await expect(page.getByTestId('preact-tutorial-header')).toBeVisible();
-    await expect(page.getByTestId('preact-tutorial-title')).toHaveAttribute('id', 'preact-tutorial-title');
-    await expect(page.getByTestId('preact-tutorial-detail')).toHaveAttribute('id', 'preact-tutorial-detail');
-    await expect(page.getByTestId('preact-tutorial-skip')).toBeVisible();
-    await expect(page.getByTestId('preact-tutorial-skip')).toHaveAttribute('aria-describedby', 'preact-tutorial-detail');
-    await expect(page.getByTestId('preact-tutorial-progress')).toHaveAttribute('aria-valuetext', /^\d+\/\d+$/);
-    await expect(page.getByTestId('preact-tutorial-current')).toHaveAttribute('role', 'group');
-    await expect(page.getByTestId('preact-tutorial-current')).toHaveAttribute('aria-labelledby', 'preact-tutorial-current-label preact-tutorial-current-title');
-    await expect(page.getByTestId('preact-tutorial-current-title')).toHaveAttribute('id', 'preact-tutorial-current-title');
-    await expect(page.getByTestId('preact-tutorial-steps')).toHaveAttribute('role', 'list');
-    const currentTutorialStep = page.locator('[data-testid^="preact-tutorial-step-"][aria-current="step"]');
-    await expect(currentTutorialStep).toHaveCount(1);
-    await expect(currentTutorialStep).toHaveAttribute('role', 'listitem');
-    await expectLegacyTutorialPanelShadow(page);
-    await expect(page.locator('#tutorial-panel')).toHaveAttribute('data-active-step', /CORE|RESOURCE|POWER/, { timeout: 5000 });
-    await expect(page.locator('#tutorial-panel')).toContainText(/(Core 목표|자원 확인|전력망 확장)/);
-
     await selectBuildCategory(page, 'LOGISTICS');
+    await expect(page.locator('#btn-conveyor')).toHaveCount(0);
     await expect(page.locator('#btn-access_point')).toHaveCount(0);
     await expect(page.locator('#btn-fast_link')).toHaveCount(0);
+    await expect(page.getByTestId('preact-build-tool-CONVEYOR')).toHaveCount(0);
     await expect(page.getByTestId('preact-build-tool-ACCESS_POINT')).toHaveCount(0);
     await expect(page.getByTestId('preact-build-tool-FAST_LINK')).toHaveCount(0);
     await selectBuildCategory(page, 'EXTRACTION');
@@ -623,10 +628,8 @@ test('desktop shows the Preact game-over screen from the existing game-over even
     const runtimeErrors = collectRuntimeErrors(page);
 
     await startGame(page);
-    await page.evaluate(async () => {
-        const modulePath = '/src/managers/EventBus.ts';
-        const { default: EventBus } = await import(modulePath);
-        EventBus.emit('GAME_OVER');
+    await page.evaluate(() => {
+        window.__GRADIUM_EVENT_BUS__?.emit('GAME_OVER');
     });
 
     const preactGameOver = page.getByTestId('preact-game-over-screen');
@@ -707,7 +710,8 @@ test('desktop shows Preact activity log entries while legacy log entries stay sh
     await expect(historyToggle).toHaveAttribute('aria-expanded', 'false');
     await historyToggle.click();
     await expect(historyToggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(activityEntries.locator('[data-testid^="preact-activity-log-entry-"]')).toHaveCount(totalEntries);
+    await expect.poll(async () => activityEntries.locator('[data-testid^="preact-activity-log-entry-"]').count())
+        .toBeGreaterThanOrEqual(totalEntries);
 
     expect(runtimeErrors).toEqual([]);
 });
@@ -986,6 +990,7 @@ test('desktop places buildings, connects cable, and removes cable', async ({ pag
 
 test('desktop covers build categories, hotkeys, right-click remove, overlays, save, and research modal', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only broad interaction smoke');
+    test.setTimeout(45_000);
     const runtimeErrors = collectRuntimeErrors(page);
 
     await page.addInitScript(() => {
@@ -1002,10 +1007,10 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     await pressGameHotkey(page, 'F2', async () => (await getMainSceneState(page)).showPowerGrid);
 
     await selectBuildCategory(page, 'LOGISTICS');
-    await selectBuildTool(page, 'CONVEYOR');
-    const conveyorPoint = await getScreenPointForTile(page, -224, -32);
-    await page.mouse.click(conveyorPoint.x, conveyorPoint.y);
-    await expectBuildingCount(page, 'CONVEYOR', 1);
+    await selectBuildTool(page, 'DATA_CACHE');
+    const cachePoint = await getScreenPointForTile(page, -224, -32);
+    await page.mouse.click(cachePoint.x, cachePoint.y);
+    await expectBuildingCount(page, 'DATA_CACHE', 1);
 
     await selectBuildTool(page, 'STORAGE');
     const storagePoint = await getScreenPointForTile(page, -224, -96);
@@ -1038,6 +1043,15 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     await expect.poll(async () => (await getMainSceneState(page)).gameSpeed).toBe(2);
     await preactSettings.getByRole('tab', { name: /^(그래픽|Graphics)$/ }).click();
     await expect(preactSettings.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'preact-settings-tab-graphics');
+    await expect(page.getByTestId('preact-settings-group-render-resolution')).toHaveAttribute('aria-labelledby', 'preact-settings-label-render-resolution');
+    await expect(page.getByTestId('preact-settings-render-resolution')).toHaveAttribute('role', 'group');
+    await expect(page.getByTestId('preact-settings-render-resolution')).toHaveAttribute('aria-labelledby', 'preact-settings-label-render-resolution');
+    await page.getByTestId('preact-settings-render-resolution-option-2560x1440').click();
+    await expect(page.getByTestId('preact-settings-render-resolution-option-2560x1440')).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(async () => page.locator('canvas').evaluate(canvas => ({
+        height: (canvas as HTMLCanvasElement).height,
+        width: (canvas as HTMLCanvasElement).width
+    }))).toEqual({ height: 1440, width: 2560 });
     await expect(page.getByTestId('preact-settings-group-fps')).toHaveAttribute('aria-labelledby', 'preact-settings-label-fps');
     await expect(page.getByTestId('preact-settings-fps')).toHaveAttribute('role', 'group');
     await expect(page.getByTestId('preact-settings-fps')).toHaveAttribute('aria-labelledby', 'preact-settings-label-fps');

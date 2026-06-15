@@ -32,6 +32,22 @@ const componentNames = [
     'MobileActionBar'
 ] as const;
 
+const gameplaySurfaceOrder = [
+    'MainMenu',
+    'TopBar',
+    'RightRail',
+    'BuildConsole',
+    'WaveResultCard',
+    'ActivityLog',
+    'TutorialPanel',
+    'MobileBuildSummary',
+    'MobileActionBar',
+    'SettingsModal',
+    'TrainingLabModal',
+    'GameOverScreen',
+    'Tooltip'
+] as const;
+
 describe('HudApp', () => {
     afterEach(() => {
         vi.resetModules();
@@ -107,6 +123,6 @@ describe('HudApp', () => {
         expect(vnode.props['data-testid']).toBe('preact-hud-root');
         expect(vnode.props['data-scene-count']).toBe(2);
 
-        expect(collectSurfaceNames(vnode)).toEqual(componentNames);
+        expect(collectSurfaceNames(vnode)).toEqual(gameplaySurfaceOrder);
     });
 });

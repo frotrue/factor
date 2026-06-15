@@ -5,8 +5,6 @@ import { shouldHideEarlyAdvancedSystem } from '../utils/progressionGates';
 
 const BUILD_CONSOLE_ICON_SRC: Record<string, string> = {
     CLASSIFIER: '/assets/buildings/building-classifier.png',
-    CONVEYOR: '/assets/buildings/building-conveyor.png',
-    FAST_LINK: '/assets/buildings/building-fast-link.png',
     FILTER: '/assets/buildings/building-filter.png',
     FIREWALL: '/assets/buildings/building-firewall.png',
     MINER: '/assets/buildings/building-miner.png',

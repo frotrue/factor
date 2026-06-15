@@ -17,6 +17,7 @@ const DATA_ITEMS = new Set([
     'TRAINED_MODEL',
     'INFERENCE_UNIT',
     'SILICON',
+    'ENERGY',
     'MATERIAL_SAMPLE',
     'TACTICAL_DATA'
 ]);

@@ -1,5 +1,6 @@
 import { textForKey, type Language } from '../i18n';
-import type { SettingsModalSnapshot } from '../types';
+import type { RenderResolutionPreset, SettingsModalSnapshot } from '../types';
+import { normalizeRenderResolutionPreset } from './renderResolution';
 
 export const DEFAULT_FPS_LIMIT = 60;
 export const MIN_FPS_LIMIT = 30;
@@ -12,6 +13,7 @@ export interface SettingsSnapshotInput {
     language: Language;
     muted: boolean;
     open: boolean;
+    renderResolutionPreset: RenderResolutionPreset;
     speed: number;
     volume: number;
 }
@@ -23,6 +25,7 @@ export interface SettingsLegacyDisplay {
         fps: number;
         language: Language;
         muted: boolean;
+        renderResolutionPreset: RenderResolutionPreset;
         volume: number;
     };
 }
@@ -50,16 +53,19 @@ export function createSettingsModalSnapshot({
     language,
     muted,
     open,
+    renderResolutionPreset,
     speed,
     volume
 }: SettingsSnapshotInput): SettingsModalSnapshot {
     const normalizedFps = normalizeFpsLimit(fps);
     const normalizedVolume = normalizeVolumePercent(volume);
+    const normalizedRenderResolutionPreset = normalizeRenderResolutionPreset(renderResolutionPreset);
 
     return {
         open,
         speed,
         fps: normalizedFps,
+        renderResolutionPreset: normalizedRenderResolutionPreset,
         volume: normalizedVolume,
         muted,
         bloomEnabled,
@@ -88,6 +94,13 @@ function createSettingsLabels(): SettingsModalSnapshot['labels'] {
         muted: textForKey('settings.muted'),
         graphics: textForKey('settings.graphics'),
         fps: textForKey('settings.fps'),
+        renderResolution: textForKey('settings.renderResolution'),
+        renderResolutionOptions: {
+            auto: textForKey('settings.renderResolution.auto'),
+            '1920x1080': textForKey('settings.renderResolution.1920'),
+            '2560x1440': textForKey('settings.renderResolution.2560'),
+            '3840x2160': textForKey('settings.renderResolution.3840')
+        },
         saveData: textForKey('settings.saveData'),
         save: textForKey('settings.save'),
         load: textForKey('settings.load'),
@@ -112,6 +125,7 @@ export function withSettingsModalOpenState(
 export function createSettingsDisplayPayload(input: SettingsSnapshotInput): SettingsDisplayPayload {
     const normalizedFps = normalizeFpsLimit(input.fps);
     const normalizedVolume = normalizeVolumePercent(input.volume);
+    const normalizedRenderResolutionPreset = normalizeRenderResolutionPreset(input.renderResolutionPreset);
 
     return {
         legacySettings: {
@@ -121,12 +135,14 @@ export function createSettingsDisplayPayload(input: SettingsSnapshotInput): Sett
                 fps: normalizedFps,
                 language: input.language,
                 muted: input.muted,
+                renderResolutionPreset: normalizedRenderResolutionPreset,
                 volume: normalizedVolume
             }
         },
         snapshot: createSettingsModalSnapshot({
             ...input,
             fps: normalizedFps,
+            renderResolutionPreset: normalizedRenderResolutionPreset,
             volume: normalizedVolume
         })
     };

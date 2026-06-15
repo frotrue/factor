@@ -20,6 +20,7 @@ import type { Language } from './i18n';
 import type { ThreatLevel } from './utils/waveSimulation';
 
 export type GameMode = 'tutorial' | 'campaign';
+export type RenderResolutionPreset = 'auto' | '1920x1080' | '2560x1440' | '3840x2160';
 
 // ── 방향 (Direction) ──
 export interface Direction {
@@ -364,11 +365,11 @@ export interface LabJobProgress {
 // ── 건물 타입 키 (타입 안전성 강화) ──
 export type BuildingType =
     | 'MINER' | 'DATA_DOWNLOADER' | 'CORE' | 'PROCESSOR'
-    | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE' | 'UNLOADER'
+    | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
     | 'MODEL_TRAINING_LAB' | 'RESEARCH_LAB' | 'DATA_CENTER' | 'GPU_CLUSTER'
-    | 'CONVEYOR' | 'FAST_LINK' | 'RECYCLER' | 'DATA_CACHE' | 'REPEATER';
+    | 'RECYCLER' | 'DATA_CACHE' | 'REPEATER';
 
 // ── 케이블 연결 ──
 export interface CableConnection {
@@ -528,6 +529,7 @@ export interface SettingsModalSnapshot {
     open: boolean;
     speed: number;
     fps: number;
+    renderResolutionPreset: RenderResolutionPreset;
     volume: number;
     muted: boolean;
     bloomEnabled: boolean;
@@ -546,6 +548,8 @@ export interface SettingsModalSnapshot {
         muted: string;
         graphics: string;
         fps: string;
+        renderResolution: string;
+        renderResolutionOptions: Record<RenderResolutionPreset, string>;
         saveData: string;
         save: string;
         load: string;

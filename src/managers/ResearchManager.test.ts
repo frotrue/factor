@@ -61,16 +61,16 @@ describe('ResearchManager global research', () => {
         const manager = createManager();
 
         manager.loadState({
-            completed: ['TECH_FAST_CONVEYOR'],
+            completed: ['TECH_FIBER_OPTIC'],
             activeSlots: [{ id: 'slot-1', researchId: 'CORE_BASIC_RESEARCH' }],
             progressById: { CORE_BASIC_RESEARCH: { progress: 12 } },
             insightBuffers: { material: 10, tactical: 11, system: 12 },
             unlockedSlots: 1
         });
 
-        expect(manager.isUnlocked('TECH_FAST_CONVEYOR')).toBe(true);
-        expect(manager.getJobProgress('TECH_FAST_CONVEYOR')).toMatchObject({
-            progress: 80,
+        expect(manager.isUnlocked('TECH_FIBER_OPTIC')).toBe(true);
+        expect(manager.getJobProgress('TECH_FIBER_OPTIC')).toMatchObject({
+            progress: 130,
             completed: true
         });
         expect(manager.getSavedState().insightBuffers).toEqual({ material: 10, tactical: 11, system: 12 });

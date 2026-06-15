@@ -9,6 +9,8 @@ import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
 import { getRestoredEnemyHp } from '../utils/enemyRestore';
 import { normalizeDefenseModelState } from '../utils/modelTrainingProgress';
 
+const REMOVED_PHYSICAL_TRANSPORT_TYPES = new Set(['CONVEYOR', 'FAST_LINK', 'UNLOADER']);
+
 export default class SaveManager {
     scene: MainScene;
     autoSaveInterval: number;
@@ -457,6 +459,7 @@ export default class SaveManager {
 
             // Load Buildings
             data.buildings.forEach(b => {
+                if (REMOVED_PHYSICAL_TRANSPORT_TYPES.has(b.type)) return;
                 const placed = this.scene.buildingManager.place(b.x, b.y, b.type, b.rotation, {
                     customState: b.customState,
                     skipCost: true

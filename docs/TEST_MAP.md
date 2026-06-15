@@ -22,6 +22,7 @@
 | 빌드 콘솔 | `src/ui/BuildConsoleController.test.ts`, E2E build/placement/cable |
 | 우측 전술 패널 | `src/ui/TacticalPanelController.test.ts`, E2E startup/threat panel |
 | Settings | `src/ui/SettingsController.test.ts`, E2E settings/language |
+| 렌더 해상도/HUD 배치 | `src/ui/renderResolution.test.ts`, `tests/e2e/hud-layout.spec.ts`, `npm run test:e2e:desktop` |
 | Training Lab | `src/ui/TrainingLabController.test.ts`, E2E training lab |
 | Mobile UI | `src/ui/MobileActionController.test.ts`, E2E `mobile-*` projects |
 | Notifications/GameOver/Wave result | `src/ui/NotificationController.test.ts`, `src/ui/GameOverController.test.ts`, E2E wave/game-over/activity |
@@ -32,8 +33,10 @@
 | 변경 영역 | 우선 테스트 |
 |---|---|
 | 설정/config | `src/config.test.ts`, `npm run build` |
+| 맵/자원 광맥 생성 | `src/managers/MapManager.test.ts`, `src/buildings/Miner.test.ts`, `src/config.test.ts` |
 | 저장/로드 | `src/managers/SaveManager.test.ts`, `src/utils/saveMigration.test.ts`, E2E save smoke |
 | 전력 효율 | `src/managers/PowerManager.test.ts`, `src/utils/powerPreview.test.ts`, 생산/케이블 관련 테스트 |
+| 케이블 물류 | `src/utils/apRelay.test.ts`, E2E build/placement/cable |
 | 독립 연구 | `src/managers/ResearchManager.test.ts`, `src/config.test.ts`, E2E research panel smoke |
 | 튜토리얼 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | 웨이브/적/경로 | `src/managers/WaveManager.test.ts`, `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |

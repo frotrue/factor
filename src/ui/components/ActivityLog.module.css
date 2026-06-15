@@ -1,8 +1,8 @@
 .log {
-    position: fixed;
-    left: 16px;
-    bottom: 292px;
-    width: min(340px, calc(100vw - 32px));
+    position: absolute;
+    left: var(--hud-edge, 24px);
+    bottom: var(--hud-build-clearance, 208px);
+    width: min(340px, calc(100% - 32px));
     display: flex;
     flex-direction: column;
     gap: var(--space-2);

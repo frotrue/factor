@@ -55,16 +55,6 @@ export const CONFIG: GameConfig = {
             CATEGORY: 'EXTRACTION',
             COST: [{ resource: 'SILICON', amount: 5 }]
         },
-        CONVEYOR: {
-            ID: 'CONVEYOR',
-            NAME: '컨베이어 벨트 (Conveyor)',
-            COLOR: 0x5aa9ff,
-            HP: 80,
-            DESCRIPTION: 'Silicon 같은 물리 자원을 한 방향으로 운반합니다.',
-            POWER: { CONSUMPTION: 0, PRODUCTION: 0 },
-            CATEGORY: 'LOGISTICS',
-            COST: [{ resource: 'SILICON', amount: 1 }]
-        },
         CORE: {
             ID: 'CORE',
             NAME: '메인 서버 (Neural Core)',
@@ -149,15 +139,6 @@ export const CONFIG: GameConfig = {
             CATEGORY: 'LOGISTICS',
             COST: [{ resource: 'SILICON', amount: 6 }]
         },
-        UNLOADER: {
-            ID: 'UNLOADER',
-            NAME: '하역기 (Unloader)',
-            COLOR: 0x59e0ff,
-            HP: 120,
-            DESCRIPTION: '인접한 창고에서 자원을 빼냅니다.',
-            POWER: { CONSUMPTION: 5, PRODUCTION: 0 },
-            CATEGORY: 'EXTRACTION'
-        },
         CLASSIFIER: {
             ID: 'CLASSIFIER',
             NAME: '분류 모델 (Classifier)',
@@ -193,39 +174,6 @@ export const CONFIG: GameConfig = {
             CATEGORY: 'DEFENSE',
             COST: [{ resource: 'SILICON', amount: 20 }]
         },
-        FAST_LINK: {
-            ID: 'FAST_LINK',
-            NAME: '고속 컨베이어 (Fast Link)',
-            COLOR: 0x50f4ff,
-            HP: 95,
-            DESCRIPTION: 'Silicon을 일반 컨베이어보다 빠르게 운반합니다.',
-            POWER: { CONSUMPTION: 1, PRODUCTION: 0 },
-            UNLOCK_REQUIRED: 'TECH_FAST_CONVEYOR',
-            CATEGORY: 'LOGISTICS',
-            COST: [{ resource: 'SILICON', amount: 5 }]
-        },
-        /*
-        Legacy conveyor-family config kept for future splitter/merger mechanics.
-        SPLITTER: {
-            ID: 'SPLITTER',
-            NAME: '분배기 (Splitter)',
-            COLOR: 0x22d3ee,
-            DESCRIPTION: '입력된 물리 자원을 여러 방향으로 분배합니다.',
-            POWER: { CONSUMPTION: 0, PRODUCTION: 0 },
-            UNLOCK_REQUIRED: 'TECH_SPLITTER',
-            CATEGORY: 'LOGISTICS',
-            COST: [{ resource: 'SILICON', amount: 3 }]
-        },
-        MERGER: {
-            ID: 'MERGER',
-            NAME: '합류기 (Merger)',
-            COLOR: 0x0ea5e9,
-            DESCRIPTION: '여러 방향에서 들어오는 물리 자원을 한 방향으로 합칩니다.',
-            POWER: { CONSUMPTION: 0, PRODUCTION: 0 },
-            CATEGORY: 'LOGISTICS',
-            COST: [{ resource: 'SILICON', amount: 3 }]
-        },
-        */
         SOLAR_PANEL: {
             ID: 'SOLAR_PANEL',
             NAME: '태양광 패널 (Solar Panel)',
@@ -446,7 +394,8 @@ export const CONFIG: GameConfig = {
 
     RESOURCE_PATCHES: {
         SILICON: 0x93c5fd,
-        ENERGY: 0xf8e27d
+        ENERGY: 0xf8e27d,
+        MATERIAL_SAMPLE: 0x7dd3fc
     },
 
     TERRAIN: {
@@ -485,15 +434,19 @@ export const CONFIG: GameConfig = {
                 // North quadrant
                 { type: 'SILICON', x: -10, y: -46, size: 5 },
                 { type: 'ENERGY', x: 8, y: -42, size: 4 },
+                { type: 'MATERIAL_SAMPLE', x: -1, y: -48, size: 3 },
                 // East quadrant
                 { type: 'SILICON', x: 40, y: -8, size: 5 },
                 { type: 'ENERGY', x: 44, y: 10, size: 4 },
+                { type: 'MATERIAL_SAMPLE', x: 51, y: 0, size: 3 },
                 // South quadrant
                 { type: 'SILICON', x: 6, y: 42, size: 5 },
                 { type: 'ENERGY', x: -12, y: 46, size: 4 },
+                { type: 'MATERIAL_SAMPLE', x: 0, y: 52, size: 3 },
                 // West quadrant
                 { type: 'SILICON', x: -46, y: 6, size: 5 },
-                { type: 'ENERGY', x: -42, y: -10, size: 4 }
+                { type: 'ENERGY', x: -42, y: -10, size: 4 },
+                { type: 'MATERIAL_SAMPLE', x: -52, y: -2, size: 3 }
             ],
             STARTER_ZONES: [
                 {
@@ -507,10 +460,16 @@ export const CONFIG: GameConfig = {
                     area: { minX: 3, maxX: 7, minY: 3, maxY: 7 },
                     patchSize: 3,
                     minTiles: 9
+                },
+                {
+                    type: 'MATERIAL_SAMPLE',
+                    area: { minX: 4, maxX: 8, minY: -8, maxY: -4 },
+                    patchSize: 3,
+                    minTiles: 9
                 }
             ],
             RANDOM_RESOURCES: {
-                types: ['SILICON', 'ENERGY'],
+                types: ['SILICON', 'ENERGY', 'MATERIAL_SAMPLE'],
                 patchCount: { min: 24, max: 36 },
                 patchSize: { min: 2, max: 5 },
                 range: { minX: -60, maxX: 60, minY: -60, maxY: 60 },
@@ -865,19 +824,6 @@ export const CONFIG: GameConfig = {
             UNLOCKS: { RECIPES: ['INFERENCE_UNIT_PRODUCTION'] }
         },
 
-        TECH_FAST_CONVEYOR: {
-            ID: 'TECH_FAST_CONVEYOR',
-            NAME: 'Fast Conveyor',
-            COST: 80,
-            DESCRIPTION: 'Unlocks fast links for faster physical resource movement.',
-            AXIS: 'automation',
-            RING: 1,
-            POSITION: 0,
-            COSTS: { insight: { system: 80 } },
-            TAGS: ['unlock'],
-            REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
-            UNLOCKS: { BUILDINGS: ['FAST_LINK'] }
-        },
         TECH_AUTO_QUEUE: {
             ID: 'TECH_AUTO_QUEUE',
             NAME: 'Queue Discipline',
@@ -885,10 +831,10 @@ export const CONFIG: GameConfig = {
             DESCRIPTION: 'Improves global research scheduling discipline for future automation.',
             AXIS: 'automation',
             RING: 1,
-            POSITION: 1,
+            POSITION: 0,
             COSTS: { insight: { system: 110 } },
             TAGS: ['rule-change'],
-            REQUIREMENTS: ['TECH_FAST_CONVEYOR'],
+            REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {}
         },
         TECH_AUTOMATION_PRIORITY: {

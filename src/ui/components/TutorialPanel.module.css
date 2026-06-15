@@ -1,9 +1,9 @@
 .panel {
-    position: fixed;
-    right: 16px;
-    bottom: 292px;
-    width: min(360px, calc(100vw - 32px));
-    max-height: min(58vh, 540px);
+    position: absolute;
+    right: var(--hud-edge, 24px);
+    bottom: var(--hud-build-clearance, 208px);
+    width: min(var(--hud-tutorial-width, 360px), calc(100% - 32px));
+    max-height: min(540px, calc(var(--hud-stage-height, 100vh) - var(--hud-build-clearance, 208px) - 112px));
     display: grid;
     gap: var(--space-3);
     padding: var(--space-4);

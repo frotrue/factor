@@ -3,11 +3,12 @@ import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
 import { BuildingOptions, IMainScene } from '../types';
 
+const MINEABLE_RESOURCE_TYPES = new Set(['SILICON', 'ENERGY', 'MATERIAL_SAMPLE']);
+
 export default class Miner extends BaseBuilding {
     productionRate: number;
     resourceType: string | null;
     productionWork: number;
-    sampleCounter: number;
     scanGraphics: Phaser.GameObjects.Graphics;
     scanY: number;
     scanTween: Phaser.Tweens.Tween | null;
@@ -16,7 +17,6 @@ export default class Miner extends BaseBuilding {
         super(scene, x, y, 'MINER', { ...config, color: CONFIG.BUILDINGS.MINER.COLOR });
         this.productionRate = CONFIG.BUILDINGS.MINER.PRODUCTION_RATE || 2;
         this.productionWork = 0;
-        this.sampleCounter = 0;
         const mapManager = (scene as IMainScene).mapManager;
         this.resourceType = mapManager?.getResourceAt(x, y) || null;
 
@@ -53,6 +53,11 @@ export default class Miner extends BaseBuilding {
             this.graphics.strokeCircle(0, 0, 9);
             this.graphics.fillStyle(0xfde047, 0.9);
             this.graphics.fillCircle(0, 0, 4);
+        } else if (this.resourceType === 'MATERIAL_SAMPLE') {
+            this.graphics.lineStyle(2, 0x7dd3fc, 1);
+            this.graphics.strokeCircle(0, 0, 9);
+            this.graphics.fillStyle(0x7dd3fc, 0.85);
+            this.graphics.fillTriangle(0, -7, 7, 6, -7, 6);
         } else {
             this.graphics.lineStyle(2, 0xffffff, 0.5);
             this.graphics.strokeCircle(0, 0, 8);
@@ -64,7 +69,11 @@ export default class Miner extends BaseBuilding {
         this.scanGraphics.clear();
         if (this.destroyed) return;
 
-        const color = this.resourceType === 'ENERGY' ? 0xfde047 : 0x59e0ff; // Yellow or Cyan
+        const color = this.resourceType === 'ENERGY'
+            ? 0xfde047
+            : this.resourceType === 'MATERIAL_SAMPLE'
+                ? 0x7dd3fc
+                : 0x59e0ff;
         const pulse = 0.5 + 0.3 * Math.sin(this.scene.time.now / 150);
 
         // Draw horizontal outer glow laser
@@ -89,19 +98,22 @@ export default class Miner extends BaseBuilding {
     onTick(tickCount: number): void {
         if (this.isInfected(tickCount) && tickCount % 2 !== 0) return;
 
+        const mapManager = (this.scene as IMainScene).mapManager;
+        const resourceType = mapManager.getResourceAt(this.x, this.y);
+        if (!resourceType || !MINEABLE_RESOURCE_TYPES.has(resourceType)) return;
+
+        this.discardMismatchedOutput(resourceType);
+
         if (this.shouldProduce(tickCount)) {
             if (this.outputBuffer.length >= this.maxBufferSize) return;
-            const mapManager = (this.scene as IMainScene).mapManager;
-            const resourceType = mapManager.getResourceAt(this.x, this.y);
-            if (resourceType === 'SILICON') {
-                this.outputBuffer.push('SILICON');
-            } else if (resourceType === 'ENERGY') {
-                this.outputBuffer.push('ENERGY');
-            }
-            this.sampleCounter++;
-            if (this.sampleCounter >= 4 && this.outputBuffer.length < this.maxBufferSize) {
-                this.sampleCounter = 0;
-                this.outputBuffer.push('MATERIAL_SAMPLE');
+            this.outputBuffer.push(resourceType);
+        }
+    }
+
+    private discardMismatchedOutput(resourceType: string): void {
+        for (let i = this.outputBuffer.length - 1; i >= 0; i--) {
+            if (this.outputBuffer[i] !== resourceType) {
+                this.outputBuffer.splice(i, 1);
             }
         }
     }

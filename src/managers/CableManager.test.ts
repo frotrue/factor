@@ -148,4 +148,25 @@ describe('CableManager validation', () => {
         expect(storage.inputBuffer).toEqual(['SILICON']);
         expect([...manager.cables.values()][0].queue).toEqual([]);
     });
+
+    it('moves energy items from miners into storage', () => {
+        const source = createBuilding(0, 0, 'MINER', {
+            outputBuffer: ['ENERGY']
+        });
+        const storage = createBuilding(32, 0, 'STORAGE');
+        const buildings = {
+            '0,0': source,
+            '32,0': storage
+        };
+        const manager = createCableManager(buildings);
+        vi.spyOn(manager, 'createPulseAnimation').mockImplementation(() => undefined);
+
+        manager.connect('0,0', '32,0', 'BASIC');
+        for (let i = 0; i < 10; i++) {
+            manager.transferData(manager.scene.buildingManager, {} as any);
+        }
+
+        expect(source.outputBuffer).toEqual([]);
+        expect(storage.inputBuffer).toEqual(['ENERGY']);
+    });
 });

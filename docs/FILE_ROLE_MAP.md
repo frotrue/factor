@@ -6,7 +6,7 @@
 
 | 파일 | 역할 | 주의 |
 |---|---|---|
-| `src/main.ts` | Phaser Game 생성, Preact HUD mount, 디버그 전역 노출 | Phaser 생성 뒤 `mountHud()` 호출 유지 |
+| `src/main.ts` | 저장된 렌더 해상도 프리셋으로 Phaser Game 생성, Preact HUD mount, 디버그 전역 노출 | Phaser 생성 뒤 render resolution sync와 `mountHud()` 호출 유지 |
 | `src/scenes/MainMenuScene.ts` | Phaser 메뉴 배경/입력 fallback, Preact menu snapshot/request 처리 | 보이는 메뉴 UI는 Preact가 담당 |
 | `src/scenes/MainScene.ts` | 게임 runtime 조립, manager/controller 생성, scene lifecycle | simulation 변경과 DOM UI 변경을 섞지 않음 |
 
@@ -19,6 +19,8 @@
 | `src/managers/CableManager.ts` | 케이블 연결/큐 전송, 전력과 분리된 buffered item 이동, Repeater/AP 릴레이 | UI overlay와 직접 결합 금지 |
 | `src/managers/EventBus.ts` | Scene/UI 간 이벤트 경계 | owner cleanup 유지 |
 | `src/managers/PowerManager.ts` | 네트워크 전력 생산/소비, satisfaction, 건물 powerEfficiency 주입 | 저전력은 효율 저하로 처리 |
+| `src/managers/MapManager.ts` | preset/seed 기반 지형과 자원 광맥 생성, resource lookup | 자원 종류 추가 시 `CONFIG.RESOURCE_PATCHES`, `GridRenderer`, 관련 맵 테스트와 함께 갱신 |
+| `src/managers/GridRenderer.ts` | 청크 기반 그리드/지형/자원 광맥 렌더링 | 자원 광맥 색은 `CONFIG.RESOURCE_PATCHES`와 동기화 |
 | `src/managers/ResearchManager.ts` | 독립 연구 슬롯, Insight buffer, throughput, 완료 효과 facade | Training Lab 시스템 연구와 분리 |
 | `src/controllers/InputController.ts` | canvas/world 입력, DOM pointer guard | DOM 조작 대신 request 이벤트 사용 |
 | `src/managers/TrainingPlannerManager.ts` | 모델 훈련 planner 상태 | Training Lab UI는 controller 경유 |
@@ -29,7 +31,8 @@
 |---|---|---|
 | `src/ui/UIManager.ts` | legacy DOM 보장, HUD controller 조립 shell | 세부 DOM 로직을 다시 키우지 않음 |
 | `src/ui/mountHud.tsx` | Preact HUD root mount/unmount, signal bridge 연결 | remount/destroy cleanup 유지 |
-| `src/ui/HudApp.tsx` | Preact overlay surface 조합 | main menu open 중 gameplay HUD 숨김 유지 |
+| `src/ui/HudApp.tsx` | Phaser canvas rect에 맞춘 HUD stage와 Preact overlay surface 조합 | main menu open 중 gameplay HUD 숨김 유지 |
+| `src/ui/renderResolution.ts` | `Auto/1920/2560/3840` 렌더 해상도 프리셋 정규화, Phaser scale 적용, HUD stage rect 계산 | 저장은 `localStorage`; campaign save에 넣지 않음 |
 | `src/ui/signals/*` | EventBus snapshot -> Preact signals bridge | simulation 직접 읽기 금지 |
 | `src/ui/domEnvironment.ts` | mobile layout, focus, pointer guard helper | E2E/mobile selector 영향 큼 |
 

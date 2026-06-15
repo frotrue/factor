@@ -1,11 +1,11 @@
 .topBar {
     position: absolute;
-    top: var(--space-4);
-    left: var(--space-4);
+    top: var(--hud-edge, var(--space-4));
+    left: var(--hud-edge, var(--space-4));
     z-index: 1505;
     display: grid;
     gap: var(--space-2);
-    width: min(540px, calc(100vw - 32px));
+    width: min(540px, calc(100% - 32px));
     padding: var(--space-2);
     border: 1px solid rgba(152, 176, 204, 0.08);
     border-radius: var(--radius-md);

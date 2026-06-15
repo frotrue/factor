@@ -16,6 +16,13 @@ import {
     normalizeVolumePercent
 } from './settingsDisplay';
 import { guardDomPointer, restoreGameCanvasFocus } from './domEnvironment';
+import {
+    RENDER_RESOLUTION_STORAGE_KEY,
+    applyRenderResolution as applyGameRenderResolution,
+    normalizeRenderResolutionPreset,
+    readStoredRenderResolutionPreset
+} from './renderResolution';
+import type { RenderResolutionPreset } from '../types';
 
 const OWNER = 'SettingsController';
 
@@ -28,6 +35,7 @@ export default class SettingsController {
     private currentVolume: number = DEFAULT_VOLUME_PERCENT;
     private currentMuted: boolean = false;
     private currentBloomEnabled: boolean = true;
+    private currentRenderResolutionPreset: RenderResolutionPreset = 'auto';
     private settingsOpen: boolean = false;
     private readonly handleLanguageChange = (): void => {
         this.syncLanguageButtons();
@@ -144,6 +152,7 @@ export default class SettingsController {
         const savedFps = parseInt(localStorage.getItem('gradium_fps_limit') || String(DEFAULT_FPS_LIMIT), 10);
         const initialFps = normalizeFpsLimit(savedFps);
         this.applyFpsLimit(initialFps);
+        this.applyRenderResolution(readStoredRenderResolutionPreset());
         this.publishSnapshot(false);
 
         refs.fpsButtons.forEach(btn => {
@@ -171,6 +180,12 @@ export default class SettingsController {
             const clamped = normalizeFpsLimit(fps);
             this.applyFpsLimit(clamped);
             localStorage.setItem('gradium_fps_limit', String(clamped));
+            this.publishSnapshot(this.isOpen());
+        }, OWNER);
+        EventBus.on('SETTINGS_RENDER_RESOLUTION_REQUESTED', ({ preset }: { preset: string }) => {
+            const normalized = normalizeRenderResolutionPreset(preset);
+            this.applyRenderResolution(normalized);
+            localStorage.setItem(RENDER_RESOLUTION_STORAGE_KEY, normalized);
             this.publishSnapshot(this.isOpen());
         }, OWNER);
         EventBus.on('SETTINGS_AUDIO_REQUESTED', ({ volume, muted }: { volume: number; muted: boolean }) => {
@@ -241,6 +256,11 @@ export default class SettingsController {
         }
     }
 
+    private applyRenderResolution(preset: RenderResolutionPreset): void {
+        this.currentRenderResolutionPreset = normalizeRenderResolutionPreset(preset);
+        applyGameRenderResolution(this.scene.game, this.currentRenderResolutionPreset);
+    }
+
     private resetTutorial(): void {
         localStorage.setItem('gradium_tutorial_completed', 'false');
         localStorage.setItem('gradium_tutorial_step', '0');
@@ -270,6 +290,7 @@ export default class SettingsController {
             open,
             speed: this.scene.gameSpeed,
             fps: this.currentFps,
+            renderResolutionPreset: this.currentRenderResolutionPreset,
             volume: this.currentVolume,
             muted: this.currentMuted,
             bloomEnabled: this.currentBloomEnabled,

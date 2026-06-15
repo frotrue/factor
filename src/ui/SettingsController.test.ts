@@ -28,6 +28,7 @@ const settingsDisplayMock = vi.hoisted(() => ({
                 fps: input.fps,
                 language: input.language,
                 muted: input.muted,
+                renderResolutionPreset: input.renderResolutionPreset,
                 volume: input.volume
             }
         },
@@ -151,7 +152,21 @@ function createController() {
         bloomEnabled: true,
         difficultyId: 'NORMAL',
         events,
-        game: { loop: { targetFps: 60 } },
+        game: {
+            loop: { targetFps: 60 },
+            scale: {
+                gameSize: { width: 1280, height: 720 },
+                height: 720,
+                refresh: vi.fn(),
+                setGameSize: vi.fn((width: number, height: number) => {
+                    scene.game.scale.gameSize.width = width;
+                    scene.game.scale.gameSize.height = height;
+                    scene.game.scale.width = width;
+                    scene.game.scale.height = height;
+                }),
+                width: 1280
+            }
+        },
         gameSpeed: 1,
         scene: {
             start: vi.fn()
@@ -262,6 +277,7 @@ describe('SettingsController', () => {
             language: 'ko',
             muted: true,
             open: false,
+            renderResolutionPreset: 'auto',
             speed: 1,
             volume: 42
         });
@@ -285,6 +301,7 @@ describe('SettingsController', () => {
 
         EventBus.emit('SETTINGS_SPEED_REQUESTED', { speed: 3 });
         EventBus.emit('SETTINGS_FPS_REQUESTED', { fps: 999 });
+        EventBus.emit('SETTINGS_RENDER_RESOLUTION_REQUESTED', { preset: '2560x1440' });
         EventBus.emit('SETTINGS_AUDIO_REQUESTED', { volume: 150, muted: false });
         EventBus.emit('SETTINGS_BLOOM_REQUESTED', { enabled: false });
         EventBus.emit('SETTINGS_LANGUAGE_REQUESTED', { language: 'en' });
@@ -292,6 +309,8 @@ describe('SettingsController', () => {
         expect(scene.setGameSpeed).toHaveBeenCalledWith(3);
         expect(scene.game.loop.targetFps).toBe(240);
         expect(globalThis.localStorage.getItem('gradium_fps_limit')).toBe('240');
+        expect(scene.game.scale.setGameSize).toHaveBeenCalledWith(2560, 1440);
+        expect(globalThis.localStorage.getItem('gradium_render_resolution')).toBe('2560x1440');
         expect(refs.volumeInput.value).toBe('100');
         expect(refs.mutedInput.checked).toBe(false);
         expect(collected.audio).toEqual([{ masterVolume: 1, muted: false }]);
@@ -303,6 +322,7 @@ describe('SettingsController', () => {
             fps: 240,
             language: 'en',
             muted: false,
+            renderResolutionPreset: '2560x1440',
             speed: 3,
             volume: 100
         });

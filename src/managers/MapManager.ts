@@ -745,6 +745,9 @@ export default class MapManager {
     }
 
     private pickRingResourceType(tileX: number, tileY: number, ring: ResourceRingConfig, random: () => number): string {
+        if (random() < 0.14) {
+            return 'MATERIAL_SAMPLE';
+        }
         if (!ring.directionalBias) {
             return random() < 0.5 ? 'SILICON' : 'ENERGY';
         }

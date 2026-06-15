@@ -5,6 +5,7 @@ export const settingsModal = signal<SettingsModalSnapshot>({
     open: false,
     speed: 1,
     fps: 60,
+    renderResolutionPreset: 'auto',
     volume: 60,
     muted: false,
     bloomEnabled: true,
@@ -28,6 +29,13 @@ export const settingsModal = signal<SettingsModalSnapshot>({
         muted: '',
         graphics: '',
         fps: '',
+        renderResolution: '',
+        renderResolutionOptions: {
+            auto: '',
+            '1920x1080': '',
+            '2560x1440': '',
+            '3840x2160': ''
+        },
         saveData: '',
         save: '',
         load: '',

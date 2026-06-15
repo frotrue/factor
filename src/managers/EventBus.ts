@@ -68,6 +68,7 @@ export interface EventMap {
     'SETTINGS_CLOSE_REQUESTED': void;
     'SETTINGS_SPEED_REQUESTED': { speed: number };
     'SETTINGS_FPS_REQUESTED': { fps: number };
+    'SETTINGS_RENDER_RESOLUTION_REQUESTED': { preset: string };
     'SETTINGS_AUDIO_REQUESTED': { volume: number; muted: boolean };
     'SETTINGS_BLOOM_REQUESTED': { enabled: boolean };
     'SETTINGS_LANGUAGE_REQUESTED': { language: string };

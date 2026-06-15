@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { powerConsumption, powerProduction, tacticalPanels } from '../signals/gameState';
+import { tutorialPanel } from '../signals/tutorialState';
 import GlassPanel from '../shared/GlassPanel';
 import ProgressBar from '../shared/ProgressBar';
 import styles from './RightRail.module.css';
@@ -80,6 +81,7 @@ export default function RightRail() {
         threat: false,
         systems: false
     });
+    if (tutorialPanel.value.open) return null;
     const powerLoad = powerProduction.value > 0
         ? Math.min(100, (powerConsumption.value / powerProduction.value) * 100)
         : 0;

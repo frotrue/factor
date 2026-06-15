@@ -297,7 +297,7 @@ export default class GridRenderer {
     }
 
     private drawResourceTile(x: number, y: number, type: string, detail: GridDetailTier): void {
-        const color = type === 'ENERGY' ? VISUAL_THEME.world.resourceEnergy : VISUAL_THEME.world.resourceSilicon;
+        const color = CONFIG.RESOURCE_PATCHES[type] ?? VISUAL_THEME.world.resourceSilicon;
         if (detail === 'low') {
             this.graphics.fillStyle(color, 0.28);
             this.graphics.fillRect(x + 4, y + 4, this.gridSize - 8, this.gridSize - 8);

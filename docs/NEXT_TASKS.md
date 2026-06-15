@@ -14,12 +14,12 @@ Checklist:
 - [ ] Normal Wave 6~10: damaged buildings visible but recoverable.
 - [ ] Normal Wave 11: East Port intro understandable.
 - [ ] Research reveal after first defense feels rewarding.
-- [ ] Delayed AP/Fiber/Fast Link/Unloader clarifies early build choices.
+- [ ] Delayed AP/Fiber clarifies early build choices.
 - [ ] Wave summaries connect factory growth to defense outcomes.
 - [ ] Post-first-defense objectives clarify expand-vs-defend tradeoff.
 - [ ] Model Training Lab copy explains permanent model growth.
 - [ ] Firewall useful as front-line blocker.
-- [ ] Conveyor/Power Node destruction feels fair, not random.
+- [ ] Power Node destruction feels fair, not random.
 
 Suggested tuning files:
 

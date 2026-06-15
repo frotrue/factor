@@ -22,6 +22,7 @@ describe('MapManager terrain blockers', () => {
         expect(mapManager.getTerrainMap().size).toBeGreaterThan(0);
         expect(countResourceNearCore(mapManager, 'SILICON')).toBeGreaterThanOrEqual(9);
         expect(countResourceNearCore(mapManager, 'ENERGY')).toBeGreaterThanOrEqual(9);
+        expect(countResourceNearCore(mapManager, 'MATERIAL_SAMPLE')).toBeGreaterThanOrEqual(9);
     });
 
     it('generates deterministic campaign resources for a preset seed', () => {
@@ -38,6 +39,7 @@ describe('MapManager terrain blockers', () => {
         expect(Array.from(first.getTerrainMap().entries())).toEqual(Array.from(second.getTerrainMap().entries()));
         expect(countResourceNearCore(first, 'SILICON')).toBeGreaterThanOrEqual(9);
         expect(countResourceNearCore(first, 'ENERGY')).toBeGreaterThanOrEqual(9);
+        expect(countResourceNearCore(first, 'MATERIAL_SAMPLE')).toBeGreaterThanOrEqual(9);
         expect(first.getResourceAt(CORE_PIXEL_X, CORE_PIXEL_Y)).toBeNull();
         expect(first.getResourceAt(CORE_PIXEL_X + CONFIG.GRID_SIZE, CORE_PIXEL_Y + CONFIG.GRID_SIZE)).toBeNull();
     });

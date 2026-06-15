@@ -172,22 +172,6 @@ export default class InputController {
         const key = `${snappedX},${snappedY}`;
         const mode = scene.selectedBuildingType;
 
-        if (
-            !scene.isMobileLayout &&
-            pointer.leftButtonDown() &&
-            !this.isPointerOverDomUI(pointer) &&
-            (mode === 'CONVEYOR' || mode === 'FAST_LINK')
-        ) {
-            const bConfig = CONFIG.BUILDINGS[mode];
-            const w = bConfig?.WIDTH || 1;
-            const h = bConfig?.HEIGHT || 1;
-            const isUnlocked = !bConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-
-            if (isUnlocked && !scene.isBlocked(snappedX, snappedY, w, h)) {
-                scene.buildingManager.place(snappedX, snappedY, mode, scene.currentRotation);
-            }
-        }
-
         const existingBuilding = scene.buildingManager.get(key);
         const ghostSignature = [
             snappedX,
