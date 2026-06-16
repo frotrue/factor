@@ -159,10 +159,6 @@ export function createLabAvailableLogMessage(): string {
     return textForKey('log.labAvailable');
 }
 
-export function createTrainingLabMissingLogMessage(): string {
-    return textForKey('log.trainingLabMissing');
-}
-
 export function createLegacyMobileTooltipContent(title: string, content: string): LegacyMobileTooltipContent {
     const lines = createTooltipLines(content);
     const tags: string[] = [];

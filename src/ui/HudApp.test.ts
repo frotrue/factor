@@ -6,7 +6,6 @@ const componentModules = [
     './components/RightRail',
     './components/BuildConsole',
     './components/SettingsModal',
-    './components/TrainingLabModal',
     './components/GameOverScreen',
     './components/WaveResultCard',
     './components/ActivityLog',
@@ -22,7 +21,6 @@ const componentNames = [
     'RightRail',
     'BuildConsole',
     'SettingsModal',
-    'TrainingLabModal',
     'GameOverScreen',
     'WaveResultCard',
     'ActivityLog',
@@ -43,7 +41,6 @@ const gameplaySurfaceOrder = [
     'MobileBuildSummary',
     'MobileActionBar',
     'SettingsModal',
-    'TrainingLabModal',
     'GameOverScreen',
     'Tooltip'
 ] as const;

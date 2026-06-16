@@ -1,5 +1,5 @@
 import { t, textForKey } from '../i18n';
-import type { DefenseModelState, PowerUpdateData, TacticalPanelSnapshot } from '../types';
+import type { PowerUpdateData, TacticalPanelSnapshot } from '../types';
 import type { ObjectiveState } from '../utils/progressionGates';
 import type { WaveBriefing } from '../utils/waveSimulation';
 
@@ -18,12 +18,13 @@ export interface LegacyPowerStatusDisplay {
 export interface LegacyDefenseStatusEntry {
     name: string;
     count: number;
-    state: DefenseModelState;
 }
 
-export interface LegacyTrainingDefenseStatus {
-    name: string;
-    state: DefenseModelState;
+export interface LegacyDefenseResearchStatus {
+    hitChance: number;
+    damageMultiplier: number;
+    rangeBonus: number;
+    fireRateMultiplier: number;
 }
 
 export interface LegacyDefenseStatusDisplay {
@@ -170,7 +171,7 @@ export function createLegacyPowerStatusDisplay(data: PowerUpdateData | null): Le
 
 export function createLegacyDefenseStatusDisplay(
     entries: LegacyDefenseStatusEntry[],
-    activeTraining: LegacyTrainingDefenseStatus | null
+    research: LegacyDefenseResearchStatus
 ): LegacyDefenseStatusDisplay {
     const total = entries.reduce((sum, entry) => sum + entry.count, 0);
 
@@ -183,15 +184,13 @@ export function createLegacyDefenseStatusDisplay(
 
     const lines = entries
         .filter(entry => entry.count > 0)
-        .map(entry => `${entry.name} x${entry.count} | ${Math.round(entry.state.modelAccuracy)}% | DMG +${Math.round(entry.state.damageBonus)}%`);
-
-    if (activeTraining) {
-        lines.push(textForKey('defenseStatus.training', {
-            name: activeTraining.name,
-            confidence: Math.round(activeTraining.state.modelAccuracy),
-            version: activeTraining.state.modelVersion
-        }));
-    }
+        .map(entry => `${entry.name} x${entry.count}`);
+    lines.push(textForKey('defenseStatus.research', {
+        hit: research.hitChance,
+        damage: Math.round(research.damageMultiplier * 100),
+        range: research.rangeBonus,
+        fire: Math.round(research.fireRateMultiplier * 100)
+    }));
 
     return {
         title: textForKey('defenseStatus.ready.title', { count: total }),

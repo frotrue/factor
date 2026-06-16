@@ -14,7 +14,7 @@ import AccessPoint from './AccessPoint';
 import DataDownloader from './DataDownloader';
 import Recycler from './Recycler';
 import DataCache from './DataCache';
-import ModelTrainingLab from './ModelTrainingLab';
+import ResearchOperationsCenter from './ResearchOperationsCenter';
 import ResearchLab from './ResearchLab';
 import DataCenter from './DataCenter';
 import GpuCluster from './GpuCluster';
@@ -37,7 +37,7 @@ const REGISTRY: Record<string, BuildingClass> = {
     SOLAR_PANEL: SolarPanel,
     NEURAL_TRAINER: NeuralTrainer,
     WEIGHT_TRAINER: WeightTrainer,
-    MODEL_TRAINING_LAB: ModelTrainingLab,
+    RESEARCH_OPERATIONS_CENTER: ResearchOperationsCenter,
     RESEARCH_LAB: ResearchLab,
     DATA_CENTER: DataCenter,
     GPU_CLUSTER: GpuCluster,

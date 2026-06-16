@@ -21,7 +21,6 @@ export default class HudShellController {
 
         hideLegacyModalFallbacks();
         EventBus.emit('SETTINGS_MODAL_OPEN_CHANGED', { open: false });
-        EventBus.emit('TRAINING_LAB_OPEN_CHANGED', { open: false });
         restoreGameCanvasFocus();
     };
 

@@ -1,7 +1,6 @@
 import { CONFIG } from '../config';
 import { DEFAULT_LANGUAGE, isLanguage } from '../i18n';
 import { SaveData } from '../types';
-import { normalizeDefenseModelState } from './modelTrainingProgress';
 
 export const CURRENT_SAVE_VERSION = '1.2.0';
 
@@ -34,14 +33,6 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         outputBuffer: building.outputBuffer || [],
         hp: typeof building.hp === 'number' ? building.hp : undefined
     }));
-    data.defenseModelStates = Object.fromEntries(
-        Object.entries(data.defenseModelStates || {}).map(([type, state]) => [
-            type,
-            normalizeDefenseModelState(state as any)
-        ])
-    );
-    data.labJobProgress = data.labJobProgress || {};
-    data.trainingPlanner = normalizeTrainingPlannerState(data);
     data.items = data.items || [];
     data.cables = data.cables || [];
     data.settings = {
@@ -62,48 +53,18 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
     data.terrainMap = data.terrainMap || [];
     data.research = data.research || [];
 
-    return data as SaveData;
-}
-
-function normalizeTrainingPlannerState(data: Record<string, any>): SaveData['trainingPlanner'] {
-    const existing = data.trainingPlanner || {};
-    const buildings = Array.isArray(data.buildings) ? data.buildings : [];
-    const firstLabJob = buildings
-        .filter((building: any) => building.type === 'MODEL_TRAINING_LAB')
-        .map((building: any) => building.customState?.activeJobId)
-        .find((jobId: any) => isValidTrainingJobId(jobId));
-    const anyLegacyAuto = buildings
-        .filter((building: any) => building.type === 'MODEL_TRAINING_LAB')
-        .some((building: any) => building.customState?.autoTrain !== false);
-    const activeDefenseJob = Object.entries(data.defenseModelStates || {})
-        .find(([, state]: [string, any]) => Boolean(state?.isTraining))?.[0];
-    const activeSystemJob = Object.entries(data.labJobProgress || {})
-        .find(([, progress]: [string, any]) => Boolean(progress?.isTraining))?.[0];
-    const activeJobId = activeDefenseJob
-        ? `DEFENSE_${activeDefenseJob}`
-        : isValidTrainingJobId(activeSystemJob)
-            ? activeSystemJob as string
-            : isValidTrainingJobId(existing.activeJobId)
-                ? existing.activeJobId
-                : firstLabJob ?? null;
-
-    const autoEnabled = typeof existing.autoEnabled === 'boolean'
-        ? existing.autoEnabled
-        : anyLegacyAuto;
-
     return {
-        activeJobId,
-        autoEnabled,
-        mode: existing.mode === 'MANUAL_LOCK' || !autoEnabled ? 'MANUAL_LOCK' : 'AUTO_DECIDE',
-        lastDecisionReason: existing.lastDecisionReason ?? null
-    };
-}
-
-function isValidTrainingJobId(jobId: unknown): jobId is string {
-    if (typeof jobId !== 'string' || jobId.length === 0) return false;
-    if (jobId.startsWith('DEFENSE_')) {
-        const type = jobId.replace(/^DEFENSE_/, '');
-        return Boolean(CONFIG.BUILDINGS[type]?.DEFENSE);
-    }
-    return Boolean(CONFIG.RESEARCH[jobId]);
+        version: data.version,
+        timestamp: data.timestamp,
+        wave: data.wave,
+        core: data.core,
+        buildings: data.buildings,
+        researchState: data.researchState,
+        items: data.items,
+        cables: data.cables,
+        settings: data.settings,
+        resourceMap: data.resourceMap,
+        terrainMap: data.terrainMap,
+        research: data.research
+    } as SaveData;
 }

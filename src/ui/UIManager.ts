@@ -1,5 +1,4 @@
 import type MainScene from '../scenes/MainScene';
-import TrainingLabController from './TrainingLabController';
 import SettingsController from './SettingsController';
 import MobileActionController from './MobileActionController';
 import NotificationController from './NotificationController';
@@ -21,7 +20,6 @@ import {
 export default class UIManager {
     private scene: MainScene;
     private topHudRefs: LegacyTopHudRefs;
-    private trainingLab: TrainingLabController;
     private settings: SettingsController;
     private mobileActions: MobileActionController;
     private notifications: NotificationController;
@@ -39,7 +37,6 @@ export default class UIManager {
         ensureLegacyHudDom();
         this.topHudRefs = getLegacyTopHudRefs();
 
-        this.trainingLab = new TrainingLabController(scene);
         this.settings = new SettingsController(scene);
         this.mobileActions = new MobileActionController(scene);
         this.notifications = new NotificationController(scene);
@@ -65,7 +62,6 @@ export default class UIManager {
         this.hudShell.setupEvents();
         this.settings.setup();
         this.mobileActions.setup();
-        this.trainingLab.setup();
         this.localization.setupEvents();
     }
 

@@ -22,7 +22,6 @@ export default function GameOverScreen() {
         green: styles.green,
         warn: styles.warn
     };
-    const modelStrength = Math.min(100, snapshot.bestModelAccuracy + snapshot.bestModelDamageBonus);
 
     return (
         <section
@@ -66,25 +65,6 @@ export default function GameOverScreen() {
                             <strong class={toneClass[stat.tone]}>{stat.value}</strong>
                         </div>
                     ))}
-                </div>
-                <div class={styles.model}>
-                    <div>
-                        <span>{snapshot.bestModelLabel}</span>
-                        <strong>{snapshot.bestModelName}</strong>
-                        <small>{snapshot.bestModelDetail}</small>
-                    </div>
-                    <div
-                        aria-label={snapshot.bestModelLabel}
-                        aria-valuemax={100}
-                        aria-valuemin={0}
-                        aria-valuenow={modelStrength}
-                        aria-valuetext={`${modelStrength}%`}
-                        class={styles.modelMeter}
-                        data-testid="preact-game-over-model-meter"
-                        role="progressbar"
-                    >
-                        <span style={{ width: `${modelStrength}%` }} />
-                    </div>
                 </div>
                 <div
                     aria-label={snapshot.title}

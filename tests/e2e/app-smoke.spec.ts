@@ -102,17 +102,6 @@ async function expectLegacySettingsShadow(page: Page): Promise<void> {
     await expect(page.locator('#audio-volume')).toHaveAttribute('tabindex', '-1');
 }
 
-async function expectLegacyTrainingLabShadow(page: Page): Promise<void> {
-    const legacyLab = page.locator('#training-lab-modal');
-    await expect(legacyLab).toBeAttached();
-    await expect(legacyLab).toBeHidden();
-    await expect(legacyLab).toHaveAttribute('data-preact-shadow', 'true');
-    await expect(legacyLab).toHaveAttribute('aria-hidden', 'true');
-    await expect(page.locator('#btn-close-training-lab')).toBeDisabled();
-    await expect(page.locator('#btn-close-training-lab')).toHaveAttribute('tabindex', '-1');
-    await expect(page.locator('#training-target-list .training-target-row').first()).toHaveAttribute('tabindex', '-1');
-}
-
 async function expectLegacyGameOverShadow(page: Page): Promise<void> {
     const legacyGameOver = page.locator('#game-over-screen');
     await expect(legacyGameOver).toBeAttached();
@@ -646,8 +635,6 @@ test('desktop shows the Preact game-over screen from the existing game-over even
     await expect(preactGameOver).toContainText(/Core Integrity|Core 무결성/);
     await expect(page.getByTestId('preact-game-over-integrity')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-game-over-integrity')).toHaveAttribute('aria-valuetext', /^\d+%$/);
-    await expect(page.getByTestId('preact-game-over-model-meter')).toHaveAttribute('role', 'progressbar');
-    await expect(page.getByTestId('preact-game-over-model-meter')).toHaveAttribute('aria-valuetext', /^\d+%$/);
     await expect(page.getByTestId('preact-game-over-stats')).toHaveAttribute('role', 'list');
     await expect(page.locator('[data-testid^="preact-game-over-stat-"]')).toHaveCount(4);
     await expect(page.getByTestId('preact-game-over-actions')).toHaveAttribute('role', 'group');
@@ -1076,8 +1063,8 @@ test('desktop covers build categories, hotkeys, right-click remove, overlays, sa
     expect(runtimeErrors).toEqual([]);
 });
 
-test('desktop operates the Preact training lab panel', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only training lab smoke');
+test('desktop operates Research Operations Center through the Research Panel', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop-only research operations smoke');
     const runtimeErrors = collectRuntimeErrors(page);
 
     await page.addInitScript(() => {
@@ -1086,97 +1073,38 @@ test('desktop operates the Preact training lab panel', async ({ page }, testInfo
     });
     await startGame(page);
 
-    await page.evaluate(() => {
+    const baselineThroughput = await page.evaluate(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-        scene.buildingManager.place(-192, -160, 'MODEL_TRAINING_LAB', 0, { skipCost: true });
+        return scene.researchManager.getResearchThroughput();
     });
+    const throughputWithRoc = await page.evaluate(() => {
+        const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
+        const center = scene.buildingManager.place(-192, -160, 'RESEARCH_OPERATIONS_CENTER', 0, { skipCost: true });
+        center.hasPower = true;
+        return scene.researchManager.getResearchThroughput();
+    });
+    expect(throughputWithRoc).toBeGreaterThan(baselineThroughput);
+
+    await expect(page.getByTestId('preact-topbar-lab')).toHaveCount(0);
+    await expect(page.getByTestId('preact-training-lab-modal')).toHaveCount(0);
+    await expect(page.locator('#training-lab-modal')).toHaveCount(0);
 
     await page.getByTestId('preact-topbar-research').click();
     await expect(page.getByTestId('preact-research-panel')).toBeVisible();
     await expect(page.getByTestId('preact-research-map')).toBeVisible();
-    await expect(page.getByTestId('preact-research-buffer-material')).toHaveAttribute('role', 'progressbar');
+    await expect(page.getByTestId('preact-research-data-material')).toHaveAttribute('role', 'progressbar');
+    await expect(page.getByTestId('preact-research-data-tactical')).toHaveAttribute('role', 'progressbar');
+    await expect(page.getByTestId('preact-research-data-system')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-research-node-CORE_BASIC_RESEARCH')).toBeVisible();
-    await page.getByTestId('preact-research-close').click();
-    await expect(page.getByTestId('preact-research-panel')).toHaveCount(0);
-
-    await page.getByTestId('preact-topbar-lab').click();
-    const labModal = page.getByTestId('preact-training-lab-modal');
-    const labPanel = labModal.getByRole('tabpanel');
-    await expect(labModal).toBeVisible();
-    await expectLegacyTrainingLabShadow(page);
-    await expect(labModal).toHaveAttribute('role', 'dialog');
-    await expect(labModal).toHaveAttribute('aria-labelledby', 'preact-training-lab-title');
-    await expect(labModal).toHaveAttribute('aria-describedby', 'preact-training-lab-overview preact-training-lab-planner preact-training-lab-duration');
-    await expect(page.getByTestId('preact-training-lab-header')).toBeVisible();
-    await expect(page.getByTestId('preact-training-lab-kicker')).toBeVisible();
-    await expect(page.getByTestId('preact-training-lab-title')).toHaveAttribute('id', 'preact-training-lab-title');
-    await expect(page.getByTestId('preact-training-lab-overview')).toHaveAttribute('id', 'preact-training-lab-overview');
-    await expect(page.getByTestId('preact-training-lab-planner')).toHaveAttribute('role', 'status');
-    await expect(page.getByTestId('preact-training-lab-planner')).toHaveAttribute('aria-labelledby', 'preact-training-lab-planner-status');
-    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('id', 'preact-training-lab-auto');
-    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('aria-controls', 'preact-training-lab-planner');
-    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('aria-describedby', 'preact-training-lab-planner-reason');
-    await expect(page.getByTestId('preact-training-lab-tabs')).toHaveAttribute('role', 'tablist');
-    await expect(page.getByTestId('preact-training-lab-tabs')).toHaveAttribute('aria-labelledby', 'preact-training-lab-title');
-    await expect(page.getByTestId('preact-training-lab-close')).toHaveAttribute('id', 'preact-training-lab-close');
-    await expect(page.getByTestId('preact-training-lab-close')).toHaveAttribute('aria-controls', 'preact-training-lab-panel');
-    await expect(page.getByTestId('preact-training-lab-close')).toHaveAttribute('aria-describedby', 'preact-training-lab-planner');
-    await expect(page.getByTestId('preact-training-lab-tab-DEFENSE')).toHaveAttribute('aria-controls', 'preact-training-lab-panel');
-    await expect(page.getByTestId('preact-training-lab-panel')).toHaveAttribute('role', 'tabpanel');
-    await expect(page.getByTestId('preact-training-lab-panel')).toHaveAttribute('aria-describedby', 'preact-training-lab-planner');
-    await expect(labPanel).toHaveAttribute('aria-labelledby', 'preact-training-lab-tab-DEFENSE');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER')).toHaveAttribute('aria-labelledby', 'preact-training-lab-row-CLASSIFIER-title');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER')).toHaveAttribute('aria-describedby', 'preact-training-lab-row-CLASSIFIER-detail preact-training-lab-row-CLASSIFIER-tone');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-tone')).toHaveAttribute('id', 'preact-training-lab-row-CLASSIFIER-tone');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-reward-group')).toHaveAttribute('role', 'group');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-reward-group')).toHaveAttribute('aria-labelledby', 'preact-training-lab-row-CLASSIFIER-reward-label');
-    await expect(page.getByTestId('preact-training-lab-reward-CLASSIFIER-accuracy')).toHaveAttribute('aria-describedby', 'preact-training-lab-row-CLASSIFIER-reward-label');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-data-progress')).toHaveAttribute('role', 'progressbar');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-data-progress')).toHaveAttribute('aria-valuetext', /%$/);
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-work-progress')).toHaveAttribute('role', 'progressbar');
-    await expect(page.getByTestId('preact-training-lab-row-CLASSIFIER-work-progress')).toHaveAttribute('aria-valuetext', /%$/);
-
-    await page.getByTestId('preact-training-lab-auto').click();
-    await expect(page.getByTestId('preact-training-lab-auto')).toHaveAttribute('aria-pressed', 'false');
+    await page.getByTestId('preact-research-node-CORE_BASIC_RESEARCH').click();
+    await page.getByTestId('preact-research-start').click();
     await expect.poll(async () => {
         return page.evaluate(() => {
             const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-            return {
-                autoEnabled: scene.trainingPlanner.autoEnabled,
-                mode: scene.trainingPlanner.mode
-            };
+            return scene.researchManager.getSavedState().activeResearch;
         });
-    }).toEqual({ autoEnabled: false, mode: 'MANUAL_LOCK' });
-
-    await page.getByTestId('preact-training-lab-reward-CLASSIFIER-damage').click();
-    await expect.poll(async () => {
-        return page.evaluate(() => {
-            const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-            return scene.getDefenseModelState('CLASSIFIER').trainingRewardPreference;
-        });
-    }).toBe('damage');
-
-    await page.getByTestId('preact-training-lab-row-FILTER').click();
-    await expect.poll(async () => {
-        return page.evaluate(() => {
-            const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
-            return scene.trainingPlanner.activeJobId;
-        });
-    }).toBe('DEFENSE_FILTER');
-
-    await page.getByTestId('preact-training-lab-tab-SYSTEM').click();
-    await expect(page.getByTestId('preact-training-lab-tab-SYSTEM')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByTestId('preact-training-lab-tab-SYSTEM')).toHaveAttribute('aria-controls', 'preact-training-lab-panel');
-    await expect(labPanel).toHaveAttribute('aria-labelledby', 'preact-training-lab-tab-SYSTEM');
-    await expect(page.getByTestId('preact-training-lab-duration')).toHaveAttribute('id', 'preact-training-lab-duration');
-
-    await page.getByTestId('preact-training-lab-close').click();
+    }).toBe('CORE_BASIC_RESEARCH');
     await expect(page.getByTestId('preact-training-lab-modal')).toHaveCount(0);
-    await expect(page.locator('#training-lab-modal')).toBeHidden();
-    await expect(page.locator('#training-lab-modal')).not.toHaveAttribute('data-preact-shadow', 'true');
-    await expect(page.locator('#btn-close-training-lab')).toBeEnabled();
-    await expect(page.locator('#btn-close-training-lab')).not.toHaveAttribute('tabindex', '-1');
-    await expect.poll(async () => page.evaluate(() => document.activeElement?.tagName)).toBe('CANVAS');
 
     expect(runtimeErrors).toEqual([]);
 });

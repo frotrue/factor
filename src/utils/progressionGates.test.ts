@@ -9,9 +9,7 @@ describe('getObjectiveState', () => {
             hasDefense: false,
             firstDefenseDone: false,
             productionCount: 0,
-            defenseCount: 0,
-            hasModelTrainingLab: false,
-            hasModelTrainingTarget: false
+            defenseCount: 0
         }).key).toBe('data');
 
         expect(getObjectiveState({
@@ -20,9 +18,7 @@ describe('getObjectiveState', () => {
             hasDefense: false,
             firstDefenseDone: false,
             productionCount: 1,
-            defenseCount: 0,
-            hasModelTrainingLab: false,
-            hasModelTrainingTarget: false
+            defenseCount: 0
         }).key).toBe('processing');
 
         expect(getObjectiveState({
@@ -31,9 +27,7 @@ describe('getObjectiveState', () => {
             hasDefense: false,
             firstDefenseDone: false,
             productionCount: 2,
-            defenseCount: 0,
-            hasModelTrainingLab: false,
-            hasModelTrainingTarget: false
+            defenseCount: 0
         }).key).toBe('defense');
     });
 
@@ -44,9 +38,7 @@ describe('getObjectiveState', () => {
             hasDefense: true,
             firstDefenseDone: true,
             productionCount: 2,
-            defenseCount: 1,
-            hasModelTrainingLab: false,
-            hasModelTrainingTarget: false
+            defenseCount: 1
         }).key).toBe('expand');
 
         expect(getObjectiveState({
@@ -55,9 +47,7 @@ describe('getObjectiveState', () => {
             hasDefense: true,
             firstDefenseDone: true,
             productionCount: 4,
-            defenseCount: 1,
-            hasModelTrainingLab: false,
-            hasModelTrainingTarget: false
+            defenseCount: 1
         }).key).toBe('defendInvestment');
 
         expect(getObjectiveState({
@@ -66,10 +56,8 @@ describe('getObjectiveState', () => {
             hasDefense: true,
             firstDefenseDone: true,
             productionCount: 4,
-            defenseCount: 2,
-            hasModelTrainingLab: true,
-            hasModelTrainingTarget: false
-        }).key).toBe('modelTarget');
+            defenseCount: 2
+        }).key).toBe('research');
     });
 });
 

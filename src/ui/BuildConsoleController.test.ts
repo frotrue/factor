@@ -88,7 +88,6 @@ function createController() {
     const events = new FakeSceneEvents();
     const scene = {
         events,
-        isGpuUnlocked: vi.fn(() => true),
         researchManager: {
             isUnlocked: vi.fn(() => true)
         },
@@ -145,8 +144,7 @@ describe('BuildConsoleController', () => {
 
         expect(buildConsoleSnapshotMock.createBuildConsoleDisplayState).toHaveBeenCalledWith(expect.objectContaining({
             activeCategory: 'EXTRACTION',
-            hasFirstDefenseSuccess: true,
-            isGpuUnlocked: true
+            hasFirstDefenseSuccess: true
         }));
         expect(legacyBuildConsoleMock.renderLegacyBuildConsole).toHaveBeenCalledTimes(1);
         expect(legacyBuildConsoleMock.updateLegacySelectedToolPanel).toHaveBeenCalledWith(

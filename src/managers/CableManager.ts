@@ -14,12 +14,9 @@ const DATA_ITEMS = new Set([
     'RAW_DATA',
     'LABELED_DATA',
     'WEIGHT_UPDATE',
-    'TRAINED_MODEL',
-    'INFERENCE_UNIT',
     'SILICON',
     'ENERGY',
-    'MATERIAL_SAMPLE',
-    'TACTICAL_DATA'
+    'MATERIAL_SAMPLE'
 ]);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
 const WIRELESS_RELAY_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => type !== 'ACCESS_POINT');

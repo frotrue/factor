@@ -5,7 +5,6 @@ import {
     TacticalPanelSnapshot,
     BuildConsoleSnapshot,
     SettingsModalSnapshot,
-    TrainingLabSnapshot,
     ResearchPanelSnapshot,
     GameOverSnapshot,
     WaveResultSnapshot,
@@ -13,12 +12,10 @@ import {
     TooltipSnapshot,
     TutorialPanelSnapshot,
     MobileActionSnapshot,
-    MainMenuSnapshot,
-    TrainingRewardPreference
+    MainMenuSnapshot
 } from '../types';
 import type { WaveBriefing } from '../utils/waveSimulation';
 import type { WaveResultSummary } from '../utils/waveResultSummary';
-import type ModelTrainingLab from '../buildings/ModelTrainingLab';
 
 export interface EventMap {
     'BUILDING_SELECTED': { type: string };
@@ -48,9 +45,6 @@ export interface EventMap {
     'RESEARCH_PANEL_OPEN_CHANGED': { open: boolean };
     'RESEARCH_STATE_CHANGED': void;
     'SETTINGS_OPEN_REQUESTED': void;
-    'TRAINING_LAB_OPEN_REQUESTED': { lab?: ModelTrainingLab; tab?: 'DEFENSE' | 'SYSTEM' };
-    'LAB_JOB_PROGRESS': { id: string; progress: number; required: number };
-    'MODEL_TRAINING_TARGET_SET': { targetType: string | null };
     'TUTORIAL_RESET': void;
     'AUDIO_SETTINGS_CHANGED': { masterVolume: number; muted: boolean };
     'BLOOM_SETTINGS_CHANGED': { enabled: boolean };
@@ -73,14 +67,6 @@ export interface EventMap {
     'SETTINGS_BLOOM_REQUESTED': { enabled: boolean };
     'SETTINGS_LANGUAGE_REQUESTED': { language: string };
     'SETTINGS_RESET_TUTORIAL_REQUESTED': void;
-    'TRAINING_LAB_UPDATED': TrainingLabSnapshot;
-    'TRAINING_LAB_RENDER_REQUESTED': void;
-    'TRAINING_LAB_OPEN_CHANGED': { open: boolean };
-    'TRAINING_LAB_CLOSE_REQUESTED': void;
-    'TRAINING_LAB_TAB_REQUESTED': { tab: 'DEFENSE' | 'SYSTEM' };
-    'TRAINING_LAB_AUTO_REQUESTED': { enabled: boolean };
-    'TRAINING_LAB_JOB_SELECT_REQUESTED': { kind: 'DEFENSE' | 'SYSTEM'; id: string };
-    'TRAINING_LAB_REWARD_REQUESTED': { type: string; reward: TrainingRewardPreference };
     'GAME_OVER_UPDATED': GameOverSnapshot;
     'GAME_OVER_ACTION_REQUESTED': { action: 'restart' | 'main-menu' };
     'WAVE_RESULT_SUMMARY_REQUESTED': WaveResultSummary;

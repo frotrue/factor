@@ -31,7 +31,6 @@ export type BuildConsoleDisplayPayload = {
 export type BuildConsoleDisplayStateInput = {
     activeCategory: string;
     hasFirstDefenseSuccess: boolean;
-    isGpuUnlocked: boolean;
     isResearchUnlocked: (researchId: string) => boolean;
 };
 
@@ -70,7 +69,6 @@ export function createBuildConsoleDisplayState(input: BuildConsoleDisplayStateIn
     Object.entries(buildables).forEach(([key, data]) => {
         buildableData[key] = data;
         if (shouldHideEarlyAdvancedSystem(key, input.hasFirstDefenseSuccess)) return;
-        if (key === 'GPU_CLUSTER' && !input.isGpuUnlocked) return;
         if (data.CATEGORY !== input.activeCategory && data.CATEGORY !== 'ALL') return;
         if (data.UNLOCK_REQUIRED && !input.isResearchUnlocked(data.UNLOCK_REQUIRED)) return;
 

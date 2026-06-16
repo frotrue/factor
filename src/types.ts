@@ -11,7 +11,6 @@ import type ResearchManager from './managers/ResearchManager';
 import type SaveManager from './managers/SaveManager';
 import type SoundManager from './managers/SoundManager';
 import type TickSystem from './managers/TickSystem';
-import type TrainingPlannerManager from './managers/TrainingPlannerManager';
 import type PerformanceStats from './managers/PerformanceStats';
 import type TutorialManager from './managers/TutorialManager';
 import type UIManager from './ui/UIManager';
@@ -211,30 +210,12 @@ export interface GameConfig {
     RESOURCE_PATCHES: Record<string, number>;
     TERRAIN: Record<string, TerrainConfig>;
     MAP_PRESETS: Record<MapPresetId, MapPresetConfig>;
-    MODEL_TRAINING: ModelTrainingConfig;
     ENEMIES: Record<string, EnemyConfig>;
     RESEARCH_AXES: ResearchAxis[];
     RESEARCH_SETTINGS: ResearchSettings;
     RESEARCH: Record<string, ResearchNode>;
     CORE_ORIGIN: { TILE_X: number; TILE_Y: number };
     DIFFICULTY: Record<string, DifficultyConfig>;
-}
-
-export interface ModelTrainingConfig {
-    TARGET_TYPES: string[];
-    BASE_ACCURACY: number;
-    ACCURACY_GAIN: number;
-    ACCURACY_DECAY_PER_INTERVAL: number;
-    ACCURACY_DECAY_INTERVAL_MS: number;
-    MIN_EFFECTIVE_ACCURACY: number;
-    DAMAGE_GAIN: number;
-    INITIAL_DATA_REQUIREMENT: number;
-    REQUIREMENT_MULTIPLIER: number;
-    BASE_TRAINING_TICKS: number;
-    DATA_VALUES: Record<string, number>;
-    GPU_UNLOCK_ACCURACY: number;
-    GPU_MAX_ACTIVE: number;
-    GPU_SPEED_BONUS: number;
 }
 
 export interface DifficultyConfig {
@@ -249,6 +230,8 @@ export interface DifficultyConfig {
 export interface ResearchEffects {
     MINING_RATE_MULTIPLIER?: number;
     PROCESSING_SPEED_MULTIPLIER?: number;
+    TACTICAL_PIPELINE_SPEED_MULTIPLIER?: number;
+    TOWER_ACCURACY_BONUS?: number;
     TOWER_DAMAGE_MULTIPLIER?: number;
     TOWER_RANGE_BONUS?: number;
     TOWER_FIRE_RATE_MULTIPLIER?: number;
@@ -258,32 +241,25 @@ export interface ResearchEffects {
     FIREWALL_HP_MULTIPLIER?: number;
 }
 
-export type InsightGroup = 'material' | 'tactical' | 'system';
-export type ResearchTag = 'unlock' | 'stat' | 'rule-change' | 'slot' | 'throughput';
-export type ResearchNodeStatus = 'locked' | 'available' | 'active' | 'waiting_resource' | 'completed' | 'gated';
+export type ResearchDataCurrency = 'material' | 'tactical' | 'system';
+export type InsightGroup = ResearchDataCurrency;
+export type ResearchTag = 'unlock' | 'stat' | 'rule-change' | 'queue' | 'slot' | 'throughput';
+export type ResearchNodeStatus = 'locked' | 'available' | 'active' | 'queued' | 'waiting_resource' | 'completed' | 'gated';
 
 export interface ResearchAxis {
     id: string;
     label: string;
     angle: number;
     color: string;
-    insightGroup: InsightGroup;
+    dataCurrency: ResearchDataCurrency;
 }
 
 export interface ResearchSettings {
     BASE_THROUGHPUT: number;
     GPU_THROUGHPUT_BONUS: number;
-    BUFFER_CAPACITY: Record<InsightGroup, number>;
-    FACILITY_OUTPUT: Record<InsightGroup, number>;
-}
-
-export interface ResearchCosts {
-    insight: Partial<Record<InsightGroup, number>>;
-}
-
-export interface ResearchSlotState {
-    id: string;
-    researchId: string | null;
+    DEFAULT_QUEUE_LIMIT: number;
+    DATA_CAPACITY: Record<ResearchDataCurrency, number>;
+    DATA_OUTPUT: Record<ResearchDataCurrency, number>;
 }
 
 export interface ResearchProgressState {
@@ -292,10 +268,11 @@ export interface ResearchProgressState {
 
 export interface ResearchState {
     completed: string[];
-    activeSlots: ResearchSlotState[];
+    activeResearch: string | null;
+    researchQueue: string[];
     progressById: Record<string, ResearchProgressState>;
-    insightBuffers: Record<InsightGroup, number>;
-    unlockedSlots: number;
+    dataStore: Record<ResearchDataCurrency, number>;
+    queueLimit: number;
 }
 
 // ── 연구 노드 (Research) ──
@@ -307,7 +284,7 @@ export interface ResearchNode {
     AXIS: string;
     RING: number;
     POSITION: number;
-    COSTS: ResearchCosts;
+    DATA_COSTS: Partial<Record<ResearchDataCurrency, number>>;
     TAGS: ResearchTag[];
     UNLOCKS: {
         BUILDINGS?: string[];
@@ -316,7 +293,7 @@ export interface ResearchNode {
     };
     REQUIREMENTS?: string[]; // IDs of required research nodes
     EFFECTS?: ResearchEffects;
-    SLOT_BONUS?: number;
+    QUEUE_LIMIT_BONUS?: number;
     THROUGHPUT_BONUS?: number;
 }
 
@@ -334,32 +311,50 @@ export interface ResearchNodeSnapshot {
     effectsText: string[];
 }
 
+export interface ResearchDataShortfall {
+    id: ResearchDataCurrency;
+    label: string;
+    required: number;
+    available: number;
+    missing: number;
+}
+
+export interface ResearchQueueSnapshot {
+    id: string;
+    name: string;
+    progressPercent: number;
+    status: ResearchNodeStatus;
+}
+
+export interface ActiveResearchSnapshot extends ResearchQueueSnapshot {
+    blocked: boolean;
+    missingData: ResearchDataShortfall[];
+}
+
 export interface ResearchPanelSnapshot {
     open: boolean;
     title: string;
     closeLabel: string;
     throughputText: string;
-    slotsText: string;
-    buffers: Array<{
-        id: InsightGroup;
+    queueText: string;
+    dataBalances: Array<{
+        id: ResearchDataCurrency;
         label: string;
         value: number;
         capacity: number;
         percent: number;
     }>;
+    activeResearch: ActiveResearchSnapshot | null;
+    researchQueue: ResearchQueueSnapshot[];
+    blockedData: {
+        blocked: boolean;
+        researchId: string | null;
+        missing: ResearchDataShortfall[];
+        message: string;
+    };
     axes: ResearchAxis[];
     nodes: ResearchNodeSnapshot[];
     selectedId: string | null;
-}
-
-export type LabJobCategory = 'DEFENSE_MODEL' | 'SYSTEM_PROTOCOL';
-
-export interface LabJobProgress {
-    progress: number;
-    completed: boolean;
-    isTraining?: boolean;
-    trainingProgressTicks?: number;
-    trainingDurationTicks?: number;
 }
 
 // ── 건물 타입 키 (타입 안전성 강화) ──
@@ -368,7 +363,7 @@ export type BuildingType =
     | 'POWER_NODE' | 'POWER_PLANT' | 'STORAGE'
     | 'CLASSIFIER' | 'FILTER' | 'FIREWALL'
     | 'ACCESS_POINT' | 'SOLAR_PANEL' | 'NEURAL_TRAINER' | 'WEIGHT_TRAINER'
-    | 'MODEL_TRAINING_LAB' | 'RESEARCH_LAB' | 'DATA_CENTER' | 'GPU_CLUSTER'
+    | 'RESEARCH_OPERATIONS_CENTER' | 'RESEARCH_LAB' | 'DATA_CENTER' | 'GPU_CLUSTER'
     | 'RECYCLER' | 'DATA_CACHE' | 'REPEATER';
 
 // ── 케이블 연결 ──
@@ -428,7 +423,6 @@ export interface TopHudLabels {
     shortcuts: string;
     settings: string;
     research: string;
-    lab: string;
     stats: {
         dataReceived: string;
         power: string;
@@ -561,50 +555,12 @@ export interface SettingsModalSnapshot {
     };
 }
 
-export interface TrainingLabRowSnapshot {
-    id: string;
-    kind: 'DEFENSE' | 'SYSTEM';
-    title: string;
-    detail: string;
-    progress: string;
-    active: boolean;
-    disabled?: boolean;
-    rewardPreference?: TrainingRewardPreference;
-}
-
-export interface TrainingLabSnapshot {
-    open: boolean;
-    title: string;
-    kicker: string;
-    closeLabel: string;
-    overview: string;
-    plannerStatus: string;
-    plannerReason: string;
-    autoToggleLabel: string;
-    autoEnabled: boolean;
-    activeTab: 'DEFENSE' | 'SYSTEM';
-    tabs: {
-        defense: string;
-        system: string;
-    };
-    rewardModeLabel: string;
-    rewardAccuracyShortLabel: string;
-    rewardDamageShortLabel: string;
-    dataProgressLabel: string;
-    workProgressLabel: string;
-    toneLabels: Record<'active' | 'complete' | 'training' | 'locked' | 'idle', string>;
-    duration: string;
-    rows: TrainingLabRowSnapshot[];
-}
-
 export interface GameOverSnapshot {
     open: boolean;
     kicker: string;
     title: string;
     failureCode: string;
     integrityLabel: string;
-    bestModelLabel: string;
-    bestModelDetail: string;
     restartLabel: string;
     mainMenuLabel: string;
     stats: Array<{
@@ -617,10 +573,6 @@ export interface GameOverSnapshot {
     coreHpPercent: number;
     totalDataReceived: number;
     unlockedResearchCount: number;
-    bestModelName: string;
-    bestModelAccuracy: number;
-    bestModelDamageBonus: number;
-    bestModelVersion: number;
 }
 
 export interface WaveResultSnapshot {
@@ -785,36 +737,6 @@ export interface DefenseTowerConfig {
     IS_AOE?: boolean;
 }
 
-export type TrainingRewardPreference = 'accuracy' | 'damage';
-export type TrainingPlannerMode = 'AUTO_DECIDE' | 'MANUAL_LOCK';
-
-export interface TrainingPlannerState {
-    activeJobId: string | null;
-    autoEnabled: boolean;
-    mode: TrainingPlannerMode;
-    lastDecisionReason?: string | null;
-}
-
-export interface TrainingPlannerDecision {
-    jobId: string | null;
-    rewardPreference?: TrainingRewardPreference;
-    score: number;
-    reason: string;
-}
-
-export interface DefenseModelState {
-    modelAccuracy: number;
-    damageBonus: number;
-    trainingRewardPreference: TrainingRewardPreference;
-    modelVersion: number;
-    inferenceCharge: number;
-    accumulatedTrainingData: number;
-    currentRequirement: number;
-    isTraining: boolean;
-    trainingProgressTicks: number;
-    trainingDurationTicks: number;
-}
-
 export interface IMainScene extends Phaser.Scene {
     researchManager: ResearchManager;
     buildingManager: BuildingManager;
@@ -831,19 +753,11 @@ export interface IMainScene extends Phaser.Scene {
     saveManager: SaveManager;
     soundManager: SoundManager;
     tutorialManager?: TutorialManager;
-    trainingPlanner: TrainingPlannerManager;
     performanceStats: PerformanceStats;
-    defenseModelStates: Record<string, DefenseModelState>;
     mode: GameMode;
     gameSpeed: number;
     difficultyId: string;
     isMobileLayout: boolean;
-    getDefenseModelState(type: string): DefenseModelState;
-    addTrainingData(type: string, itemType: string): number;
-    startTrainingIfReady(type: string, durationTicks?: number): boolean;
-    completeTraining(type: string): TrainingRewardPreference;
-    isGpuUnlocked(): boolean;
-    syncDefenseModelType(type: string): void;
     setGameSpeed(speed: number): void;
     bloomEnabled: boolean;
     setBloomEnabled(enabled: boolean): void;
@@ -912,10 +826,7 @@ export interface SaveData {
         totalDataReceived: number;
     };
     buildings: SavedBuilding[];
-    defenseModelStates?: Record<string, DefenseModelState>;
-    labJobProgress?: Record<string, LabJobProgress>;
     researchState?: ResearchState;
-    trainingPlanner?: TrainingPlannerState;
     items: SavedItem[];
     cables?: SavedCable[];
     settings: {

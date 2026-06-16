@@ -30,7 +30,6 @@ export function createTopHudLabels(): TopHudLabels {
         shortcuts: t('top.shortcuts'),
         settings: t('top.settings'),
         research: t('top.research'),
-        lab: t('top.lab'),
         stats: {
             dataReceived: t('hud.dataReceived'),
             power: t('hud.power'),

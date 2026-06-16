@@ -40,7 +40,6 @@ export default function TopBar() {
             <nav class={styles.shortcuts} aria-label={labels.shortcuts}>
                 <ShortcutButton label={labels.settings} testId="preact-topbar-settings" onClick={() => EventBus.emit('SETTINGS_OPEN_REQUESTED')} />
                 <ShortcutButton label={labels.research} testId="preact-topbar-research" onClick={() => EventBus.emit('RESEARCH_OPEN_REQUESTED')} />
-                <ShortcutButton label={labels.lab} testId="preact-topbar-lab" onClick={() => EventBus.emit('TRAINING_LAB_OPEN_REQUESTED', { tab: 'DEFENSE' })} />
             </nav>
         </section>
     );

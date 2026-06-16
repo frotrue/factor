@@ -30,9 +30,9 @@ export default class ResearchLab extends BaseBuilding {
         const index = this.inputBuffer.indexOf('MATERIAL_SAMPLE');
         if (index < 0) return;
         this.inputBuffer.splice(index, 1);
-        (this.scene as IMainScene).researchManager.addInsight(
+        (this.scene as IMainScene).researchManager.depositData(
             'material',
-            CONFIG.RESEARCH_SETTINGS.FACILITY_OUTPUT.material
+            CONFIG.RESEARCH_SETTINGS.DATA_OUTPUT.material
         );
     }
 

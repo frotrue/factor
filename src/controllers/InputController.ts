@@ -4,8 +4,6 @@ import type MainScene from '../scenes/MainScene';
 import AbstractProcessor from '../buildings/AbstractProcessor';
 import AccessPoint from '../buildings/AccessPoint';
 import DefenseTower from '../buildings/DefenseTower';
-import ModelTrainingLab from '../buildings/ModelTrainingLab';
-import NeuralTrainer from '../buildings/NeuralTrainer';
 import { getBuildingName, getCableName, getItemName, t, textForKey } from '../i18n';
 import { getSquareCoverageOffsets } from '../utils/powerPreview';
 import { VISUAL_THEME } from '../visuals/visualTheme';
@@ -90,7 +88,6 @@ export default class InputController {
             '#ui-tabs',
             '#top-actions',
             '#settings-modal',
-            '#training-lab-modal',
             '#game-over-screen',
             '#mobile-action-bar',
             '#mobile-cable-menu',
@@ -101,8 +98,7 @@ export default class InputController {
             '.build-btn',
             '.tab-btn',
             '.mobile-action-btn',
-            '.mobile-cable-option',
-            '.training-target-row'
+            '.mobile-cable-option'
         ].join(','));
         if (!uiElement) return false;
 
@@ -246,21 +242,8 @@ export default class InputController {
                 content += `\n${textForKey('tooltip.status')}: ${existingBuilding.isProcessing ? textForKey('tooltip.processing') : textForKey('tooltip.idle')}`;
                 content += `\n${textForKey('tooltip.recipe')}: ${existingBuilding.recipe?.OUTPUT}`;
             }
-            if (existingBuilding instanceof NeuralTrainer) {
-                content += `\n${textForKey('tooltip.leftClickCycleRecipe')}`;
-            }
-            if (existingBuilding instanceof ModelTrainingLab) {
-                const targetType = existingBuilding.targetType;
-                const targetState = targetType ? scene.getDefenseModelState(targetType) : null;
-                const targetName = targetType ? getBuildingName(targetType) : textForKey('tooltip.none');
-                content += `\n${textForKey('tooltip.trainingTarget')}: ${targetName}`;
-                if (targetState) {
-                    content += `\n${textForKey('tooltip.modelAccuracy')}: ${Math.round(targetState.modelAccuracy)}%`;
-                    content += `\n${textForKey('tooltip.damageBonus')}: +${Math.round(targetState.damageBonus)}%`;
-                    content += `\n${textForKey('tooltip.sharedVersion')}: v${targetState.modelVersion}`;
-                }
-                content += `\n${textForKey('tooltip.autoTrain')}: ${existingBuilding.autoTrain ? textForKey('tooltip.on') : textForKey('tooltip.off')}`;
-                content += `\n${textForKey('tooltip.leftClickSelectModel')}`;
+            if (existingBuilding.type === 'RESEARCH_OPERATIONS_CENTER') {
+                content += `\n${textForKey('tooltip.status')}: ${existingBuilding.hasPower === false ? textForKey('tooltip.powerOutage') : textForKey('tooltip.researchOperations')}`;
             }
             if (existingBuilding instanceof AccessPoint) {
                 const rangeBonus = scene.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
@@ -278,22 +261,16 @@ export default class InputController {
                 const damageMultiplier = scene.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
                 const rangeBonus = scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
                 const fireRateMultiplier = scene.researchManager.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1);
+                const accuracyBonus = scene.researchManager.getEffectValue('TOWER_ACCURACY_BONUS', 0);
                 const effectiveDamage = bConfig.DEFENSE.DAMAGE * damageMultiplier;
                 const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
                 const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
                 const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
-                const modelConfidence = tower?.getEffectiveModelConfidence() ?? CONFIG.MODEL_TRAINING.BASE_ACCURACY;
-                const damageBonus = tower?.damageBonus ?? 0;
-                const confidenceFactor = 0.6 + modelConfidence / 125;
-                const modelDamageMultiplier = 1 + damageBonus / 100;
-                content += `\n${textForKey('tooltip.modelAccuracy')}: ${Math.round(modelConfidence)}%`;
-                content += `\n${textForKey('tooltip.damageBonus')}: +${Math.round(damageBonus)}%`;
-                content += `\n${textForKey('tooltip.modelVersion')}: v${tower?.modelVersion ?? 1}`;
-                content += `\n${textForKey('tooltip.inferenceCharge')}: ${tower?.inferenceCharge ?? 0}`;
-                content += `\n${textForKey('tooltip.damage')}: ${(effectiveDamage * confidenceFactor * modelDamageMultiplier).toFixed(1)}`;
+                const hitChance = tower?.getHitChance() ?? Phaser.Math.Clamp(0.65 + accuracyBonus, 0.05, 0.95);
+                content += `\n${textForKey('tooltip.hitChance')}: ${Math.round(hitChance * 100)}%`;
+                content += `\n${textForKey('tooltip.damage')}: ${effectiveDamage.toFixed(1)}`;
                 content += `\n${textForKey('tooltip.range')}: ${effectiveRange} tiles`;
                 content += `\n${textForKey('tooltip.fireRate')}: ${effectiveFireRate} ticks`;
-                content += `\n${textForKey('tooltip.attackInput')}: ${textForKey('tooltip.modelAccuracy')}`;
             }
 
             this.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
@@ -486,15 +463,10 @@ export default class InputController {
                 EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
 
                 const existingBuilding = scene.buildingManager.get(key);
-                if (existingBuilding instanceof ModelTrainingLab) {
-                    EventBus.emit('TRAINING_LAB_OPEN_REQUESTED', { lab: existingBuilding });
+                if (existingBuilding?.type === 'RESEARCH_OPERATIONS_CENTER') {
+                    EventBus.emit('RESEARCH_OPEN_REQUESTED');
                     return;
                 }
-                if (existingBuilding instanceof NeuralTrainer) {
-                    existingBuilding.cycleRecipe();
-                    return;
-                }
-
                 const bConfig = CONFIG.BUILDINGS[mode];
                 if (!bConfig) return;
                 const w = bConfig.WIDTH || 1;

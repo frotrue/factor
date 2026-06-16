@@ -5,9 +5,7 @@ export type ObjectiveKey =
     | 'wave'
     | 'research'
     | 'expand'
-    | 'defendInvestment'
-    | 'modelTarget'
-    | 'modelGrowth';
+    | 'defendInvestment';
 
 export interface ObjectiveStateInput {
     hasDownloader: boolean;
@@ -16,8 +14,6 @@ export interface ObjectiveStateInput {
     firstDefenseDone: boolean;
     productionCount: number;
     defenseCount: number;
-    hasModelTrainingLab: boolean;
-    hasModelTrainingTarget: boolean;
 }
 
 export interface ObjectiveState {
@@ -40,8 +36,6 @@ export function getObjectiveState(input: ObjectiveStateInput): ObjectiveState {
 
     if (input.productionCount < 3) return state('expand');
     if (input.defenseCount < 2) return state('defendInvestment');
-    if (input.hasModelTrainingLab && !input.hasModelTrainingTarget) return state('modelTarget');
-    if (input.hasModelTrainingLab && input.hasModelTrainingTarget) return state('modelGrowth');
 
     return state('research');
 }

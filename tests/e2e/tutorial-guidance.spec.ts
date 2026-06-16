@@ -122,21 +122,25 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
         scene.buildingManager.place(-32, -224, 'CLASSIFIER', 0, { skipCost: true });
         scene.waveManager.startWave();
         scene.waveManager.endWave();
-        const lab = scene.buildingManager.place(160, 128, 'MODEL_TRAINING_LAB', 0, { skipCost: true });
-        lab.setTarget('CLASSIFIER');
+        const baselineThroughput = scene.researchManager.getResearchThroughput();
+        const center = scene.buildingManager.place(160, 128, 'RESEARCH_OPERATIONS_CENTER', 0, { skipCost: true });
+        center.hasPower = true;
 
         return {
             completed: scene.tutorialManager.isCompleted(),
             step: scene.tutorialManager.getSavedStep(),
-            labAcceptsWeightUpdate: lab.canAcceptItem('WEIGHT_UPDATE')
+            centerAcceptsWeightUpdate: center.canAcceptItem('WEIGHT_UPDATE'),
+            hasTrainingTargetApi: typeof center.setTarget === 'function',
+            baselineThroughput,
+            throughputWithRoc: scene.researchManager.getResearchThroughput()
         };
     });
 
-    expect(completion).toEqual({
-        completed: true,
-        step: 12,
-        labAcceptsWeightUpdate: true
-    });
+    expect(completion.completed).toBe(true);
+    expect(completion.step).toBe(12);
+    expect(completion.centerAcceptsWeightUpdate).toBe(false);
+    expect(completion.hasTrainingTargetApi).toBe(false);
+    expect(completion.throughputWithRoc).toBeGreaterThan(completion.baselineThroughput);
 
     await page.waitForFunction(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;

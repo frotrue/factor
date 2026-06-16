@@ -10,12 +10,11 @@ import {
     createWaveStartedHudSnapshot,
     createWaveTimerHudSnapshot
 } from '../topHudDisplay';
-import { withTrainingLabOpenState } from '../trainingLabDisplay';
 import { withWaveResultOpenState } from '../waveResultDisplay';
 import { buildConsole } from './buildState';
 import * as gameState from './gameState';
 import { mainMenu } from './menuState';
-import { gameOverScreen, researchPanel, settingsModal, trainingLabModal } from './modalState';
+import { gameOverScreen, researchPanel, settingsModal } from './modalState';
 import { mobileActions } from './mobileState';
 import { activityLog, tooltip, waveResult, waveResultHistory } from './notificationState';
 import { tutorialPanel } from './tutorialState';
@@ -43,12 +42,6 @@ export function connectGameStateBridge(): () => void {
     }, OWNER);
     EventBus.on('SETTINGS_MODAL_OPEN_CHANGED', ({ open }) => {
         settingsModal.value = withSettingsModalOpenState(settingsModal.value, open);
-    }, OWNER);
-    EventBus.on('TRAINING_LAB_UPDATED', snapshot => {
-        trainingLabModal.value = snapshot;
-    }, OWNER);
-    EventBus.on('TRAINING_LAB_OPEN_CHANGED', ({ open }) => {
-        trainingLabModal.value = withTrainingLabOpenState(trainingLabModal.value, open);
     }, OWNER);
     EventBus.on('RESEARCH_PANEL_UPDATED', snapshot => {
         researchPanel.value = snapshot;

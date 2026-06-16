@@ -79,7 +79,6 @@ export default class BuildConsoleController {
         const displayState = createBuildConsoleDisplayState({
             activeCategory: this.activeCategory,
             hasFirstDefenseSuccess,
-            isGpuUnlocked: this.scene.isGpuUnlocked(),
             isResearchUnlocked: researchId => Boolean(this.scene.researchManager?.isUnlocked(researchId))
         });
         this.currentTabBuildings = displayState.currentTabBuildings;

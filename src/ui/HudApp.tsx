@@ -13,7 +13,6 @@ import ResearchPanel from './components/ResearchPanel';
 import SettingsModal from './components/SettingsModal';
 import TopBar from './components/TopBar';
 import Tooltip from './components/Tooltip';
-import TrainingLabModal from './components/TrainingLabModal';
 import TutorialPanel from './components/TutorialPanel';
 import WaveResultCard from './components/WaveResultCard';
 import { mainMenu } from './signals/menuState';
@@ -54,7 +53,6 @@ export default function HudApp({ game }: HudAppProps) {
             {showGameplayHud && (
                 <>
                     <SettingsModal />
-                    <TrainingLabModal />
                     <ResearchPanel />
                     <GameOverScreen />
                     <Tooltip />

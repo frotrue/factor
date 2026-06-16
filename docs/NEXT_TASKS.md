@@ -1,6 +1,6 @@
 # Next Tasks
 
-Updated: 2026-05-23
+Updated: 2026-06-16
 
 ## Immediate Priority
 
@@ -17,7 +17,7 @@ Checklist:
 - [ ] Delayed AP/Fiber clarifies early build choices.
 - [ ] Wave summaries connect factory growth to defense outcomes.
 - [ ] Post-first-defense objectives clarify expand-vs-defend tradeoff.
-- [ ] Model Training Lab copy explains permanent model growth.
+- [x] Research Operations Center copy explains global research throughput.
 - [ ] Firewall useful as front-line blocker.
 - [ ] Power Node destruction feels fair, not random.
 
@@ -124,6 +124,7 @@ Enemies have distinct stats + some specials. Next pass: clearer building-interac
 - [x] Added BLOCKER data-debris visual treatment.
 - [x] Added wave result summary with factory-growth feedback.
 - [x] Added expand-vs-defend objective states after first defense.
-- [x] Improved Model Training Lab permanent-growth copy.
+- [x] Reframed model growth as permanent Research Tree effects.
+- [x] Cleaned active ROC docs/copy after `RESEARCH_OPERATIONS_CENTER` rename and documented desktop research economy targets.
 - [x] Added game-over run stats.
 - [x] Reduced early DDoS pressure + added building category accents.

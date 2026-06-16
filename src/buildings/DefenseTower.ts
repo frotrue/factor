@@ -1,17 +1,14 @@
 import Phaser from 'phaser';
 import BaseBuilding from './BaseBuilding';
 import { CONFIG } from '../config';
-import { BuildingOptions, DefenseModelState, DefenseTowerConfig, IMainScene } from '../types';
+import { BuildingOptions, DefenseTowerConfig, IMainScene } from '../types';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { getCategoryColor } from '../visuals/visualTheme';
-import { getTimeAdjustedModelAccuracy } from '../utils/modelTrainingProgress';
+
+const BASE_HIT_CHANCE = 0.65;
 
 export default class DefenseTower extends BaseBuilding {
     fireTimer: number;
-    modelConfidence: number;
-    damageBonus: number;
-    modelVersion: number;
-    inferenceCharge: number;
     lockedTarget: BaseEnemy | null;
     towerGraphics: Phaser.GameObjects.Graphics;
     animProgress: number;
@@ -20,15 +17,6 @@ export default class DefenseTower extends BaseBuilding {
     constructor(scene: Phaser.Scene, x: number, y: number, type: string, config: BuildingOptions = {}) {
         super(scene, x, y, type, { ...config, color: CONFIG.BUILDINGS[type].COLOR });
         this.fireTimer = 0;
-        const sharedModel = (scene as IMainScene).getDefenseModelState?.(type);
-        this.modelConfidence = Phaser.Math.Clamp(
-            config.customState?.modelAccuracy ?? config.customState?.modelConfidence ?? sharedModel?.modelAccuracy ?? CONFIG.MODEL_TRAINING.BASE_ACCURACY,
-            0,
-            100
-        );
-        this.damageBonus = Math.max(0, config.customState?.damageBonus ?? sharedModel?.damageBonus ?? 0);
-        this.modelVersion = Math.max(1, config.customState?.modelVersion ?? sharedModel?.modelVersion ?? 1);
-        this.inferenceCharge = Math.max(0, config.customState?.inferenceCharge ?? sharedModel?.inferenceCharge ?? 0);
         this.lockedTarget = null;
 
         const bConfig = CONFIG.BUILDINGS[type];
@@ -197,19 +185,10 @@ export default class DefenseTower extends BaseBuilding {
         return {};
     }
 
-    applyModelState(state: DefenseModelState): void {
-        this.modelConfidence = Phaser.Math.Clamp(state.modelAccuracy, 0, 100);
-        this.damageBonus = Math.max(0, state.damageBonus);
-        this.modelVersion = Math.max(1, state.modelVersion);
-        this.inferenceCharge = Math.max(0, state.inferenceCharge);
-    }
-
-    getEffectiveModelConfidence(currentTimeMs: number = this.scene.time.now): number {
-        return getTimeAdjustedModelAccuracy(this.modelConfidence, currentTimeMs);
-    }
-
-    improveModel(itemType: string): boolean {
-        return ((this.scene as IMainScene).addTrainingData?.(this.type, itemType) ?? 0) > 0;
+    getHitChance(): number {
+        const researchManager = (this.scene as IMainScene).researchManager;
+        const accuracyBonus = researchManager?.getEffectValue('TOWER_ACCURACY_BONUS', 0) ?? 0;
+        return Phaser.Math.Clamp(BASE_HIT_CHANCE + accuracyBonus, 0.05, 0.95);
     }
 
     onTick(_tickCount: number): void {
@@ -259,20 +238,17 @@ export default class DefenseTower extends BaseBuilding {
         }
 
         const damageMultiplier = researchManager?.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1) ?? 1;
-        const effectiveModelConfidence = this.getEffectiveModelConfidence();
-        const confidenceFactor = 0.6 + effectiveModelConfidence / 125;
-        const modelDamageMultiplier = 1 + this.damageBonus / 100;
-        const actualDamage = dConfig.DAMAGE * damageMultiplier * confidenceFactor * modelDamageMultiplier;
-        const hitChance = Phaser.Math.Clamp(0.45 + effectiveModelConfidence / 180, 0.05, 0.95);
+        const actualDamage = dConfig.DAMAGE * damageMultiplier;
+        const hitChance = this.getHitChance();
 
         if (dConfig.IS_AOE) {
             if (this.type === 'FILTER') {
-                this.fireAreaInference(enemies, actualDamage, hitChance, range * CONFIG.GRID_SIZE, effectiveModelConfidence);
+                this.fireAreaInference(enemies, actualDamage, hitChance, range * CONFIG.GRID_SIZE);
                 this.fireTimer = 0;
                 return;
             }
             enemies.forEach((enemy: BaseEnemy) => {
-                this.resolveShot(enemy, actualDamage, hitChance, effectiveModelConfidence);
+                this.resolveShot(enemy, actualDamage, hitChance);
             });
         } else if (this.type === 'FIREWALL') {
             enemies.forEach((enemy: BaseEnemy) => {
@@ -294,7 +270,7 @@ export default class DefenseTower extends BaseBuilding {
 
             if (!target) return;
 
-            this.resolveShot(target, actualDamage, hitChance, effectiveModelConfidence);
+            this.resolveShot(target, actualDamage, hitChance);
         }
 
         this.fireTimer = 0;
@@ -308,7 +284,7 @@ export default class DefenseTower extends BaseBuilding {
                     this.getLockKey(),
                     this.lockedTarget,
                     this.type,
-                    this.getEffectiveModelConfidence()
+                    this.getHitChance() * 100
                 );
                 return null;
             }
@@ -321,25 +297,23 @@ export default class DefenseTower extends BaseBuilding {
                 this.getLockKey(),
                 this.lockedTarget,
                 this.type,
-                this.getEffectiveModelConfidence()
+                this.getHitChance() * 100
             );
         }
         return this.lockedTarget;
     }
 
-    resolveShot(target: BaseEnemy, damage: number, hitChance: number, modelConfidence: number = this.getEffectiveModelConfidence()): void {
-        const finalHitChance = this.getFinalHitChance(target, hitChance, modelConfidence);
-        this.fireProjectile(target, damage, Math.random() <= finalHitChance, modelConfidence);
+    resolveShot(target: BaseEnemy, damage: number, hitChance: number): void {
+        const finalHitChance = this.getFinalHitChance(target, hitChance);
+        this.fireProjectile(target, damage, Math.random() <= finalHitChance, hitChance * 100);
     }
 
-    getFinalHitChance(target: BaseEnemy, hitChance: number, modelConfidence: number = this.getEffectiveModelConfidence()): number {
-        const adversarialResist = target.type === 'ADVERSARIAL'
-            ? 0.65 + modelConfidence / 300
-            : 1;
-        return Phaser.Math.Clamp(hitChance * target.getHitChanceMultiplier() * adversarialResist, 0.05, 0.98);
+    getFinalHitChance(target: BaseEnemy, hitChance: number): number {
+        void target;
+        return Phaser.Math.Clamp(hitChance, 0.05, 0.95);
     }
 
-    fireAreaInference(enemies: BaseEnemy[], damage: number, hitChance: number, radius: number, modelConfidence: number = this.getEffectiveModelConfidence()): void {
+    fireAreaInference(enemies: BaseEnemy[], damage: number, hitChance: number, radius: number): void {
         const mainScene = this.scene as IMainScene;
         const x = this.x + CONFIG.GRID_SIZE / 2;
         const y = this.y + CONFIG.GRID_SIZE / 2;
@@ -351,7 +325,7 @@ export default class DefenseTower extends BaseBuilding {
                 y: enemy.y,
                 radius: CONFIG.ENEMIES[enemy.type]?.RADIUS ?? 8,
                 type: enemy.type,
-                hit: Math.random() <= this.getFinalHitChance(enemy, hitChance, modelConfidence)
+                hit: Math.random() <= this.getFinalHitChance(enemy, hitChance)
             }));
 
         if (results.length === 0) return;
@@ -361,7 +335,7 @@ export default class DefenseTower extends BaseBuilding {
             x,
             y,
             radius,
-            confidence: modelConfidence,
+            confidence: hitChance * 100,
             targets: results.map(result => ({
                 x: result.x,
                 y: result.y,
@@ -379,14 +353,14 @@ export default class DefenseTower extends BaseBuilding {
         });
     }
 
-    fireProjectile(target: BaseEnemy, damage: number, hit: boolean = true, modelConfidence: number = this.getEffectiveModelConfidence()): void {
+    fireProjectile(target: BaseEnemy, damage: number, hit: boolean = true, confidence: number = this.getHitChance() * 100): void {
         if (!target.active) return;
         const x = this.x + CONFIG.GRID_SIZE / 2;
         const y = this.y + CONFIG.GRID_SIZE / 2;
         const mainScene = this.scene as IMainScene;
         mainScene.soundManager?.play('shot');
         if (this.type === 'CLASSIFIER') {
-            mainScene.effectsManager?.setInferenceLock(this.getLockKey(), target, this.type, modelConfidence);
+            mainScene.effectsManager?.setInferenceLock(this.getLockKey(), target, this.type, confidence);
             mainScene.effectsManager?.playInferenceTargeting({
                 towerType: this.type,
                 x,
@@ -395,7 +369,7 @@ export default class DefenseTower extends BaseBuilding {
                 targetY: target.y,
                 targetRadius: CONFIG.ENEMIES[target.type]?.RADIUS ?? 8,
                 targetType: target.type,
-                confidence: modelConfidence,
+                confidence,
                 hit,
                 onHit: () => {
                     if (hit) target.takeDamage(damage);

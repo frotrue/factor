@@ -141,9 +141,7 @@ export default class AbstractProcessor extends BaseBuilding {
 
         if (this.isProcessing) {
             this.processingTimer += this.getPowerEfficiency();
-            const researchManager = (this.scene as IMainScene).researchManager;
-            const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
-            const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
+            const requiredTime = this.getRequiredProcessingTime();
             if (this.processingTimer >= requiredTime) {
                 this.finishProcessing();
             }
@@ -180,10 +178,17 @@ export default class AbstractProcessor extends BaseBuilding {
         this.processingTimer = 0;
     }
 
-    updateProgressDisplay(): void {
+    getRequiredProcessingTime(): number {
         const researchManager = (this.scene as IMainScene).researchManager;
-        const multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
-        const requiredTime = Math.max(1, Math.round(this.recipe.TIME * multiplier));
+        let multiplier = researchManager?.getEffectValue('PROCESSING_SPEED_MULTIPLIER', 1) ?? 1;
+        if (this.type === 'WEIGHT_TRAINER' || this.type === 'NEURAL_TRAINER') {
+            multiplier *= researchManager?.getEffectValue('TACTICAL_PIPELINE_SPEED_MULTIPLIER', 1) ?? 1;
+        }
+        return Math.max(1, Math.round(this.recipe.TIME * multiplier));
+    }
+
+    updateProgressDisplay(): void {
+        const requiredTime = this.getRequiredProcessingTime();
         const progress = this.isProcessing ? Math.min(1, this.processingTimer / requiredTime) : 0;
         this.progressBar.width = CONFIG.GRID_SIZE * progress;
         this.progressBg.setVisible(this.isProcessing);

@@ -190,20 +190,19 @@ export const CONFIG: GameConfig = {
             NAME: '신경망 학습기 (Neural Trainer)',
             COLOR: 0x8fb3ff,
             HP: 260,
-            DESCRIPTION: '고급 데이터 아이템을 생산하는 2x2 가공소입니다.',
+            DESCRIPTION: 'Weight Update를 Tactical Data 연구 자원으로 변환하는 2x2 가공소입니다.',
             WIDTH: 2,
             HEIGHT: 2,
             POWER: { CONSUMPTION: 20, PRODUCTION: 0 },
-            UNLOCK_REQUIRED: 'TECH_ADVANCED_PROCESSING',
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 30 }]
         },
-        MODEL_TRAINING_LAB: {
-            ID: 'MODEL_TRAINING_LAB',
-            NAME: 'Neural Operations Lab',
+        RESEARCH_OPERATIONS_CENTER: {
+            ID: 'RESEARCH_OPERATIONS_CENTER',
+            NAME: 'Research Operations Center',
             COLOR: 0x64ffcf,
             HP: 280,
-            DESCRIPTION: 'Consumes data items to train defense models and analyze Tactical Data.',
+            DESCRIPTION: 'Boosts global research speed. Powered adjacent GPU Clusters increase this center contribution.',
             WIDTH: 2,
             HEIGHT: 2,
             MAX_BUFFER: 12,
@@ -216,7 +215,7 @@ export const CONFIG: GameConfig = {
             NAME: 'Research Lab',
             COLOR: 0x5eead4,
             HP: 220,
-            DESCRIPTION: 'Analyzes Material Samples into Material Insight for production and energy research.',
+            DESCRIPTION: 'Analyzes Material Samples into Material Data for production and energy research.',
             WIDTH: 2,
             HEIGHT: 2,
             MAX_BUFFER: 16,
@@ -229,7 +228,7 @@ export const CONFIG: GameConfig = {
             NAME: 'Data Center',
             COLOR: 0x60a5fa,
             HP: 260,
-            DESCRIPTION: 'Collects system operation logs into System Insight for automation and network research.',
+            DESCRIPTION: 'Collects system operation logs into System Data for automation and network research.',
             WIDTH: 2,
             HEIGHT: 2,
             POWER: { CONSUMPTION: 24, PRODUCTION: 0 },
@@ -241,7 +240,7 @@ export const CONFIG: GameConfig = {
             NAME: 'GPU Cluster',
             COLOR: 0x7cf7ff,
             HP: 180,
-            DESCRIPTION: 'High-power accelerator. Place next to a Neural Operations Lab to reduce training time.',
+            DESCRIPTION: 'High-power accelerator. Place next to a Research Operations Center to boost global research speed.',
             POWER: { CONSUMPTION: 35, PRODUCTION: 0 },
             CATEGORY: 'PRODUCTION',
             COST: [{ resource: 'SILICON', amount: 80 }]
@@ -312,15 +311,10 @@ export const CONFIG: GameConfig = {
             OUTPUT: 'WEIGHT_UPDATE',
             TIME: 5
         },
-        MODEL_TRAINING: {
-            INPUTS: [{ type: 'WEIGHT_UPDATE', amount: 1 }, { type: 'SILICON', amount: 1 }],
-            OUTPUT: 'TRAINED_MODEL',
+        TACTICAL_DATA_SYNTHESIS: {
+            INPUTS: [{ type: 'WEIGHT_UPDATE', amount: 1 }],
+            OUTPUT: 'TACTICAL_DATA',
             TIME: 8
-        },
-        INFERENCE_UNIT_PRODUCTION: {
-            INPUTS: [{ type: 'TRAINED_MODEL', amount: 1 }, { type: 'ENERGY', amount: 1 }],
-            OUTPUT: 'INFERENCE_UNIT',
-            TIME: 5
         },
         RECYCLING: {
             INPUTS: [{ type: 'ANY_DATA', amount: 2 }],
@@ -377,18 +371,6 @@ export const CONFIG: GameConfig = {
             NAME: 'Projectile',
             COLOR: 0xffffff,
             RADIUS: 3
-        },
-        TRAINED_MODEL: {
-            ID: 'TRAINED_MODEL',
-            NAME: 'Trained Model',
-            COLOR: 0xb98cff,
-            RADIUS: 8
-        },
-        INFERENCE_UNIT: {
-            ID: 'INFERENCE_UNIT',
-            NAME: 'Inference Unit',
-            COLOR: 0xff5ebc,
-            RADIUS: 8
         }
     },
 
@@ -505,27 +487,6 @@ export const CONFIG: GameConfig = {
         }
     },
 
-    MODEL_TRAINING: {
-        TARGET_TYPES: ['CLASSIFIER', 'FILTER', 'FIREWALL'],
-        BASE_ACCURACY: 40,
-        ACCURACY_GAIN: 10,
-        ACCURACY_DECAY_PER_INTERVAL: 1,
-        ACCURACY_DECAY_INTERVAL_MS: 30000,
-        MIN_EFFECTIVE_ACCURACY: 5,
-        DAMAGE_GAIN: 5,
-        INITIAL_DATA_REQUIREMENT: 100,
-        REQUIREMENT_MULTIPLIER: 1.3,
-        BASE_TRAINING_TICKS: 120,
-        DATA_VALUES: {
-            RAW_DATA: 1,
-            LABELED_DATA: 3,
-            WEIGHT_UPDATE: 5
-        },
-        GPU_UNLOCK_ACCURACY: 100,
-        GPU_MAX_ACTIVE: 4,
-        GPU_SPEED_BONUS: 0.2
-    },
-
     ENEMIES: {
         NOISE: {
             ID: 'NOISE',
@@ -580,26 +541,27 @@ export const CONFIG: GameConfig = {
     },
 
     RESEARCH_AXES: [
-        { id: 'production', label: 'Production', angle: 180, color: '#7dd3fc', insightGroup: 'material' },
-        { id: 'energy', label: 'Energy', angle: 120, color: '#fde047', insightGroup: 'material' },
-        { id: 'defense', label: 'Defense', angle: 270, color: '#fb7185', insightGroup: 'tactical' },
-        { id: 'model', label: 'Model', angle: 60, color: '#f0abfc', insightGroup: 'tactical' },
-        { id: 'automation', label: 'Automation', angle: 0, color: '#a78bfa', insightGroup: 'system' },
-        { id: 'network', label: 'Network', angle: 330, color: '#50f4ff', insightGroup: 'system' }
+        { id: 'production', label: 'Production', angle: 180, color: '#7dd3fc', dataCurrency: 'material' },
+        { id: 'energy', label: 'Energy', angle: 120, color: '#fde047', dataCurrency: 'material' },
+        { id: 'defense', label: 'Defense', angle: 270, color: '#fb7185', dataCurrency: 'tactical' },
+        { id: 'model', label: 'Model', angle: 60, color: '#f0abfc', dataCurrency: 'tactical' },
+        { id: 'automation', label: 'Automation', angle: 0, color: '#a78bfa', dataCurrency: 'system' },
+        { id: 'network', label: 'Network', angle: 330, color: '#50f4ff', dataCurrency: 'system' }
     ],
 
     RESEARCH_SETTINGS: {
         BASE_THROUGHPUT: 6,
         GPU_THROUGHPUT_BONUS: 1.5,
-        BUFFER_CAPACITY: {
+        DEFAULT_QUEUE_LIMIT: 3,
+        DATA_CAPACITY: {
             material: 300,
             tactical: 300,
             system: 300
         },
-        FACILITY_OUTPUT: {
-            material: 4,
-            tactical: 4,
-            system: 3
+        DATA_OUTPUT: {
+            material: 1,
+            tactical: 1,
+            system: 1
         }
     },
 
@@ -607,12 +569,12 @@ export const CONFIG: GameConfig = {
         CORE_BASIC_RESEARCH: {
             ID: 'CORE_BASIC_RESEARCH',
             NAME: 'Basic Research',
-            COST: 60,
+            COST: 300,
             DESCRIPTION: 'Establishes the shared research framework and opens the first ring.',
             AXIS: 'core',
             RING: 0,
             POSITION: 0,
-            COSTS: { insight: { material: 20, tactical: 20, system: 20 } },
+            DATA_COSTS: { material: 300 },
             TAGS: ['unlock'],
             UNLOCKS: {}
         },
@@ -620,25 +582,25 @@ export const CONFIG: GameConfig = {
             ID: 'CORE_RESEARCH_SLOT_I',
             NAME: 'Parallel Research I',
             COST: 120,
-            DESCRIPTION: 'Adds a second global research slot.',
+            DESCRIPTION: 'Increases the global research queue limit.',
             AXIS: 'core',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { material: 50, tactical: 20, system: 50 } },
-            TAGS: ['slot', 'rule-change'],
+            DATA_COSTS: { material: 50, tactical: 20, system: 50 },
+            TAGS: ['queue', 'rule-change'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {},
-            SLOT_BONUS: 1
+            QUEUE_LIMIT_BONUS: 1
         },
         CORE_THROUGHPUT_I: {
             ID: 'CORE_THROUGHPUT_I',
             NAME: 'Research Throughput I',
             COST: 150,
-            DESCRIPTION: 'Improves the amount of Insight the research queue can consume each tick.',
+            DESCRIPTION: 'Improves the amount of research data the queue can consume each tick.',
             AXIS: 'core',
             RING: 1,
             POSITION: 1,
-            COSTS: { insight: { material: 40, tactical: 40, system: 70 } },
+            DATA_COSTS: { material: 40, tactical: 40, system: 70 },
             TAGS: ['throughput', 'rule-change'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {},
@@ -652,7 +614,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'core',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { material: 80, tactical: 80, system: 80 } },
+            DATA_COSTS: { material: 80, tactical: 80, system: 80 },
             TAGS: ['unlock', 'rule-change'],
             REQUIREMENTS: ['CORE_RESEARCH_SLOT_I', 'CORE_THROUGHPUT_I'],
             UNLOCKS: {}
@@ -666,7 +628,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'production',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { material: 80 } },
+            DATA_COSTS: { material: 80 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {},
@@ -680,7 +642,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'production',
             RING: 1,
             POSITION: 1,
-            COSTS: { insight: { material: 90 } },
+            DATA_COSTS: { material: 90 },
             TAGS: ['unlock'],
             REQUIREMENTS: ['TECH_EFFICIENT_MINING'],
             UNLOCKS: { BUILDINGS: ['RECYCLER'] }
@@ -693,7 +655,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'production',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { material: 140 } },
+            DATA_COSTS: { material: 140 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_TIER_2_GATE', 'TECH_RECYCLING'],
             UNLOCKS: {},
@@ -708,7 +670,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'energy',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { material: 90 } },
+            DATA_COSTS: { material: 90 },
             TAGS: ['unlock'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: { BUILDINGS: ['SOLAR_PANEL'] }
@@ -721,7 +683,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'energy',
             RING: 1,
             POSITION: 1,
-            COSTS: { insight: { material: 120 } },
+            DATA_COSTS: { material: 120 },
             TAGS: ['rule-change'],
             REQUIREMENTS: ['TECH_SOLAR_POWER'],
             UNLOCKS: {}
@@ -734,7 +696,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'energy',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { material: 100, system: 50 } },
+            DATA_COSTS: { material: 100, system: 50 },
             TAGS: ['throughput'],
             REQUIREMENTS: ['CORE_TIER_2_GATE', 'TECH_POWER_STABILITY'],
             UNLOCKS: {},
@@ -743,17 +705,17 @@ export const CONFIG: GameConfig = {
 
         TECH_PRECISION_INFERENCE: {
             ID: 'TECH_PRECISION_INFERENCE',
-            NAME: 'Precision Inference',
+            NAME: 'Defense Payload I',
             COST: 100,
-            DESCRIPTION: 'Classifier and filter damage increases by 30%.',
+            DESCRIPTION: 'Defense tower payload damage increases by 25%.',
             AXIS: 'defense',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { tactical: 100 } },
+            DATA_COSTS: { tactical: 100 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {},
-            EFFECTS: { TOWER_DAMAGE_MULTIPLIER: 1.3 }
+            EFFECTS: { TOWER_DAMAGE_MULTIPLIER: 1.25 }
         },
         TECH_DEFENSE_RANGE: {
             ID: 'TECH_DEFENSE_RANGE',
@@ -763,7 +725,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'defense',
             RING: 1,
             POSITION: 1,
-            COSTS: { insight: { tactical: 130 } },
+            DATA_COSTS: { tactical: 130 },
             TAGS: ['stat'],
             REQUIREMENTS: ['TECH_PRECISION_INFERENCE'],
             UNLOCKS: {},
@@ -777,7 +739,7 @@ export const CONFIG: GameConfig = {
             AXIS: 'defense',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { tactical: 180 } },
+            DATA_COSTS: { tactical: 180 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_TIER_2_GATE', 'TECH_DEFENSE_RANGE'],
             UNLOCKS: {},
@@ -786,53 +748,55 @@ export const CONFIG: GameConfig = {
 
         TECH_DATASET_ENCODING: {
             ID: 'TECH_DATASET_ENCODING',
-            NAME: 'Dataset Encoding',
-            COST: 90,
-            DESCRIPTION: 'Tactical Data analysis becomes more useful for model-oriented work.',
+            NAME: 'Adaptive Targeting I',
+            COST: 100,
+            DESCRIPTION: 'Defense tower hit chance increases by 10 percentage points.',
             AXIS: 'model',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { tactical: 90 } },
+            DATA_COSTS: { tactical: 100 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
-            UNLOCKS: {}
+            UNLOCKS: {},
+            EFFECTS: { TOWER_ACCURACY_BONUS: 0.1 }
         },
         TECH_ADVANCED_PROCESSING: {
             ID: 'TECH_ADVANCED_PROCESSING',
-            NAME: 'Advanced Model Training',
+            NAME: 'Tactical Pipeline Optimization',
             COST: 150,
-            DESCRIPTION: 'Unlocks the Neural Trainer, Neural Operations Lab, and model training recipe.',
+            DESCRIPTION: 'Optimizes Weight Trainer and Neural Trainer cycle time for tactical data production.',
             AXIS: 'model',
             RING: 1,
             POSITION: 1,
-            COSTS: { insight: { tactical: 150 } },
-            TAGS: ['unlock'],
+            DATA_COSTS: { tactical: 150 },
+            TAGS: ['stat'],
             REQUIREMENTS: ['TECH_DATASET_ENCODING'],
-            UNLOCKS: { BUILDINGS: ['NEURAL_TRAINER', 'MODEL_TRAINING_LAB'], RECIPES: ['MODEL_TRAINING'] }
+            UNLOCKS: {},
+            EFFECTS: { TACTICAL_PIPELINE_SPEED_MULTIPLIER: 0.8 }
         },
         TECH_AUTOMATED_DEFENSE: {
             ID: 'TECH_AUTOMATED_DEFENSE',
             NAME: 'Automated Defense AI',
             COST: 220,
-            DESCRIPTION: 'Unlocks inference unit production for advanced automated defense.',
+            DESCRIPTION: 'Reserved for future automated defense operations.',
             AXIS: 'model',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { tactical: 160, system: 60 } },
-            TAGS: ['unlock', 'rule-change'],
+            DATA_COSTS: { tactical: 160, system: 60 },
+            TAGS: ['rule-change'],
             REQUIREMENTS: ['CORE_TIER_2_GATE', 'TECH_ADVANCED_PROCESSING'],
-            UNLOCKS: { RECIPES: ['INFERENCE_UNIT_PRODUCTION'] }
+            UNLOCKS: {}
         },
 
         TECH_AUTO_QUEUE: {
             ID: 'TECH_AUTO_QUEUE',
             NAME: 'Queue Discipline',
-            COST: 110,
+            COST: 1440,
             DESCRIPTION: 'Improves global research scheduling discipline for future automation.',
             AXIS: 'automation',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { system: 110 } },
+            DATA_COSTS: { system: 1440 },
             TAGS: ['rule-change'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {}
@@ -840,27 +804,27 @@ export const CONFIG: GameConfig = {
         TECH_AUTOMATION_PRIORITY: {
             ID: 'TECH_AUTOMATION_PRIORITY',
             NAME: 'Automation Priority',
-            COST: 160,
-            DESCRIPTION: 'Adds a third global research slot for broader parallel work.',
+            COST: 1920,
+            DESCRIPTION: 'Increases the global research queue limit for broader planned work.',
             AXIS: 'automation',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { system: 160 } },
-            TAGS: ['slot'],
+            DATA_COSTS: { system: 1920 },
+            TAGS: ['queue'],
             REQUIREMENTS: ['CORE_TIER_2_GATE', 'TECH_AUTO_QUEUE'],
             UNLOCKS: {},
-            SLOT_BONUS: 1
+            QUEUE_LIMIT_BONUS: 1
         },
 
         TECH_DISTRIBUTED_AP: {
             ID: 'TECH_DISTRIBUTED_AP',
             NAME: 'Distributed AP',
-            COST: 100,
+            COST: 1440,
             DESCRIPTION: 'AP range increases by 2 tiles and cable throughput/length improve.',
             AXIS: 'network',
             RING: 1,
             POSITION: 0,
-            COSTS: { insight: { system: 100 } },
+            DATA_COSTS: { system: 1440 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_BASIC_RESEARCH'],
             UNLOCKS: {},
@@ -869,12 +833,12 @@ export const CONFIG: GameConfig = {
         TECH_FIBER_OPTIC: {
             ID: 'TECH_FIBER_OPTIC',
             NAME: 'Fiber Optic Cable',
-            COST: 130,
+            COST: 1680,
             DESCRIPTION: 'Unlocks fiber optic cable with higher bandwidth and queue capacity.',
             AXIS: 'network',
             RING: 1,
             POSITION: 1,
-            COSTS: { insight: { system: 130 } },
+            DATA_COSTS: { system: 1680 },
             TAGS: ['unlock'],
             REQUIREMENTS: ['TECH_DISTRIBUTED_AP'],
             UNLOCKS: { CABLES: ['FIBER'] }
@@ -882,12 +846,12 @@ export const CONFIG: GameConfig = {
         TECH_FIREWALL_HARDENING: {
             ID: 'TECH_FIREWALL_HARDENING',
             NAME: 'Firewall Hardening',
-            COST: 160,
+            COST: 1800,
             DESCRIPTION: 'Firewall maximum HP increases by 50%.',
             AXIS: 'network',
             RING: 2,
             POSITION: 0,
-            COSTS: { insight: { system: 100, tactical: 60 } },
+            DATA_COSTS: { system: 1500, tactical: 300 },
             TAGS: ['stat'],
             REQUIREMENTS: ['CORE_TIER_2_GATE', 'TECH_FIBER_OPTIC'],
             UNLOCKS: {},

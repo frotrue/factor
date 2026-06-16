@@ -6,7 +6,6 @@ import { BuildingOptions, IMainScene } from '../types';
 export default class DataDownloader extends BaseBuilding {
     productionRate: number;
     productionWork: number;
-    tacticalCounter: number;
     signalGraphics: Phaser.GameObjects.Graphics;
     waveRadius: number;
     signalTween: Phaser.Tweens.Tween | null;
@@ -15,7 +14,6 @@ export default class DataDownloader extends BaseBuilding {
         super(scene, x, y, 'DATA_DOWNLOADER', { ...config, color: CONFIG.BUILDINGS.DATA_DOWNLOADER.COLOR });
         this.productionRate = CONFIG.BUILDINGS.DATA_DOWNLOADER.PRODUCTION_RATE || 2;
         this.productionWork = 0;
-        this.tacticalCounter = 0;
 
         this.drawAntenna();
 
@@ -84,11 +82,6 @@ export default class DataDownloader extends BaseBuilding {
         if (this.outputBuffer.length >= this.maxBufferSize) return;
 
         this.outputBuffer.push('RAW_DATA');
-        this.tacticalCounter++;
-        if (this.tacticalCounter >= 5 && this.outputBuffer.length < this.maxBufferSize) {
-            this.tacticalCounter = 0;
-            this.outputBuffer.push('TACTICAL_DATA');
-        }
         this.updateStatusMarkers(tickCount);
     }
 

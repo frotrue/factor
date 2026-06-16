@@ -12,7 +12,7 @@ export type TutorialStepId =
     | 'TRAINER'
     | 'DEFENSE'
     | 'FIRST_WAVE'
-    | 'MODEL_LAB';
+    | 'RESEARCH_CENTER';
 
 export type TutorialHintMode = 'explicit' | 'suggestive';
 
@@ -25,7 +25,7 @@ export type TutorialHintSymbol =
     | 'PROCESSOR'
     | 'TRAINER'
     | 'DEFENSE'
-    | 'MODEL_LAB';
+    | 'RESEARCH_CENTER';
 
 export type TutorialCompletion =
     | { kind: 'auto'; delayMs: number }
@@ -33,8 +33,7 @@ export type TutorialCompletion =
     | { kind: 'connect-cable' }
     | { kind: 'produce-item'; buildingType: string; itemType: string }
     | { kind: 'power-online'; buildingType: string }
-    | { kind: 'wave-ended' }
-    | { kind: 'model-target-set' };
+    | { kind: 'wave-ended' };
 
 export interface TutorialPoint {
     x: number;
@@ -107,7 +106,7 @@ export const TUTORIAL_HINT_POSITIONS = {
     processor: { x: 5 * 32, y: -1 * 32 },
     trainer: { x: 5 * 32, y: 2 * 32 },
     defense: { x: -1 * 32, y: -7 * 32 },
-    modelLab: { x: 5 * 32, y: 4 * 32 }
+    researchCenter: { x: 5 * 32, y: 4 * 32 }
 } as const;
 
 export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
@@ -256,15 +255,15 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         }
     },
     {
-        id: 'MODEL_LAB',
-        title: t('tutorial.MODEL_LAB.title' as any),
-        detail: t('tutorial.MODEL_LAB.detail' as any),
-        allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'CLASSIFIER', 'MODEL_TRAINING_LAB', 'BASIC', 'REMOVE'],
-        completion: { kind: 'model-target-set' },
+        id: 'RESEARCH_CENTER',
+        title: t('tutorial.RESEARCH_CENTER.title' as any),
+        detail: t('tutorial.RESEARCH_CENTER.detail' as any),
+        allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'CLASSIFIER', 'RESEARCH_OPERATIONS_CENTER', 'BASIC', 'REMOVE'],
+        completion: { kind: 'place-building', buildingType: 'RESEARCH_OPERATIONS_CENTER' },
         visualHints: {
             mode: 'explicit',
-            ghosts: [{ type: 'MODEL_LAB', ...TUTORIAL_HINT_POSITIONS.modelLab, width: 2, height: 2 }],
-            areas: [{ ...tileCenter(TUTORIAL_HINT_POSITIONS.modelLab.x, TUTORIAL_HINT_POSITIONS.modelLab.y), radius: 72, color: 0x64ffcf, kind: 'model-growth' }]
+            ghosts: [{ type: 'RESEARCH_CENTER', ...TUTORIAL_HINT_POSITIONS.researchCenter, width: 2, height: 2 }],
+            areas: [{ ...tileCenter(TUTORIAL_HINT_POSITIONS.researchCenter.x, TUTORIAL_HINT_POSITIONS.researchCenter.y), radius: 72, color: 0x64ffcf, kind: 'model-growth' }]
         }
     }
 ];

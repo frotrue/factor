@@ -8,7 +8,9 @@
 |---|---|---|
 | `src/main.ts` | 저장된 렌더 해상도 프리셋으로 Phaser Game 생성, Preact HUD mount, 디버그 전역 노출 | Phaser 생성 뒤 render resolution sync와 `mountHud()` 호출 유지 |
 | `src/scenes/MainMenuScene.ts` | Phaser 메뉴 배경/입력 fallback, Preact menu snapshot/request 처리 | 보이는 메뉴 UI는 Preact가 담당 |
-| `src/scenes/MainScene.ts` | 게임 runtime 조립, manager/controller 생성, scene lifecycle | simulation 변경과 DOM UI 변경을 섞지 않음 |
+| `src/scenes/MainScene.ts` | 게임 Scene lifecycle, public runtime state, frame update, 입력/cursor proxy | simulation 변경과 DOM UI 변경을 섞지 않음 |
+| `src/scenes/MainSceneBootstrap.ts` | manager/controller 생성, 맵/Core/초기 Storage 배치, tutorial/save bootstrap | 기존 초기화 순서 보존 |
+| `src/scenes/MainSceneRuntimeEvents.ts` | BUILDING/POWER/WAVE EventBus wiring, wave result summary, shutdown owner cleanup | EventBus 이벤트 이름과 owner cleanup 계약 유지 |
 
 ## Core Runtime
 
@@ -21,9 +23,8 @@
 | `src/managers/PowerManager.ts` | 네트워크 전력 생산/소비, satisfaction, 건물 powerEfficiency 주입 | 저전력은 효율 저하로 처리 |
 | `src/managers/MapManager.ts` | preset/seed 기반 지형과 자원 광맥 생성, resource lookup | 자원 종류 추가 시 `CONFIG.RESOURCE_PATCHES`, `GridRenderer`, 관련 맵 테스트와 함께 갱신 |
 | `src/managers/GridRenderer.ts` | 청크 기반 그리드/지형/자원 광맥 렌더링 | 자원 광맥 색은 `CONFIG.RESOURCE_PATCHES`와 동기화 |
-| `src/managers/ResearchManager.ts` | 독립 연구 슬롯, Insight buffer, throughput, 완료 효과 facade | Training Lab 시스템 연구와 분리 |
+| `src/managers/ResearchManager.ts` | 단일 활성 연구, queue, 3종 research data store, throughput, 완료 효과 facade | `RESEARCH_OPERATIONS_CENTER`/GPU throughput과 save schema 영향 큼 |
 | `src/controllers/InputController.ts` | canvas/world 입력, DOM pointer guard | DOM 조작 대신 request 이벤트 사용 |
-| `src/managers/TrainingPlannerManager.ts` | 모델 훈련 planner 상태 | Training Lab UI는 controller 경유 |
 
 ## UI Shell
 
@@ -44,8 +45,7 @@
 | `src/ui/TacticalPanelController.ts` | objective/wave/power/right rail snapshot 발행 |
 | `src/ui/BuildConsoleController.ts` | build category/tool/hotkey/refresh request 처리 |
 | `src/ui/SettingsController.ts` | settings modal request, legacy mirror, snapshot 발행 |
-| `src/ui/TrainingLabController.ts` | Training Lab open/tab/job/reward request 처리 |
-| `src/ui/ResearchPanelController.ts` | Research Panel open/select/start request 처리 |
+| `src/ui/ResearchPanelController.ts` | Research Panel open/select/start request, active/queue/data snapshot 발행 |
 | `src/ui/MobileActionController.ts` | mobile actions, cable menu, build summary 처리 |
 | `src/ui/NotificationController.ts` | tooltip, activity log, wave result 표시 처리 |
 | `src/ui/GameOverController.ts` | game-over event/action request 처리 |

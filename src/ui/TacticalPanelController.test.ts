@@ -35,8 +35,8 @@ const legacyTacticalPanelsMock = vi.hoisted(() => ({
 }));
 
 const tacticalPanelDisplayMock = vi.hoisted(() => ({
-    createLegacyDefenseStatusDisplay: vi.fn((counts: any[], activeLab: any) => ({
-        detail: `defense:${counts.map(item => `${item.name}:${item.count}`).join(',')}:${activeLab?.name ?? 'none'}`,
+    createLegacyDefenseStatusDisplay: vi.fn((counts: any[], research: any) => ({
+        detail: `defense:${counts.map(item => `${item.name}:${item.count}`).join(',')}:hit:${research.hitChance}`,
         title: `defense-count:${counts.reduce((sum, item) => sum + item.count, 0)}`
     })),
     createLegacyObjectiveDisplay: vi.fn((state: any) => ({
@@ -73,9 +73,6 @@ const tacticalPanelDisplayMock = vi.hoisted(() => ({
 vi.mock('../i18n', () => i18nMock);
 vi.mock('../utils/progressionGates', () => progressionGatesMock);
 vi.mock('../utils/waveSimulation', () => waveSimulationMock);
-vi.mock('../buildings/ModelTrainingLab', () => ({
-    default: class ModelTrainingLab {}
-}));
 vi.mock('./legacyTacticalPanels', () => legacyTacticalPanelsMock);
 vi.mock('./tacticalPanelDisplay', () => tacticalPanelDisplayMock);
 
@@ -111,12 +108,17 @@ function createController() {
         },
         difficultyId: 'HARD',
         events,
-        getDefenseModelState: vi.fn((type: string) => ({
-            modelAccuracy: type === 'FILTER' ? 72 : 64,
-            modelVersion: type === 'FIREWALL' ? 0 : 2
-        })),
         performanceStats: {
             increment: vi.fn()
+        },
+        researchManager: {
+            getEffectValue: vi.fn((effect: string, defaultValue: number) => {
+                if (effect === 'TOWER_ACCURACY_BONUS') return 0.1;
+                if (effect === 'TOWER_DAMAGE_MULTIPLIER') return 1.25;
+                if (effect === 'TOWER_RANGE_BONUS') return 1;
+                if (effect === 'TOWER_FIRE_RATE_MULTIPLIER') return 0.8;
+                return defaultValue;
+            })
         },
         time: {
             now: 0
@@ -176,7 +178,7 @@ describe('TacticalPanelController', () => {
         expect(legacyTacticalPanelsMock.updateLegacyDefensePanel).toHaveBeenCalledWith(
             expect.any(Object),
             'defense-count:3',
-            expect.stringContaining('building:CLASSIFIER:2')
+            expect.stringContaining('hit:75')
         );
         expect(legacyTacticalPanelsMock.updateLegacyPowerStatus).toHaveBeenCalledWith(
             expect.any(Object),

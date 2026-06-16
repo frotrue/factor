@@ -1,5 +1,6 @@
 import EventBus from '../managers/EventBus';
 import type MainScene from '../scenes/MainScene';
+import { restoreGameCanvasFocus } from './domEnvironment';
 
 const OWNER = 'ResearchPanelController';
 
@@ -19,9 +20,11 @@ export default class ResearchPanelController {
         EventBus.on('RESEARCH_CLOSE_REQUESTED', () => {
             this.open = false;
             EventBus.emit('RESEARCH_PANEL_OPEN_CHANGED', { open: false });
+            restoreGameCanvasFocus();
         }, OWNER);
         EventBus.on('RESEARCH_SELECT_REQUESTED', ({ id }) => {
             this.selectedId = id;
+            this.scene.researchManager.assignResearch(id);
             this.render();
         }, OWNER);
         EventBus.on('RESEARCH_SLOT_ASSIGN_REQUESTED', ({ id }) => {

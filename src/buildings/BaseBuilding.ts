@@ -199,7 +199,7 @@ export default class BaseBuilding {
 
         graphics.lineStyle(2, 0xdbeafe, 0.52);
         switch (type) {
-            case 'MODEL_TRAINING_LAB':
+            case 'RESEARCH_OPERATIONS_CENTER':
                 for (let i = 0; i < 3; i++) {
                     graphics.strokeRect(left + 8 + i * 9, top + 8, 5, height - 16);
                 }

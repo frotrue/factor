@@ -38,7 +38,6 @@ const STORAGE_STEP = 'gradium_tutorial_step';
     private activeStepStartedAt = 0;
     private cableConnectedForStep = false;
     private waveEndedForStep = false;
-    private modelTargetSetForStep = false;
     private guideGraphics: Phaser.GameObjects.Graphics;
     private languageChangeHandler = () => this.refreshLanguage();
 
@@ -84,7 +83,6 @@ const STORAGE_STEP = 'gradium_tutorial_step';
         this.activeStepStartedAt = 0;
         this.cableConnectedForStep = false;
         this.waveEndedForStep = false;
-        this.modelTargetSetForStep = false;
         if (this.typingInterval) clearInterval(this.typingInterval);
         this.steps = createTutorialSteps();
         localStorage.setItem(STORAGE_COMPLETED, 'false');
@@ -142,14 +140,6 @@ const STORAGE_STEP = 'gradium_tutorial_step';
             }
         }, 'TutorialManager');
 
-        EventBus.on('MODEL_TRAINING_TARGET_SET', ({ targetType }) => {
-            const activeStep = this.getActiveStep();
-            if (activeStep?.completion.kind === 'model-target-set' && targetType) {
-                this.modelTargetSetForStep = true;
-                this.completeStep(activeStep.id);
-            }
-        }, 'TutorialManager');
-
         EventBus.on('TUTORIAL_RESET', () => this.reset(), 'TutorialManager');
         EventBus.on('TUTORIAL_SKIP_REQUESTED', () => this.completeAll({ transitionToCampaign: true }), 'TutorialManager');
         window.addEventListener('languagechange', this.languageChangeHandler);
@@ -184,8 +174,6 @@ const STORAGE_STEP = 'gradium_tutorial_step';
         } else if (completion.kind === 'connect-cable' && this.cableConnectedForStep) {
             this.completeStep(activeStep.id);
         } else if (completion.kind === 'wave-ended' && this.waveEndedForStep) {
-            this.completeStep(activeStep.id);
-        } else if (completion.kind === 'model-target-set' && this.modelTargetSetForStep) {
             this.completeStep(activeStep.id);
         }
     }
@@ -302,7 +290,6 @@ const STORAGE_STEP = 'gradium_tutorial_step';
             this.activeStepStartedAt = this.scene.time.now;
             this.cableConnectedForStep = false;
             this.waveEndedForStep = false;
-            this.modelTargetSetForStep = false;
 
             renderLegacyTutorialPanel(
                 this.panel,
@@ -361,7 +348,7 @@ const STORAGE_STEP = 'gradium_tutorial_step';
 
     private drawGhostHint(ghost: TutorialGhostHint, pulse: number, glowPulse: number): void {
         const colorValid = ghost.exact ? 0x64ff9f : 0x59e0ff;
-        const colorGlow = ghost.type === 'MODEL_LAB' ? 0x64ffcf : 0x59e0ff;
+        const colorGlow = ghost.type === 'RESEARCH_CENTER' ? 0x64ffcf : 0x59e0ff;
         const width = ghost.width ?? 1;
         const height = ghost.height ?? 1;
 
@@ -451,7 +438,7 @@ const STORAGE_STEP = 'gradium_tutorial_step';
             this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
             this.guideGraphics.lineBetween(cx, cy - 8, cx, cy + 8);
             this.guideGraphics.lineBetween(cx - 8, cy, cx + 8, cy);
-        } else if (type === 'MODEL_LAB') {
+        } else if (type === 'RESEARCH_CENTER') {
             this.guideGraphics.strokeCircle(cx, cy, 12);
             this.guideGraphics.lineStyle(1.5, 0x64ffcf, 0.72);
             this.guideGraphics.strokeCircle(cx, cy, 5);

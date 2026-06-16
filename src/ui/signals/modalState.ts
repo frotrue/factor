@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import type { GameOverSnapshot, ResearchPanelSnapshot, SettingsModalSnapshot, TrainingLabSnapshot } from '../../types';
+import type { GameOverSnapshot, ResearchPanelSnapshot, SettingsModalSnapshot } from '../../types';
 
 export const settingsModal = signal<SettingsModalSnapshot>({
     open: false,
@@ -47,44 +47,21 @@ export const settingsModal = signal<SettingsModalSnapshot>({
     }
 });
 
-export const trainingLabModal = signal<TrainingLabSnapshot>({
-    open: false,
-    title: 'Neural Operations Lab',
-    kicker: '',
-    closeLabel: '',
-    overview: '',
-    plannerStatus: '',
-    plannerReason: '',
-    autoToggleLabel: '',
-    autoEnabled: false,
-    activeTab: 'DEFENSE',
-    tabs: {
-        defense: '',
-        system: ''
-    },
-    rewardModeLabel: '',
-    rewardAccuracyShortLabel: '',
-    rewardDamageShortLabel: '',
-    dataProgressLabel: '',
-    workProgressLabel: '',
-    toneLabels: {
-        active: '',
-        complete: '',
-        training: '',
-        locked: '',
-        idle: ''
-    },
-    duration: '',
-    rows: []
-});
-
 export const researchPanel = signal<ResearchPanelSnapshot>({
     open: false,
     title: 'Research',
     closeLabel: 'Close',
     throughputText: '',
-    slotsText: '',
-    buffers: [],
+    queueText: '',
+    dataBalances: [],
+    activeResearch: null,
+    researchQueue: [],
+    blockedData: {
+        blocked: false,
+        researchId: null,
+        missing: [],
+        message: ''
+    },
     axes: [],
     nodes: [],
     selectedId: null
@@ -96,17 +73,11 @@ export const gameOverScreen = signal<GameOverSnapshot>({
     title: '',
     failureCode: '',
     integrityLabel: '',
-    bestModelLabel: '',
-    bestModelDetail: '',
     restartLabel: '',
     mainMenuLabel: '',
     stats: [],
     wave: 0,
     coreHpPercent: 0,
     totalDataReceived: 0,
-    unlockedResearchCount: 0,
-    bestModelName: '',
-    bestModelAccuracy: 0,
-    bestModelDamageBonus: 0,
-    bestModelVersion: 0
+    unlockedResearchCount: 0
 });

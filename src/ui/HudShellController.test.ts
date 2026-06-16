@@ -98,14 +98,10 @@ describe('HudShellController', () => {
 
     it('closes legacy modal fallbacks and Preact modal snapshots on Escape', () => {
         const settingsOpenStates: boolean[] = [];
-        const labOpenStates: boolean[] = [];
         const { controller, keyboard, buildConsole } = createController();
 
         EventBus.on('SETTINGS_MODAL_OPEN_CHANGED', ({ open }) => {
             settingsOpenStates.push(open);
-        }, owner);
-        EventBus.on('TRAINING_LAB_OPEN_CHANGED', ({ open }) => {
-            labOpenStates.push(open);
         }, owner);
 
         controller.setupEvents();
@@ -114,7 +110,6 @@ describe('HudShellController', () => {
         expect(buildConsole.handleKeyboard).toHaveBeenCalledWith(expect.objectContaining({ key: 'Escape' }));
         expect(legacyHudDomMock.hideLegacyModalFallbacks).toHaveBeenCalledTimes(1);
         expect(settingsOpenStates).toEqual([false]);
-        expect(labOpenStates).toEqual([false]);
         expect(domEnvironmentMock.restoreGameCanvasFocus).toHaveBeenCalledTimes(1);
     });
 

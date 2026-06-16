@@ -1,4 +1,3 @@
-import ModelTrainingLab from '../buildings/ModelTrainingLab';
 import { getBuildingName } from '../i18n';
 import EventBus from '../managers/EventBus';
 import type MainScene from '../scenes/MainScene';
@@ -160,17 +159,13 @@ export default class TacticalPanelController {
         const hasProcessor = this.countBuildings(['PROCESSOR', 'WEIGHT_TRAINER']) > 0;
         const hasDefense = this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']) > 0;
         const firstDefenseDone = this.hasFirstDefenseSuccess();
-        const modelLabs = (this.scene.buildingManager?.getByType('MODEL_TRAINING_LAB') || [])
-            .filter((building): building is ModelTrainingLab => building instanceof ModelTrainingLab);
         const state = getObjectiveState({
             hasDownloader,
             hasProcessor,
             hasDefense,
             firstDefenseDone,
-            productionCount: this.countBuildings(['DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'NEURAL_TRAINER', 'MODEL_TRAINING_LAB']),
+            productionCount: this.countBuildings(['DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'NEURAL_TRAINER', 'RESEARCH_OPERATIONS_CENTER']),
             defenseCount: this.countBuildings(['CLASSIFIER', 'FILTER', 'FIREWALL']),
-            hasModelTrainingLab: modelLabs.length > 0,
-            hasModelTrainingTarget: modelLabs.some(lab => Boolean(lab.targetType))
         });
         const display = createLegacyObjectiveDisplay(state);
 
@@ -186,20 +181,15 @@ export default class TacticalPanelController {
         const defenseTypes = ['CLASSIFIER', 'FILTER', 'FIREWALL'];
         const counts = defenseTypes.map(type => ({
             name: getBuildingName(type),
-            count: this.countBuildings([type]),
-            state: this.scene.getDefenseModelState(type)
+            count: this.countBuildings([type])
         }));
 
-        const activeLab = this.findActiveModelTrainingLab();
-        const display = createLegacyDefenseStatusDisplay(
-            counts,
-            activeLab?.targetType
-                ? {
-                    name: getBuildingName(activeLab.targetType),
-                    state: this.scene.getDefenseModelState(activeLab.targetType)
-                }
-                : null
-        );
+        const display = createLegacyDefenseStatusDisplay(counts, {
+            hitChance: Math.max(5, Math.min(95, Math.round((0.65 + this.scene.researchManager.getEffectValue('TOWER_ACCURACY_BONUS', 0)) * 100))),
+            damageMultiplier: this.scene.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1),
+            rangeBonus: this.scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0),
+            fireRateMultiplier: this.scene.researchManager.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1)
+        });
         updateLegacyDefensePanel(
             this.getLegacyRefs(),
             display.title,
@@ -222,18 +212,6 @@ export default class TacticalPanelController {
         const waveManager = this.scene.waveManager;
         if (!waveManager) return false;
         return waveManager.currentWave > 1 || (waveManager.currentWave >= 1 && !waveManager.waveActive);
-    }
-
-    private findActiveModelTrainingLab(): ModelTrainingLab | null {
-        let activeLab: ModelTrainingLab | null = null;
-        const labs = this.scene.buildingManager?.getByType('MODEL_TRAINING_LAB') || [];
-        for (let i = 0; i < labs.length; i++) {
-            if (labs[i] instanceof ModelTrainingLab) {
-                activeLab = labs[i] as ModelTrainingLab;
-                break;
-            }
-        }
-        return activeLab;
     }
 
     private teardown(): void {

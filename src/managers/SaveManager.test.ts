@@ -63,7 +63,6 @@ function createScene(overrides: Partial<any> = {}) {
         showPowerGrid: false,
         showDefenseRange: false,
         bloomEnabled: true,
-        defenseModelStates: {},
         buildingManager: {
             getUniqueBuildings: () => Array.from(buildings.values()),
             forEach: (callback: (building: any) => void) => Array.from(buildings.values()).forEach(callback),
@@ -114,22 +113,17 @@ function createScene(overrides: Partial<any> = {}) {
         },
         gridRenderer: { draw: vi.fn() },
         researchManager: {
-            getSavedJobProgress: vi.fn(() => ({})),
             getSavedState: vi.fn(() => ({
                 completed: [],
-                activeSlots: [],
+                activeResearch: null,
+                researchQueue: [],
                 progressById: {},
-                insightBuffers: { material: 0, tactical: 0, system: 0 },
-                unlockedSlots: 1
+                dataStore: { material: 0, tactical: 0, system: 0 },
+                queueLimit: 3
             })),
             getUnlockedResearch: vi.fn(() => []),
             loadState: vi.fn()
         },
-        trainingPlanner: {
-            getState: vi.fn(() => ({})),
-            loadState: vi.fn()
-        },
-        initializeDefenseModelStates: vi.fn(),
         setGameSpeed: vi.fn((speed: number) => {
             scene.gameSpeed = speed;
         }),

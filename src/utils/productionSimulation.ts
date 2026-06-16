@@ -14,6 +14,7 @@ export interface ProductionSimulationOptions {
     dataDownloaders?: number;
     processors?: number;
     weightTrainers?: number;
+    neuralTrainers?: number;
     cableBandwidth?: number;
     maxBuffer?: number;
 }
@@ -23,6 +24,7 @@ export interface ProductionSimulationResult {
     rawProduced: number;
     labeledProduced: number;
     weightUpdatesProduced: number;
+    tacticalDataDeposited: number;
     researchProgressValue: number;
     totalDeliveredToCore: number;
     maxObservedBuffer: number;
@@ -92,16 +94,19 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
     const dataDownloaders = Math.max(1, Math.floor(options.dataDownloaders ?? 1));
     const processorCount = Math.max(1, Math.floor(options.processors ?? 1));
     const trainerCount = Math.max(1, Math.floor(options.weightTrainers ?? 1));
+    const neuralTrainerCount = Math.max(1, Math.floor(options.neuralTrainers ?? 1));
     const cableBandwidth = Math.max(1, Math.floor(options.cableBandwidth ?? CONFIG.CABLES.BASIC.BANDWIDTH));
     const maxBuffer = Math.max(1, Math.floor(options.maxBuffer ?? 20));
 
     const downloaderOutput: string[] = [];
     const processors = Array.from({ length: processorCount }, () => createProcessor('LABELLING', maxBuffer));
     const trainers = Array.from({ length: trainerCount }, () => createProcessor('WEIGHT_TRAINING', maxBuffer));
+    const neuralTrainers = Array.from({ length: neuralTrainerCount }, () => createProcessor('TACTICAL_DATA_SYNTHESIS', maxBuffer));
 
     let rawProduced = 0;
     let labeledProduced = 0;
     let weightUpdatesProduced = 0;
+    let tacticalDataDeposited = 0;
     let researchProgressValue = 0;
     let totalDeliveredToCore = 0;
     let maxObservedBuffer = 0;
@@ -130,10 +135,14 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
             if (runProcessor(trainer) === 'WEIGHT_UPDATE') weightUpdatesProduced++;
         });
 
-        trainers.forEach(trainer => {
-            while (trainer.output.length > 0) {
-                trainer.output.shift();
-                researchProgressValue += CONFIG.MODEL_TRAINING.DATA_VALUES.WEIGHT_UPDATE;
+        neuralTrainers.forEach(neuralTrainer => {
+            trainers.forEach(trainer => {
+                moveItems(trainer.output, neuralTrainer.input, 'WEIGHT_UPDATE', cableBandwidth, maxBuffer);
+            });
+            if (runProcessor(neuralTrainer) === 'TACTICAL_DATA') {
+                neuralTrainer.output.pop();
+                tacticalDataDeposited += CONFIG.RESEARCH_SETTINGS.DATA_OUTPUT.tactical;
+                researchProgressValue += CONFIG.RESEARCH_SETTINGS.DATA_OUTPUT.tactical;
                 totalDeliveredToCore++;
             }
         });
@@ -141,7 +150,8 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
         const observedBuffers = [
             downloaderOutput.length,
             ...processors.flatMap(processor => [processor.input.length, processor.output.length]),
-            ...trainers.flatMap(trainer => [trainer.input.length, trainer.output.length])
+            ...trainers.flatMap(trainer => [trainer.input.length, trainer.output.length]),
+            ...neuralTrainers.flatMap(neuralTrainer => [neuralTrainer.input.length, neuralTrainer.output.length])
         ];
         maxObservedBuffer = Math.max(maxObservedBuffer, ...observedBuffers);
 
@@ -155,6 +165,7 @@ export function simulateProductionLoop(options: ProductionSimulationOptions): Pr
         rawProduced,
         labeledProduced,
         weightUpdatesProduced,
+        tacticalDataDeposited,
         researchProgressValue,
         totalDeliveredToCore,
         maxObservedBuffer,

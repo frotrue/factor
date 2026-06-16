@@ -23,7 +23,7 @@ describe('tutorial flow', () => {
             'TRAINER',
             'DEFENSE',
             'FIRST_WAVE',
-            'MODEL_LAB'
+            'RESEARCH_CENTER'
         ]);
     });
 
@@ -38,11 +38,11 @@ describe('tutorial flow', () => {
     it('uses Korean by default and refreshes created steps when language changes', () => {
         setLanguage('ko');
         expect(createTutorialSteps()[3].title).toBe('Miner 역할');
-        expect(createTutorialSteps().at(-1)?.title).toBe('Model Lab 역할');
+        expect(createTutorialSteps().at(-1)?.title).toBe('Research Operations Center 역할');
 
         setLanguage('en');
         expect(createTutorialSteps()[3].title).toBe('Miner role');
-        expect(createTutorialSteps().at(-1)?.title).toBe('Model Lab role');
+        expect(createTutorialSteps().at(-1)?.title).toBe('Research Operations Center role');
 
         setLanguage('ko');
     });
@@ -65,8 +65,8 @@ describe('tutorial flow', () => {
         expect(byId.TRAINER.completion).toEqual({ kind: 'produce-item', buildingType: 'WEIGHT_TRAINER', itemType: 'WEIGHT_UPDATE' });
         expect(byId.DEFENSE.visualHints?.areas?.some(area => area.kind === 'range')).toBe(true);
         expect(byId.FIRST_WAVE.allowedBuildings).toBeNull();
-        expect(byId.MODEL_LAB.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('MODEL_LAB');
-        expect(byId.MODEL_LAB.title).toBe('Model Lab 역할');
+        expect(byId.RESEARCH_CENTER.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('RESEARCH_CENTER');
+        expect(byId.RESEARCH_CENTER.title).toBe('Research Operations Center 역할');
     });
 
     it('anchors visual hints to valid spawn-area tiles and weight-update training flow', () => {

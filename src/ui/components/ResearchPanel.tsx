@@ -71,21 +71,30 @@ export default function ResearchPanel() {
                 </button>
             </header>
 
-            <section class={styles.status} aria-label="Insight buffers">
+            <section class={styles.status} aria-label="Research data">
                 <div class={styles.meta}>
-                    <span>{snapshot.slotsText}</span>
+                    <span>{snapshot.queueText}</span>
                     <span>{snapshot.throughputText}</span>
                 </div>
-                <div class={styles.buffers}>
-                    {snapshot.buffers.map(buffer => (
+                <div class={styles.queueSummary}>
+                    <span>{snapshot.activeResearch ? `Active: ${snapshot.activeResearch.name}` : 'Active: Idle'}</span>
+                    {snapshot.researchQueue.length > 0 ? (
+                        <span>Next: {snapshot.researchQueue.map(item => item.name).join(' / ')}</span>
+                    ) : null}
+                    {snapshot.blockedData.blocked ? (
+                        <span class={styles.blocked}>{snapshot.blockedData.message}</span>
+                    ) : null}
+                </div>
+                <div class={styles.dataBalances}>
+                    {snapshot.dataBalances.map(balance => (
                         <ProgressBar
-                            dataTestId={`preact-research-buffer-${buffer.id}`}
-                            id={`preact-research-buffer-${buffer.id}`}
-                            key={buffer.id}
-                            label={`${buffer.label} ${Math.floor(buffer.value)}/${buffer.capacity}`}
-                            tone={buffer.percent > 70 ? 'success' : 'default'}
-                            value={buffer.percent}
-                            valueText={`${buffer.label}: ${Math.floor(buffer.value)} / ${buffer.capacity}`}
+                            dataTestId={`preact-research-data-${balance.id}`}
+                            id={`preact-research-data-${balance.id}`}
+                            key={balance.id}
+                            label={`${balance.label} ${Math.floor(balance.value)}/${balance.capacity}`}
+                            tone={balance.percent > 70 ? 'success' : 'default'}
+                            value={balance.percent}
+                            valueText={`${balance.label}: ${Math.floor(balance.value)} / ${balance.capacity}`}
                         />
                     ))}
                 </div>
@@ -178,7 +187,7 @@ export default function ResearchPanel() {
                                 {selected.effectsText.map(effect => <li key={effect}>{effect}</li>)}
                             </ul>
                             <Button
-                                disabled={selected.status === 'locked' || selected.status === 'gated' || selected.status === 'completed'}
+                                disabled={selected.status === 'locked' || selected.status === 'gated' || selected.status === 'completed' || selected.status === 'active' || selected.status === 'queued'}
                                 dataTestId="preact-research-start"
                                 onClick={event => {
                                     stopResearchEvent(event);

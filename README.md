@@ -2,7 +2,7 @@
 
 Phaser 3 + TypeScript + Vite로 만든 2D 공장 자동화/타워 디펜스 게임입니다.
 
-플레이어는 데이터 처리 공장을 구축해 `Signal Packet -> Labeled Data -> Weight Update -> Confidence Score` 흐름을 만들고, 침입 포트에서 들어오는 적을 방어합니다. 현재 빌드는 초반 온보딩, 고정 침입 포트, 지형 BLOCKER, 건물 내구도/파괴, AP 무선 릴레이, 모바일 조작, 저장/로드를 포함합니다.
+플레이어는 데이터 처리 공장을 구축해 `Signal Packet -> Labeled Data -> Weight Update -> Tactical Data` 흐름을 만들고, 연구 데이터를 모아 영구 업그레이드로 침입 포트를 방어합니다. 현재 빌드는 초반 온보딩, 고정 침입 포트, 지형 BLOCKER, 건물 내구도/파괴, AP 무선 릴레이, 모바일 조작, 저장/로드를 포함합니다.
 
 ## 실행
 
@@ -16,7 +16,8 @@ npm run dev
 ```powershell
 npm test
 npm run typecheck
-npm run test:e2e
+npm run test:e2e          # desktop 기본
+npm run test:e2e:mobile   # 모바일 명시 실행
 npm run build
 ```
 
@@ -25,10 +26,10 @@ npm run build
 ```text
 Silicon / Energy 패치 확인
 -> Data Downloader로 Signal Packet 생산
--> Processor / Weight Trainer로 데이터 처리
--> Core에 Weight Update 전달
--> Confidence Score 획득
--> 연구와 방어 모델 강화
+-> Processor / Weight Trainer / Neural Trainer로 데이터 처리
+-> Research Lab / Neural Trainer / Data Center로 연구 데이터 축적
+-> Research Panel에서 단일 활성 연구와 queue 운영
+-> Research Operations Center(`RESEARCH_OPERATIONS_CENTER`)와 GPU로 연구 처리량 강화
 -> 침입 포트 방어
 ```
 
@@ -75,7 +76,7 @@ Silicon / Energy 패치 확인
 | --- | --- |
 | 추출 | Extractor, Data Downloader |
 | 물류 | Storage, Data Cache, AP, Repeater |
-| 생산 | Data Processor, Weight Trainer, Neural Trainer, Model Training Lab, Recycler |
+| 생산 | Data Processor, Weight Trainer, Neural Trainer, Research Operations Center (`RESEARCH_OPERATIONS_CENTER`), Recycler |
 | 전력 | Neural Core, Power Plant, Power Node, Solar Panel |
 | 방어 | Classifier, Anomaly Engine, Firewall |
 

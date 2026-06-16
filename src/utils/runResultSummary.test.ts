@@ -2,31 +2,21 @@ import { describe, expect, test } from 'vitest';
 import { createRunResultSummary } from './runResultSummary';
 
 describe('createRunResultSummary', () => {
-    test('summarizes reached wave, core integrity, research, and best model', () => {
+    test('summarizes reached wave, core integrity, data, and research', () => {
         const summary = createRunResultSummary({
             wave: 9,
             coreHp: 240,
             coreMaxHp: 1000,
             totalDataReceived: 180,
-            unlockedResearchCount: 3,
-            modelStates: {
-                CLASSIFIER: { modelAccuracy: 55, damageBonus: 0, trainingRewardPreference: 'accuracy', modelVersion: 2, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
-                FILTER: { modelAccuracy: 72, damageBonus: 0, trainingRewardPreference: 'accuracy', modelVersion: 3, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 },
-                FIREWALL: { modelAccuracy: 100, damageBonus: 15, trainingRewardPreference: 'damage', modelVersion: 8, inferenceCharge: 0, accumulatedTrainingData: 0, currentRequirement: 100, isTraining: false, trainingProgressTicks: 0, trainingDurationTicks: 120 }
-            },
-            getModelName: type => type
+            unlockedResearchCount: 3
         });
 
         expect(summary.coreHpPercent).toBe(24);
-        expect(summary.bestModelName).toBe('FIREWALL');
-        expect(summary.bestModelAccuracy).toBe(100);
-        expect(summary.bestModelDamageBonus).toBe(15);
         expect(summary.lines).toEqual([
             'Reached Wave 9',
             'Core integrity 24%',
             'Data delivered 180',
-            'Protocols completed 3',
-            'Best model FIREWALL 100% accuracy / +15% damage'
+            'Research completed 3'
         ]);
     });
 });

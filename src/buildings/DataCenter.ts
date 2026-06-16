@@ -25,9 +25,9 @@ export default class DataCenter extends BaseBuilding {
 
         const cycles = Math.floor(this.logWork);
         this.logWork -= cycles;
-        (this.scene as IMainScene).researchManager.addInsight(
+        (this.scene as IMainScene).researchManager.depositData(
             'system',
-            CONFIG.RESEARCH_SETTINGS.FACILITY_OUTPUT.system * cycles
+            CONFIG.RESEARCH_SETTINGS.DATA_OUTPUT.system * cycles
         );
     }
 

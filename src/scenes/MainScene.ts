@@ -1,48 +1,40 @@
 import Phaser from 'phaser';
-import { CONFIG, CORE_KEY, CORE_PIXEL_X, CORE_PIXEL_Y } from '../config';
-import { getBuildingName, t } from '../i18n';
+import { CONFIG } from '../config';
 import BaseBuilding from '../buildings/BaseBuilding';
 
-import BuildingManager from '../managers/BuildingManager';
-import ItemManager from '../managers/ItemManager';
-import MapManager from '../managers/MapManager';
-import UIManager from '../ui/UIManager';
-import GridRenderer from '../managers/GridRenderer';
-import CameraController from '../managers/CameraController';
-import TickSystem from '../managers/TickSystem';
-import PowerManager from '../managers/PowerManager';
-import WaveManager from '../managers/WaveManager';
-import SaveManager from '../managers/SaveManager';
-import ResearchManager from '../managers/ResearchManager';
-import InventoryManager from '../managers/InventoryManager';
-import CableManager from '../managers/CableManager';
-import EffectsManager from '../managers/EffectsManager';
-import SoundManager from '../managers/SoundManager';
-import TutorialManager from '../managers/TutorialManager';
-import TrainingPlannerManager from '../managers/TrainingPlannerManager';
-import PerformanceStats from '../managers/PerformanceStats';
+import type BuildingManager from '../managers/BuildingManager';
+import type ItemManager from '../managers/ItemManager';
+import type MapManager from '../managers/MapManager';
+import type UIManager from '../ui/UIManager';
+import type GridRenderer from '../managers/GridRenderer';
+import type CameraController from '../managers/CameraController';
+import type TickSystem from '../managers/TickSystem';
+import type PowerManager from '../managers/PowerManager';
+import type WaveManager from '../managers/WaveManager';
+import type SaveManager from '../managers/SaveManager';
+import type ResearchManager from '../managers/ResearchManager';
+import type InventoryManager from '../managers/InventoryManager';
+import type CableManager from '../managers/CableManager';
+import type EffectsManager from '../managers/EffectsManager';
+import type SoundManager from '../managers/SoundManager';
+import type TutorialManager from '../managers/TutorialManager';
+import type PerformanceStats from '../managers/PerformanceStats';
 import EventBus from '../managers/EventBus';
-import { DefenseModelState, GameMode } from '../types';
-import DefenseTower from '../buildings/DefenseTower';
-import Core from '../buildings/Core';
-import OverlayController from '../controllers/OverlayController';
-import InputController from '../controllers/InputController';
-import { createWaveResultSummary } from '../utils/waveResultSummary';
+import { GameMode } from '../types';
+import type OverlayController from '../controllers/OverlayController';
+import type InputController from '../controllers/InputController';
 import { getCategoryColor, VISUAL_THEME } from '../visuals/visualTheme';
-import {
-    applyCompletedTraining,
-    createDefaultDefenseModelState,
-    getNextTrainingRequirement,
-    getTrainingDataValue,
-    isGpuUnlocked,
-    normalizeDefenseModelState
-} from '../utils/modelTrainingProgress';
 import {
     clearMobileLayoutClass,
     createMobileLayoutMediaQuery,
     isMobileLayoutMatched,
     setMobileLayoutClass
 } from '../ui/domEnvironment';
+import {
+    finishMainSceneBootstrap,
+    initializeMainSceneSystems
+} from './MainSceneBootstrap';
+import MainSceneRuntimeEvents from './MainSceneRuntimeEvents';
 
 export default class MainScene extends Phaser.Scene {
     buildingManager!: BuildingManager;
@@ -61,12 +53,10 @@ export default class MainScene extends Phaser.Scene {
     effectsManager!: EffectsManager;
     soundManager!: SoundManager;
     tutorialManager?: TutorialManager;
-    trainingPlanner!: TrainingPlannerManager;
     performanceStats!: PerformanceStats;
     mode: GameMode = 'campaign';
     overlayController!: OverlayController;
     inputController!: InputController;
-    defenseModelStates: Record<string, DefenseModelState> = {};
 
     cableState: 'IDLE' | 'CABLE_START' = 'IDLE';
     cableStartKey: string | null = null;
@@ -105,6 +95,7 @@ export default class MainScene extends Phaser.Scene {
         buildingsDestroyed: Set<string>;
     } | null = null;
     private loadSaveOnStart: boolean = false;
+    private runtimeEvents: MainSceneRuntimeEvents | null = null;
 
     constructor() {
         super('MainScene');
@@ -119,137 +110,18 @@ export default class MainScene extends Phaser.Scene {
     create(): void {
         this.input.addPointer(2);
         this.setupMobileLayoutDetection();
-        this.cameras.main.setBackgroundColor(VISUAL_THEME.world.background);
-
-        this.mapManager = new MapManager();
-        this.performanceStats = new PerformanceStats(this);
-        (window as any).__GRADIUM_PERF__ = this.performanceStats;
-        this.initializeDefenseModelStates();
-        this.itemManager = new ItemManager(this);
-        this.buildingManager = new BuildingManager(this);
-        this.powerManager = new PowerManager(this, this.buildingManager);
-        this.cableManager = new CableManager(this);
-        this.waveManager = new WaveManager(this, this.buildingManager);
-        this.waveManager.setDifficulty(this.difficultyId);
-        this.tickSystem = new TickSystem(this, this.buildingManager, this.itemManager, this.mapManager, this.powerManager);
-        this.gridRenderer = new GridRenderer(this, this.mapManager);
-        this.cameraController = new CameraController(this);
-        this.researchManager = new ResearchManager(this);
-        this.trainingPlanner = new TrainingPlannerManager(this);
-        this.soundManager = new SoundManager();
-        this.uiManager = new UIManager(this);
-        this.saveManager = new SaveManager(this);
-        this.inventoryManager = new InventoryManager(this.buildingManager);
-        this.effectsManager = new EffectsManager(this);
-        this.overlayController = new OverlayController(this);
-        this.inputController = new InputController(this);
-        this.tutorialManager = undefined;
-
-        if (this.mode === 'tutorial') {
-            this.mapManager.generateTutorialMap();
-        } else {
-            this.mapManager.generateResourcePatches();
-        }
-        this.cameraController.applyBounds();
-        this.buildingManager.place(CORE_PIXEL_X, CORE_PIXEL_Y, 'CORE', 0);
-        this.cameraController.centerOnCore();
-
-        // 시작 시 일정량의 실리콘 제공을 위한 창고 설치
-        const startStorage = this.buildingManager.place((CONFIG.CORE_ORIGIN.TILE_X - 2) * CONFIG.GRID_SIZE, CONFIG.CORE_ORIGIN.TILE_Y * CONFIG.GRID_SIZE, 'STORAGE', 0);
-        if (startStorage) {
-            for (let i = 0; i < 100; i++) {
-                startStorage.inputBuffer.push('SILICON');
-            }
-        }
+        initializeMainSceneSystems(this);
 
         this.setupCursor();
         this.setupInput();
         this.setupEvents();
         this.gridRenderer.draw(true);
-
-        // Initialize build controls now that all managers are ready.
-        if (this.mode === 'tutorial') {
-            this.tutorialManager = new TutorialManager(this);
-        }
-        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
-        if (this.loadSaveOnStart) {
-            this.saveManager.loadGame();
-        }
+        finishMainSceneBootstrap(this, this.loadSaveOnStart);
     }
 
     setupEvents(): void {
-        EventBus.on('BUILDING_SELECTED', ({ type }: { type: string }) => {
-            this.selectedBuildingType = type;
-            this.updateCursorGraphics();
-        }, 'MainScene');
-
-        EventBus.on('POWER_UPDATED', () => {
-            this.powerGridDirty = true;
-            this._powerWarningDirty = true;
-        }, 'MainScene');
-
-        EventBus.on('BUILDING_PLACED', ({ building, type }: { key: string; building: any; type: string }) => {
-            this.effectsManager.playBuildOnline(building, type);
-            EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
-                message: t('log.buildingOnline', { name: getBuildingName(type) })
-            });
-            this.defenseRangeDirty = true;
-        }, 'MainScene');
-
-        EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
-            const [x, y] = key.split(',').map(Number);
-            this.effectsManager.playBuildingRemoved(x, y);
-            EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
-                message: `System: Unit disconnected at [${x}, ${y}].`,
-                isAlert: true
-            });
-            this.defenseRangeDirty = true;
-        }, 'MainScene');
-
-        EventBus.on('BUILDING_DAMAGED', ({ key, building }: { key: string; building: any; amount: number; hp: number; maxHp: number }) => {
-            this.effectsManager.playBuildingDamaged(building);
-            this.currentWaveStats?.buildingsDamaged.add(key);
-        }, 'MainScene');
-
-        EventBus.on('BUILDING_DESTROYED', ({ key }: { key: string; building: any }) => {
-            this.currentWaveStats?.buildingsDestroyed.add(key);
-        }, 'MainScene');
-
-        EventBus.on('WAVE_STARTED', ({ wave, routes }) => {
-            const core = this.buildingManager.get(CORE_KEY) as Core | null;
-            this.currentWaveStats = {
-                wave,
-                enemiesDestroyed: 0,
-                coreHpBefore: core?.hp ?? 0,
-                dataBefore: core?.totalDataReceived ?? 0,
-                buildingsDamaged: new Set<string>(),
-                buildingsDestroyed: new Set<string>()
-            };
-            this.effectsManager.playWaveStart(routes);
-        }, 'MainScene');
-
-        EventBus.on('ENEMY_KILLED', ({ x, y }: { id: string; type: string; x: number; y: number; rewardSilicon: number }) => {
-            if (this.currentWaveStats) this.currentWaveStats.enemiesDestroyed++;
-            this.effectsManager.playEnemyKilled(x, y);
-        }, 'MainScene');
-
-        EventBus.on('WAVE_ENDED', () => {
-            if (!this.currentWaveStats) return;
-            const core = this.buildingManager.get(CORE_KEY) as Core | null;
-            const summary = createWaveResultSummary({
-                wave: this.currentWaveStats.wave,
-                enemiesDestroyed: this.currentWaveStats.enemiesDestroyed,
-                coreHpBefore: this.currentWaveStats.coreHpBefore,
-                coreHpAfter: core?.hp ?? 0,
-                coreMaxHp: core?.maxHp ?? 1,
-                dataBefore: this.currentWaveStats.dataBefore,
-                dataAfter: core?.totalDataReceived ?? this.currentWaveStats.dataBefore,
-                buildingsDamaged: this.currentWaveStats.buildingsDamaged.size,
-                buildingsDestroyed: this.currentWaveStats.buildingsDestroyed.size
-            });
-            EventBus.emit('WAVE_RESULT_SUMMARY_REQUESTED', summary);
-            this.currentWaveStats = null;
-        }, 'MainScene');
+        this.runtimeEvents = new MainSceneRuntimeEvents(this);
+        this.runtimeEvents.setup();
 
         this.events.on('shutdown', () => {
             if (this.mobileMediaQuery && this.mobileLayoutHandler) {
@@ -257,94 +129,6 @@ export default class MainScene extends Phaser.Scene {
                 window.removeEventListener('resize', this.mobileLayoutHandler);
             }
             clearMobileLayoutClass();
-            [
-                'MainScene',
-                'CableManager',
-                'Core',
-                'BaseEnemyPathCache',
-                'BuildConsoleController',
-                'InputController',
-                'ItemManager',
-                'GameOverController',
-                'HudShellController',
-                'HudLocalizationController',
-                'NotificationController',
-                'PowerManager',
-                'SaveManager',
-                'SettingsController',
-                'SoundManager',
-                'TacticalPanelController',
-                'TopHudController',
-                'MobileActionController',
-                'TrainingLabController',
-                'TutorialManager',
-                'WaveManager'
-            ].forEach(owner => EventBus.offAll(owner));
-            if ((window as any).__GRADIUM_PERF__ === this.performanceStats) {
-                delete (window as any).__GRADIUM_PERF__;
-            }
-        });
-    }
-
-    initializeDefenseModelStates(): void {
-        CONFIG.MODEL_TRAINING.TARGET_TYPES.forEach(type => {
-            this.defenseModelStates[type] = createDefaultDefenseModelState();
-        });
-    }
-
-    getDefenseModelState(type: string): DefenseModelState {
-        if (!this.defenseModelStates[type]) {
-            this.defenseModelStates[type] = createDefaultDefenseModelState();
-        } else {
-            this.defenseModelStates[type] = normalizeDefenseModelState(this.defenseModelStates[type] as any);
-        }
-        return this.defenseModelStates[type];
-    }
-
-    addTrainingData(type: string, itemType: string): number {
-        const state = this.getDefenseModelState(type);
-        const value = getTrainingDataValue(itemType);
-        if (value <= 0) return 0;
-        state.accumulatedTrainingData += value;
-        return value;
-    }
-
-    startTrainingIfReady(type: string, durationTicks: number = CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS): boolean {
-        const state = this.getDefenseModelState(type);
-        if (state.isTraining || state.accumulatedTrainingData < state.currentRequirement) {
-            return false;
-        }
-
-        state.accumulatedTrainingData -= state.currentRequirement;
-        state.isTraining = true;
-        state.trainingProgressTicks = 0;
-        state.trainingDurationTicks = Math.max(1, Math.ceil(durationTicks));
-        this.syncDefenseModelType(type);
-        return true;
-    }
-
-    completeTraining(type: string): 'accuracy' | 'damage' {
-        const state = this.getDefenseModelState(type);
-        const reward = applyCompletedTraining(state);
-        state.isTraining = false;
-        state.trainingProgressTicks = 0;
-        state.trainingDurationTicks = CONFIG.MODEL_TRAINING.BASE_TRAINING_TICKS;
-        state.currentRequirement = getNextTrainingRequirement(state.currentRequirement);
-        this.syncDefenseModelType(type);
-        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
-        return reward.kind;
-    }
-
-    isGpuUnlocked(): boolean {
-        return isGpuUnlocked(this.defenseModelStates);
-    }
-
-    syncDefenseModelType(type: string): void {
-        const state = this.getDefenseModelState(type);
-        this.buildingManager?.getByType(type).forEach(building => {
-            if (building instanceof DefenseTower && building.type === type) {
-                building.applyModelState(state);
-            }
         });
     }
 
@@ -368,6 +152,11 @@ export default class MainScene extends Phaser.Scene {
             const targetZoom = matches && !wasMobile ? 1 : currentZoom;
             this.cameras.main.setZoom(Phaser.Math.Clamp(targetZoom, matches ? 0.45 : CONFIG.CAMERA.MIN_ZOOM, CONFIG.CAMERA.MAX_ZOOM));
         }
+    }
+
+    markPowerStateDirty(): void {
+        this.powerGridDirty = true;
+        this._powerWarningDirty = true;
     }
 
     setupInput(): void {

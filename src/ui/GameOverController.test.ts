@@ -4,10 +4,6 @@ import GameOverController from './GameOverController';
 
 const runResultSummaryMock = vi.hoisted(() => ({
     createRunResultSummary: vi.fn((input: any) => ({
-        bestModelAccuracy: 91,
-        bestModelDamageBonus: 18,
-        bestModelName: 'Classifier',
-        bestModelVersion: 4,
         coreHpPercent: 25,
         totalDataReceived: input.totalDataReceived,
         unlockedResearchCount: input.unlockedResearchCount,
@@ -63,9 +59,6 @@ function createController() {
     const scene = {
         buildingManager: {
             get: vi.fn(() => null)
-        },
-        defenseModelStates: {
-            CLASSIFIER: { modelAccuracy: 91, damageBonus: 18, modelVersion: 4 }
         },
         events,
         researchManager: {

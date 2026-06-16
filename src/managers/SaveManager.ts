@@ -7,7 +7,6 @@ import { getLanguage, setLanguage, t } from '../i18n';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from '../utils/saveMigration';
 import { getRestoredEnemyHp } from '../utils/enemyRestore';
-import { normalizeDefenseModelState } from '../utils/modelTrainingProgress';
 
 const REMOVED_PHYSICAL_TRANSPORT_TYPES = new Set(['CONVEYOR', 'FAST_LINK', 'UNLOADER']);
 
@@ -48,7 +47,6 @@ export default class SaveManager {
             'CORE_DATA_RECEIVED',
             'ENEMY_KILLED',
             'GAME_SPEED_CHANGED',
-            'MODEL_TRAINING_TARGET_SET',
             'RESEARCH_UNLOCKED',
             'RESEARCH_STATE_CHANGED',
             'WAVE_STARTED',
@@ -346,10 +344,7 @@ export default class SaveManager {
                 totalDataReceived: coreBuilding ? coreBuilding.totalDataReceived : 0
             },
             buildings: payload.buildings,
-            defenseModelStates: this.scene.defenseModelStates,
-            labJobProgress: this.scene.researchManager.getSavedJobProgress(),
             researchState: this.scene.researchManager.getSavedState(),
-            trainingPlanner: this.scene.trainingPlanner.getState(),
             items: payload.items,
             cables: payload.cables,
             settings: {
@@ -438,24 +433,12 @@ export default class SaveManager {
             // Load Research
             this.scene.researchManager.loadState(data.researchState ?? {
                 completed: data.research ?? [],
-                activeSlots: [],
+                activeResearch: null,
+                researchQueue: [],
                 progressById: {},
-                insightBuffers: { material: 0, tactical: 0, system: 0 },
-                unlockedSlots: 1
+                dataStore: { material: 0, tactical: 0, system: 0 },
+                queueLimit: CONFIG.RESEARCH_SETTINGS.DEFAULT_QUEUE_LIMIT
             });
-            this.scene.trainingPlanner.loadState(data.trainingPlanner || {});
-
-            this.scene.initializeDefenseModelStates();
-            if (data.defenseModelStates) {
-                Object.entries(data.defenseModelStates).forEach(([type, state]) => {
-                    this.scene.defenseModelStates[type] = normalizeDefenseModelState(state as any);
-                });
-            } else {
-                data.buildings.forEach(b => {
-                    if (!CONFIG.BUILDINGS[b.type]?.DEFENSE || !b.customState) return;
-                    this.scene.defenseModelStates[b.type] = normalizeDefenseModelState(b.customState);
-                });
-            }
 
             // Load Buildings
             data.buildings.forEach(b => {

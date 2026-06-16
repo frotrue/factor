@@ -60,19 +60,7 @@ export function getGameOverCoreTone(coreHpPercent: number): GameOverSnapshot['st
 }
 
 export function createLegacyGameOverStatLines(summary: RunResultSummary): string[] {
-    return [
-        ...createGameOverStatDisplays(summary).map(stat => stat.legacyLine),
-        createGameOverModelStatLine(summary)
-    ];
-}
-
-export function createGameOverModelStatLine(summary: RunResultSummary): string {
-    return textForKey('gameOver.stat.model', {
-        name: summary.bestModelName,
-        confidence: summary.bestModelAccuracy,
-        damage: summary.bestModelDamageBonus,
-        version: summary.bestModelVersion
-    });
+    return createGameOverStatDisplays(summary).map(stat => stat.legacyLine);
 }
 
 export function createGameOverSnapshot(summary: RunResultSummary): GameOverSnapshot {
@@ -82,22 +70,12 @@ export function createGameOverSnapshot(summary: RunResultSummary): GameOverSnaps
         title: textForKey('gameOver.screenTitle'),
         failureCode: textForKey('gameOver.failureCode', { percent: summary.coreHpPercent }),
         integrityLabel: textForKey('gameOver.integrity'),
-        bestModelLabel: textForKey('gameOver.bestModel'),
-        bestModelDetail: textForKey('gameOver.modelDetail', {
-            version: summary.bestModelVersion,
-            confidence: summary.bestModelAccuracy,
-            damage: summary.bestModelDamageBonus
-        }),
         restartLabel: textForKey('gameOver.restart'),
         mainMenuLabel: textForKey('gameOver.mainMenu'),
         stats: createGameOverStats(summary),
         wave: summary.wave,
         coreHpPercent: summary.coreHpPercent,
         totalDataReceived: summary.totalDataReceived,
-        unlockedResearchCount: summary.unlockedResearchCount,
-        bestModelName: summary.bestModelName,
-        bestModelAccuracy: summary.bestModelAccuracy,
-        bestModelDamageBonus: summary.bestModelDamageBonus,
-        bestModelVersion: summary.bestModelVersion
+        unlockedResearchCount: summary.unlockedResearchCount
     };
 }

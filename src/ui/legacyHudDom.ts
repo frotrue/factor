@@ -447,7 +447,7 @@ export function showLegacyGameplayHudSurfaces(): void {
 }
 
 export function hideLegacyModalFallbacks(): void {
-    ['settings-modal', 'training-lab-modal'].forEach(id => {
+    ['settings-modal'].forEach(id => {
         const modal = document.getElementById(id);
         if (modal) modal.style.display = 'none';
     });

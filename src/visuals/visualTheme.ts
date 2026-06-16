@@ -36,9 +36,8 @@ export const VISUAL_THEME = {
         SILICON: 0xb9c7d8,
         ENERGY: 0xffe873,
         MATERIAL_SAMPLE: 0x7dd3fc,
-        PROJECTILE: 0xffffff,
-        TRAINED_MODEL: 0xb98cff,
-        INFERENCE_UNIT: 0xff5ebc
+        TACTICAL_DATA: 0xf0abfc,
+        PROJECTILE: 0xffffff
     },
     enemies: {
         NOISE: 0xff5d68,

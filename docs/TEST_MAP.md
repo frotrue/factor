@@ -10,8 +10,8 @@
 | 타입 npm script | `npm run typecheck` |
 | 유닛/통합 | `npm test` |
 | 번들 | `npm run build` |
-| 브라우저 smoke | `npm run test:e2e` |
-| 브라우저 smoke 분할 | `npm run test:e2e:desktop`, `npm run test:e2e:mobile` |
+| 브라우저 smoke desktop 기본 | `npm run test:e2e` |
+| 브라우저 smoke 명시 실행 | `npm run test:e2e:desktop`, `npm run test:e2e:mobile` |
 
 ## UI 테스트
 
@@ -23,7 +23,7 @@
 | 우측 전술 패널 | `src/ui/TacticalPanelController.test.ts`, E2E startup/threat panel |
 | Settings | `src/ui/SettingsController.test.ts`, E2E settings/language |
 | 렌더 해상도/HUD 배치 | `src/ui/renderResolution.test.ts`, `tests/e2e/hud-layout.spec.ts`, `npm run test:e2e:desktop` |
-| Training Lab | `src/ui/TrainingLabController.test.ts`, E2E training lab |
+| Research Panel / ROC | `src/ui/ResearchPanelController.test.ts`, `src/managers/ResearchManager.test.ts`, E2E Research Panel/`RESEARCH_OPERATIONS_CENTER` smoke |
 | Mobile UI | `src/ui/MobileActionController.test.ts`, E2E `mobile-*` projects |
 | Notifications/GameOver/Wave result | `src/ui/NotificationController.test.ts`, `src/ui/GameOverController.test.ts`, E2E wave/game-over/activity |
 | HUD shell/localization | `src/ui/HudShellController.test.ts`, `src/ui/HudLocalizationController.test.ts`, E2E startup/language |
@@ -41,7 +41,7 @@
 | 튜토리얼 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
 | 웨이브/적/경로 | `src/managers/WaveManager.test.ts`, `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |
 | MainScene 초기화 순서 | `src/managers/SaveManager.test.ts`, `src/managers/WaveManager.test.ts`, E2E startup/save/tutorial smoke |
-| 모델 훈련/GPU | `src/managers/TrainingPlannerManager.test.ts`, `src/utils/modelTrainingProgress.test.ts`, `src/utils/modelTrainingSummary.test.ts`, E2E Training Lab, 연구 throughput smoke |
+| ROC/GPU 연구 처리량 | `src/managers/ResearchManager.test.ts`, `src/config.test.ts`, E2E `RESEARCH_OPERATIONS_CENTER` throughput smoke |
 | 성능/대형 공장 | `npm test`, `npm run build`, `tests/e2e/performance.spec.ts` |
 
 ## 주의
@@ -49,4 +49,5 @@
 - Phaser는 game world 렌더링을 유지하고, Preact는 DOM overlay만 담당합니다.
 - DOM ID를 바꾸면 같은 단계에서 E2E selector도 같이 바꿉니다.
 - 모바일은 일부 legacy compact HUD fallback을 호환 표면으로 유지합니다.
-- 전체 E2E가 로컬 시간 제한에 걸리면 desktop/mobile 분할 명령을 먼저 신뢰하고, 실패한 project만 좁혀 재실행합니다.
+- `npm run test:e2e`는 desktop-only 기본값입니다. 모바일은 개발 재개 시 `npm run test:e2e:mobile`로 명시 실행합니다.
+- 연구 economy sanity는 `src/config.test.ts`가 우선 고정합니다: `DATA_OUTPUT` material/tactical/system 1/1/1, `CORE_BASIC_RESEARCH` 300 material, first tactical entries 100 tactical, first system entries 1440 system과 desktop 10~14분 공급 window.

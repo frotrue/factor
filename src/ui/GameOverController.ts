@@ -1,6 +1,5 @@
 import { CORE_KEY } from '../config';
 import Core from '../buildings/Core';
-import { getBuildingName } from '../i18n';
 import EventBus from '../managers/EventBus';
 import type MainScene from '../scenes/MainScene';
 import { createRunResultSummary } from '../utils/runResultSummary';
@@ -41,9 +40,7 @@ export default class GameOverController {
             coreHp: coreBuilding?.hp ?? 0,
             coreMaxHp: coreBuilding?.maxHp ?? 1,
             totalDataReceived: coreBuilding?.totalDataReceived ?? 0,
-            unlockedResearchCount: this.scene.researchManager?.getUnlockedResearch().length ?? 0,
-            modelStates: this.scene.defenseModelStates,
-            getModelName: getBuildingName
+            unlockedResearchCount: this.scene.researchManager?.getUnlockedResearch().length ?? 0
         });
 
         const display = createGameOverDisplayPayload(summary);
