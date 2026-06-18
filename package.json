@@ -1,5 +1,5 @@
 {
-  "name": "factorio-clone",
+  "name": "gradium",
   "version": "1.0.0",
   "description": "Factorio style 2D game with Phaser 3 and Vite",
   "type": "module",
@@ -7,14 +7,20 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "npm run test:e2e:desktop",
+    "test:e2e:desktop": "playwright test tests/e2e/app-smoke.spec.ts tests/e2e/performance.spec.ts tests/e2e/tutorial-guidance.spec.ts tests/e2e/hud-layout.spec.ts --project=desktop-chromium --workers=1",
+    "test:e2e:mobile": "playwright test tests/e2e/app-smoke.spec.ts --project=mobile-portrait --project=mobile-landscape --workers=1"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "@preact/signals": "^2.9.1",
+    "phaser": "^3.90.0",
+    "preact": "^10.29.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@preact/preset-vite": "^2.10.5",
     "playwright-core": "^1.60.0",
     "typescript": "^6.0.3",
     "vite": "^5.0.0",

@@ -7,9 +7,39 @@ import EventBus from './EventBus';
 import AccessPoint from '../buildings/AccessPoint';
 import BaseBuilding from '../buildings/BaseBuilding';
 import { getAvailableInputSpace, isAPAutoRelaySource, selectAPRelayTarget } from '../utils/apRelay';
+import { getItemColor, VISUAL_THEME } from '../visuals/visualTheme';
+import { getCableDistanceTiles, getTouchedCableTiles, isPointInsideFootprint } from '../utils/cablePath';
 
-const DATA_ITEMS = new Set(['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT']);
+const DATA_ITEMS = new Set([
+    'RAW_DATA',
+    'LABELED_DATA',
+    'WEIGHT_UPDATE',
+    'SILICON',
+    'ENERGY',
+    'MATERIAL_SAMPLE'
+]);
 const DEFAULT_CABLE_TRAVEL_TICKS = 2;
+const WIRELESS_RELAY_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => type !== 'ACCESS_POINT');
+const MAX_ACTIVE_CABLE_PULSES = 120;
+const MAX_ACTIVE_AP_WAVES = 24;
+const MAX_POOLED_CIRCLES = 180;
+const MAX_POOLED_GRAPHICS = 80;
+
+export type CableBlockReason = 'same-endpoint' | 'duplicate' | 'too-far' | 'blocked' | 'missing-endpoint' | 'out-of-bounds';
+
+export interface CableValidationResult {
+    ok: boolean;
+    reason?: CableBlockReason;
+    distanceTiles: number;
+    maxLengthTiles: number;
+    cost: number;
+    blockedTile?: { x: number; y: number };
+}
+
+interface CableConnectOptions {
+    skipValidation?: boolean;
+    costPaid?: number;
+}
 
 export default class CableManager {
     scene: IMainScene;
@@ -18,6 +48,14 @@ export default class CableManager {
     graphics: Phaser.GameObjects.Graphics;
     dirty: boolean;
     apDirty: boolean;
+    _lastThrottleState: boolean;
+    _wirelessBuildingsCache: BaseBuilding[] | null;
+    _wirelessSpatialCache: Map<string, BaseBuilding[]>;
+    _wirelessCacheDirty: boolean;
+    activeCablePulses: number;
+    activeAPWaves: number;
+    private circlePool: Phaser.GameObjects.Arc[];
+    private graphicsPool: Phaser.GameObjects.Graphics[];
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -27,13 +65,27 @@ export default class CableManager {
         this.graphics.setDepth(15);
         this.dirty = true;
         this.apDirty = true;
+        this._lastThrottleState = false;
+        this._wirelessBuildingsCache = null;
+        this._wirelessSpatialCache = new Map();
+        this._wirelessCacheDirty = true;
+        this.activeCablePulses = 0;
+        this.activeAPWaves = 0;
+        this.circlePool = [];
+        this.graphicsPool = [];
 
         EventBus.on('BUILDING_REMOVED', ({ key }: { key: string }) => {
             this.handleBuildingRemoved(key);
+            this._wirelessCacheDirty = true;
         }, 'CableManager');
 
         EventBus.on('BUILDING_PLACED', () => {
             this.apDirty = true;
+            this._wirelessCacheDirty = true;
+        }, 'CableManager');
+
+        EventBus.on('BUILDING_DESTROYED', () => {
+            this._wirelessCacheDirty = true;
         }, 'CableManager');
 
         EventBus.on('RESEARCH_UNLOCKED', () => {
@@ -77,11 +129,88 @@ export default class CableManager {
         return `cable_${sorted[0]}_${sorted[1]}`;
     }
 
-    connect(fromKey: string, toKey: string, type: 'BASIC' | 'FIBER' = 'BASIC'): boolean {
+    getCableLengthBonus(): number {
+        return this.scene.researchManager?.getEffectValue('CABLE_LENGTH_BONUS', 0) ?? 0;
+    }
+
+    getCableMaxLength(type: 'BASIC' | 'FIBER'): number {
+        return CONFIG.CABLES[type].MAX_LENGTH_TILES + this.getCableLengthBonus();
+    }
+
+    getCableCost(fromKey: string, toKey: string, type: 'BASIC' | 'FIBER'): number {
+        const from = this.getBuildingCenter(fromKey);
+        const to = this.getBuildingCenter(toKey);
+        return getCableDistanceTiles(from, to) * (CONFIG.CABLES[type].COST_PER_TILE || 0);
+    }
+
+    canConnect(fromKey: string, toKey: string, type: 'BASIC' | 'FIBER' = 'BASIC', ignoreDuplicate = false): CableValidationResult {
+        const config = CONFIG.CABLES[type];
+        const maxLengthTiles = this.getCableMaxLength(type);
+        const fallback: CableValidationResult = {
+            ok: false,
+            distanceTiles: 0,
+            maxLengthTiles,
+            cost: 0
+        };
+
+        if (fromKey === toKey) return { ...fallback, reason: 'same-endpoint' };
+
+        const buildingA = this.scene.buildingManager.get(fromKey);
+        const buildingB = this.scene.buildingManager.get(toKey);
+        if (!buildingA || !buildingB) return { ...fallback, reason: 'missing-endpoint' };
+
+        const id = this.makeCableId(fromKey, toKey);
+        const centerA = this.getBuildingCenter(fromKey);
+        const centerB = this.getBuildingCenter(toKey);
+        const distanceTiles = getCableDistanceTiles(centerA, centerB);
+        const cost = distanceTiles * (config.COST_PER_TILE || 0);
+        const resultBase = { distanceTiles, maxLengthTiles, cost };
+
+        if (!ignoreDuplicate && this.cables.has(id)) {
+            return { ok: false, reason: 'duplicate', ...resultBase };
+        }
+        if (distanceTiles > maxLengthTiles) {
+            return { ok: false, reason: 'too-far', ...resultBase };
+        }
+        if (!this.scene.mapManager.isAreaWithinBuildBounds(buildingA.x, buildingA.y, CONFIG.BUILDINGS[buildingA.type]?.WIDTH || 1, CONFIG.BUILDINGS[buildingA.type]?.HEIGHT || 1)
+            || !this.scene.mapManager.isAreaWithinBuildBounds(buildingB.x, buildingB.y, CONFIG.BUILDINGS[buildingB.type]?.WIDTH || 1, CONFIG.BUILDINGS[buildingB.type]?.HEIGHT || 1)) {
+            return { ok: false, reason: 'out-of-bounds', ...resultBase };
+        }
+
+        const blockedTile = this.findCableBlockedTile(fromKey, toKey);
+        if (blockedTile) {
+            return { ok: false, reason: 'blocked', blockedTile, ...resultBase };
+        }
+
+        return { ok: true, ...resultBase };
+    }
+
+    findCableBlockedTile(fromKey: string, toKey: string): { x: number; y: number } | undefined {
+        const buildingA = this.scene.buildingManager.get(fromKey);
+        const buildingB = this.scene.buildingManager.get(toKey);
+        if (!buildingA || !buildingB) return undefined;
+
+        const centerA = this.getBuildingCenter(fromKey);
+        const centerB = this.getBuildingCenter(toKey);
+        const tiles = getTouchedCableTiles(centerA, centerB);
+        const configA = CONFIG.BUILDINGS[buildingA.type];
+        const configB = CONFIG.BUILDINGS[buildingB.type];
+
+        return tiles.find(tile => {
+            if (isPointInsideFootprint(tile, buildingA, configA?.WIDTH || 1, configA?.HEIGHT || 1)) return false;
+            if (isPointInsideFootprint(tile, buildingB, configB?.WIDTH || 1, configB?.HEIGHT || 1)) return false;
+            return this.scene.mapManager.getTerrainAt(tile.x, tile.y) === 'BLOCKER';
+        });
+    }
+
+    connect(fromKey: string, toKey: string, type: 'BASIC' | 'FIBER' = 'BASIC', options: CableConnectOptions = {}): boolean {
         if (fromKey === toKey) return false;
 
         const id = this.makeCableId(fromKey, toKey);
         if (this.cables.has(id)) return false;
+
+        const validation = this.canConnect(fromKey, toKey, type);
+        if (!options.skipValidation && !validation.ok) return false;
 
         const config = CONFIG.CABLES[type];
         const bandwidthBonus = this.scene.researchManager?.getEffectValue('CABLE_BANDWIDTH_BONUS', 0) ?? 0;
@@ -91,7 +220,8 @@ export default class CableManager {
             toKey,
             bandwidth: config.BANDWIDTH + bandwidthBonus,
             queue: [],
-            cableType: type
+            cableType: type,
+            costPaid: options.costPaid ?? validation.cost
         });
         this.dirty = true;
         this.apDirty = true;
@@ -99,7 +229,17 @@ export default class CableManager {
         return true;
     }
 
-    disconnect(id: string): void {
+    disconnect(id: string, refund: boolean = false): void {
+        const cable = this.cables.get(id);
+        if (refund && cable?.costPaid) {
+            const refundAmount = Math.floor(cable.costPaid * 0.5);
+            if (refundAmount > 0) {
+                this.scene.inventoryManager.addResource('SILICON', refundAmount);
+                EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', {
+                    message: `System: Cable removed. Refunded ${refundAmount} Silicon.`
+                });
+            }
+        }
         this.cables.delete(id);
         this.dirty = true;
     }
@@ -129,6 +269,7 @@ export default class CableManager {
         }
         toRemove.forEach(id => this.disconnect(id));
         this.apDirty = true;
+        this._wirelessCacheDirty = true;
     }
 
     getConnectionsFrom(key: string): CableConnection[] {
@@ -141,6 +282,14 @@ export default class CableManager {
 
     isDataItem(itemType: string | undefined): boolean {
         return Boolean(itemType && DATA_ITEMS.has(itemType));
+    }
+
+    canCableEndpointSend(building: BaseBuilding): boolean {
+        return building.type !== 'REPEATER' || building.hasPower;
+    }
+
+    canCableEndpointReceive(building: BaseBuilding): boolean {
+        return building.type !== 'REPEATER' || building.hasPower;
     }
 
     getCableTravelTicks(): number {
@@ -167,6 +316,7 @@ export default class CableManager {
 
     processCableArrivals(cable: CableConnection, buildingA: BaseBuilding, buildingB: BaseBuilding): void {
         cable.queue = cable.queue.map(packet => this.normalizeQueuedPacket(packet, cable.flowDirection || 'FORWARD'));
+        const effectiveBandwidth = this.getEffectiveBandwidth(cable.bandwidth);
 
         for (const packet of cable.queue) {
             if (packet.ticksRemaining > 0) {
@@ -183,7 +333,22 @@ export default class CableManager {
             }
 
             const dest = packet.flowDirection === 'FORWARD' ? buildingB : buildingA;
-            if (delivered < cable.bandwidth && this.isDataItem(packet.itemType) && dest.canAcceptItem(packet.itemType)) {
+            if (dest.type === 'REPEATER') {
+                const repeaterKey = `${dest.x},${dest.y}`;
+                if (dest.hasPower && this.relayPacketFromRepeater(repeaterKey, cable.id, packet)) {
+                    delivered++;
+                } else {
+                    pending.push({ ...packet, ticksRemaining: 0 });
+                }
+                continue;
+            }
+
+            if (
+                delivered < effectiveBandwidth
+                && this.isDataItem(packet.itemType)
+                && this.canCableEndpointReceive(dest)
+                && dest.canAcceptItem(packet.itemType)
+            ) {
                 dest.acceptItem(packet.itemType);
                 delivered++;
             } else {
@@ -191,6 +356,31 @@ export default class CableManager {
             }
         }
         cable.queue = pending;
+    }
+
+    private relayPacketFromRepeater(repeaterKey: string, incomingCableId: string, packet: CablePacket): boolean {
+        for (const cable of this.cables.values()) {
+            if (cable.id === incomingCableId) continue;
+            if (cable.fromKey !== repeaterKey && cable.toKey !== repeaterKey) continue;
+
+            const nextKey = cable.fromKey === repeaterKey ? cable.toKey : cable.fromKey;
+            const nextBuilding = this.scene.buildingManager.get(nextKey);
+            if (!nextBuilding?.hasPower) continue;
+            if (nextBuilding.type !== 'REPEATER' && !nextBuilding.canAcceptItem(packet.itemType)) continue;
+
+            const maxQueue = CONFIG.CABLES[cable.cableType]?.MAX_QUEUE || 10;
+            if (cable.queue.length >= maxQueue) continue;
+
+            cable.flowDirection = cable.fromKey === repeaterKey ? 'FORWARD' : 'BACKWARD';
+            cable.queue.push({
+                itemType: packet.itemType,
+                flowDirection: cable.flowDirection,
+                ticksRemaining: this.getCableTravelTicks()
+            });
+            this.createPulseAnimation(repeaterKey, nextKey, packet.itemType);
+            return true;
+        }
+        return false;
     }
 
     updateAPConnections(_buildingManager: BuildingManager): void {
@@ -206,7 +396,7 @@ export default class CableManager {
             const buildingB = buildingManager.get(cable.toKey);
 
             if (!buildingA || !buildingB) continue;
-            if (!buildingA.hasPower || !buildingB.hasPower) continue;
+            if (!this.canCableEndpointSend(buildingA) && !this.canCableEndpointSend(buildingB)) continue;
 
             this.processCableArrivals(cable, buildingA, buildingB);
 
@@ -216,9 +406,23 @@ export default class CableManager {
                 const aOut = buildingA.getOutputSource();
                 const bOut = buildingB.getOutputSource();
 
-                if (this.isDataItem(aOut[0]) && buildingB.canAcceptItem(aOut[0])) {
+                if (
+                    this.canCableEndpointSend(buildingA)
+                    && this.isDataItem(aOut[0])
+                    && (
+                        (buildingB.type === 'REPEATER' && buildingB.hasPower)
+                        || (this.canCableEndpointReceive(buildingB) && buildingB.canAcceptItem(aOut[0]))
+                    )
+                ) {
                     flowDir = 'FORWARD';
-                } else if (this.isDataItem(bOut[0]) && buildingA.canAcceptItem(bOut[0])) {
+                } else if (
+                    this.canCableEndpointSend(buildingB)
+                    && this.isDataItem(bOut[0])
+                    && (
+                        (buildingA.type === 'REPEATER' && buildingA.hasPower)
+                        || (this.canCableEndpointReceive(buildingA) && buildingA.canAcceptItem(bOut[0]))
+                    )
+                ) {
                     flowDir = 'BACKWARD';
                 }
                 cable.flowDirection = flowDir;
@@ -226,14 +430,19 @@ export default class CableManager {
 
             const currentSource = flowDir === 'FORWARD' ? buildingA : buildingB;
             const currentDest = flowDir === 'FORWARD' ? buildingB : buildingA;
+            if (!this.canCableEndpointSend(currentSource)) continue;
             const sourceOutput = currentSource.getOutputSource();
             const maxQueue = CONFIG.CABLES[cable.cableType]?.MAX_QUEUE || 10;
+            const effectiveBandwidth = this.getEffectiveBandwidth(cable.bandwidth);
             let launched = 0;
 
-            while (sourceOutput.length > 0 && cable.queue.length < maxQueue && launched < cable.bandwidth) {
+            while (sourceOutput.length > 0 && cable.queue.length < maxQueue && launched < effectiveBandwidth) {
                 const item = sourceOutput[0];
                 if (!this.isDataItem(item)) break;
-                if (currentDest.canAcceptItem(item) || cable.queue.length > 0) {
+                const destinationReady = currentDest.type === 'REPEATER'
+                    ? currentDest.hasPower
+                    : this.canCableEndpointReceive(currentDest);
+                if (destinationReady && (currentDest.type === 'REPEATER' || currentDest.canAcceptItem(item) || cable.queue.length > 0)) {
                     cable.queue.push({
                         itemType: currentSource.popOutput()!,
                         flowDirection: flowDir,
@@ -253,15 +462,12 @@ export default class CableManager {
     }
 
     transferWirelessData(buildingManager: BuildingManager): void {
-        const accessPoints: AccessPoint[] = [];
-        const buildings: BaseBuilding[] = [];
+        if (this._wirelessCacheDirty || !this._wirelessBuildingsCache) {
+            this.rebuildWirelessCache(buildingManager);
+        }
 
-        buildingManager.forEach(building => {
-            buildings.push(building);
-            if (building instanceof AccessPoint && building.hasPower) {
-                accessPoints.push(building);
-            }
-        });
+        const accessPoints = buildingManager.getByType('ACCESS_POINT')
+            .filter((building): building is AccessPoint => building instanceof AccessPoint && building.hasPower);
 
         if (accessPoints.length === 0) return;
 
@@ -270,21 +476,16 @@ export default class CableManager {
         for (const ap of accessPoints) {
             ap.relaysThisTick = 0;
             const apRange = ap.range + rangeBonus;
-            const inRange = buildings.filter(building =>
-                building !== ap
-                && !(building instanceof AccessPoint)
-                && building.hasPower
-                && Math.abs(building.x - ap.x) / CONFIG.GRID_SIZE <= apRange
-                && Math.abs(building.y - ap.y) / CONFIG.GRID_SIZE <= apRange
-            );
-            const senders = inRange.filter(building => isAPAutoRelaySource(building, itemType => this.isDataItem(itemType)));
+            const effectiveBandwidth = this.getEffectiveBandwidth(ap.bandwidth, ap);
             let relayed = 0;
+            const inRange = this.getWirelessBuildingsInRange(ap, apRange);
 
-            for (const source of senders) {
-                if (relayed >= ap.bandwidth) break;
+            for (const source of inRange) {
+                if (relayed >= effectiveBandwidth) break;
+                if (!isAPAutoRelaySource(source, itemType => this.isDataItem(itemType))) continue;
 
                 const item = source.outputBuffer[0];
-                const target = selectAPRelayTarget(inRange, source, item);
+                const target = selectAPRelayTarget(inRange, source, item) as BaseBuilding | undefined;
                 if (!target) continue;
 
                 source.outputBuffer.shift();
@@ -293,8 +494,66 @@ export default class CableManager {
                 ap.relaysThisTick = relayed;
                 this.createPulseAnimation(`${source.x},${source.y}`, `${ap.x},${ap.y}`, item);
                 this.createPulseAnimation(`${ap.x},${ap.y}`, `${target.x},${target.y}`, item);
+
+                // Spawn expanding wireless sonar radar wave
+                this.createAPWirelessWave(ap.x + CONFIG.GRID_SIZE, ap.y + CONFIG.GRID_SIZE, item);
             }
         }
+    }
+
+    private getEffectiveBandwidth(baseBandwidth: number, ...buildings: BaseBuilding[]): number {
+        const efficiency = buildings.reduce(
+            (min, building) => Math.min(min, building.getPowerEfficiency()),
+            1
+        );
+        if (efficiency <= 0 || baseBandwidth <= 0) return 0;
+        return Math.max(1, Math.floor(baseBandwidth * efficiency));
+    }
+
+    private rebuildWirelessCache(buildingManager: BuildingManager): void {
+        const buildings = buildingManager.getByTypes(WIRELESS_RELAY_TYPES);
+        const spatial = new Map<string, BaseBuilding[]>();
+
+        for (const building of buildings) {
+            const bucketKey = this.getWirelessBucketKey(building.x, building.y);
+            const bucket = spatial.get(bucketKey);
+            if (bucket) {
+                bucket.push(building);
+            } else {
+                spatial.set(bucketKey, [building]);
+            }
+        }
+
+        this._wirelessBuildingsCache = buildings;
+        this._wirelessSpatialCache = spatial;
+        this._wirelessCacheDirty = false;
+    }
+
+    private getWirelessBuildingsInRange(ap: AccessPoint, apRange: number): BaseBuilding[] {
+        const result: BaseBuilding[] = [];
+        const apTileX = Math.floor(ap.x / CONFIG.GRID_SIZE);
+        const apTileY = Math.floor(ap.y / CONFIG.GRID_SIZE);
+        const tileRadius = Math.ceil(apRange);
+
+        for (let dx = -tileRadius; dx <= tileRadius; dx++) {
+            for (let dy = -tileRadius; dy <= tileRadius; dy++) {
+                const bucket = this._wirelessSpatialCache.get(`${apTileX + dx},${apTileY + dy}`);
+                if (!bucket) continue;
+
+                for (const building of bucket) {
+                    if (!building.hasPower) continue;
+                    if (Math.abs(building.x - ap.x) / CONFIG.GRID_SIZE > apRange) continue;
+                    if (Math.abs(building.y - ap.y) / CONFIG.GRID_SIZE > apRange) continue;
+                    result.push(building);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private getWirelessBucketKey(x: number, y: number): string {
+        return `${Math.floor(x / CONFIG.GRID_SIZE)},${Math.floor(y / CONFIG.GRID_SIZE)}`;
     }
 
     getAvailableInputSpace(building: BaseBuilding): number {
@@ -310,6 +569,12 @@ export default class CableManager {
     }
 
     createPulseAnimation(fromKey: string, toKey: string, itemType: string): void {
+        if (this.activeCablePulses >= MAX_ACTIVE_CABLE_PULSES) {
+            this.scene.performanceStats?.increment('cablePulseSkipped');
+            return;
+        }
+        this.activeCablePulses++;
+
         const center1 = this.getBuildingCenter(fromKey);
         const center2 = this.getBuildingCenter(toKey);
         const cx1 = center1.x;
@@ -317,13 +582,24 @@ export default class CableManager {
         const cx2 = center2.x;
         const cy2 = center2.y;
 
-        const itemConfig = CONFIG.ITEMS[itemType] || CONFIG.ITEMS.RAW_DATA;
+        const color = getItemColor(itemType);
+        let released = false;
+        const releasePulseSlot = () => {
+            if (released) return;
+            released = true;
+            this.activeCablePulses = Math.max(0, this.activeCablePulses - 1);
+        };
 
-        const pulse = this.scene.add.circle(cx1, cy1, 4, itemConfig.COLOR);
+        const pulse = this.acquireCircle(cx1, cy1, 4, color, 1);
         pulse.setDepth(16);
-        const trail = this.scene.add.graphics();
+        pulse.setStrokeStyle(1, 0xffffff, 0.55);
+        const trail = this.acquireGraphics();
         trail.setDepth(15);
-        trail.lineStyle(1, itemConfig.COLOR, 0.28);
+        trail.setAlpha(1);
+        trail.clear();
+        trail.lineStyle(5, color, 0.1);
+        trail.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+        trail.lineStyle(1, color, 0.45);
         trail.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
 
         this.scene.tweens.add({
@@ -333,14 +609,36 @@ export default class CableManager {
             duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
             ease: 'Linear',
             onComplete: () => {
-                pulse.destroy();
+                this.releaseCircle(pulse);
             }
         });
+
+        // Multi-delayed trailing circles to simulate packet motion trail (Bloom-only)
+        if (this.scene.bloomEnabled) {
+            for (let i = 1; i <= 2; i++) {
+                const delay = i * 40;
+                const trailCircle = this.acquireCircle(cx1, cy1, 4 - i, color, 0.5 / i);
+                trailCircle.setDepth(15);
+                this.scene.tweens.add({
+                    targets: trailCircle,
+                    x: cx2,
+                    y: cy2,
+                    duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
+                    delay: delay,
+                    ease: 'Linear',
+                    onComplete: () => this.releaseCircle(trailCircle)
+                });
+            }
+        }
+
         this.scene.tweens.add({
             targets: trail,
             alpha: 0,
             duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS,
-            onComplete: () => trail.destroy()
+            onComplete: () => {
+                this.releaseGraphics(trail);
+                releasePulseSlot();
+            }
         });
     }
 
@@ -350,6 +648,9 @@ export default class CableManager {
 
         this.graphics.clear();
 
+        const bloomEnabled = this.scene.bloomEnabled;
+        const isFlashActive = Math.floor(this.scene.time.now / 150) % 2 === 0;
+
         for (const cable of this.cables.values()) {
             const center1 = this.getBuildingCenter(cable.fromKey);
             const center2 = this.getBuildingCenter(cable.toKey);
@@ -358,25 +659,146 @@ export default class CableManager {
             const cx2 = center2.x;
             const cy2 = center2.y;
 
-            const config = CONFIG.CABLES[cable.cableType];
-            const color = config ? config.COLOR : 0xaaaaaa;
-            const maxQueue = config ? config.MAX_QUEUE : 10;
-            const isThrottling = cable.queue.length > maxQueue * 0.5;
+            const color = cable.cableType === 'FIBER' ? VISUAL_THEME.cables.fiber : VISUAL_THEME.cables.basic;
+            const isThrottling = this.checkIsThrottling(cable);
 
-            this.graphics.lineStyle(isThrottling ? 4 : 2, isThrottling ? 0xfacc15 : color, 0.8);
+            // Fading glitch alpha logic for throttled cables
+            let throttleAlpha = isFlashActive ? 0.95 : 0.22;
+            let standardAlpha = 0.72;
+
+            if (bloomEnabled) {
+                // Glow Outer Line (Bloom effect)
+                this.graphics.lineStyle(
+                    isThrottling ? 8 : 5,
+                    isThrottling ? VISUAL_THEME.cables.throttled : color,
+                    isThrottling ? throttleAlpha * 0.2 : 0.12
+                );
+                this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+            }
+
+            // Core Line
+            this.graphics.lineStyle(
+                isThrottling ? 3 : 2,
+                isThrottling ? VISUAL_THEME.cables.throttled : color,
+                isThrottling ? throttleAlpha : (bloomEnabled ? standardAlpha : 1.0)
+            );
             this.graphics.strokeLineShape(new Phaser.Geom.Line(cx1, cy1, cx2, cy2));
+
+            // Endpoint Nodes
+            this.graphics.fillStyle(color, isThrottling ? throttleAlpha : 0.55);
+            this.graphics.fillCircle(cx1, cy1, 3);
+            this.graphics.fillCircle(cx2, cy2, 3);
         }
     }
 
     markDirtyIfThrottlingChanged(): void {
+        let anyThrottling = false;
         for (const cable of this.cables.values()) {
-            const config = CONFIG.CABLES[cable.cableType];
-            const maxQueue = config ? config.MAX_QUEUE : 10;
-            const isThrottling = cable.queue.length > maxQueue * 0.5;
-            if (isThrottling) {
-                this.dirty = true;
-                return;
+            if (this.checkIsThrottling(cable)) {
+                anyThrottling = true;
+                break;
             }
+        }
+        if (anyThrottling !== this._lastThrottleState) {
+            this._lastThrottleState = anyThrottling;
+            this.dirty = true;
+        }
+    }
+
+    checkIsThrottling(cable: CableConnection): boolean {
+        const config = CONFIG.CABLES[cable.cableType];
+        const maxQueue = config ? config.MAX_QUEUE : 10;
+        if (cable.queue.length <= maxQueue * 0.5) return false;
+
+        const buildingA = this.scene.buildingManager.get(cable.fromKey);
+        const buildingB = this.scene.buildingManager.get(cable.toKey);
+        if (!buildingA || !buildingB) return false;
+
+        const flowDir = cable.flowDirection || 'FORWARD';
+        const dest = flowDir === 'FORWARD' ? buildingB : buildingA;
+
+        if (dest && cable.queue.length > 0) {
+            const nextItem = cable.queue[0].itemType;
+            if (!dest.canAcceptItem(nextItem)) {
+                return false; // Receiver is full, not a cable bottleneck, so don't mark throttled (red)
+            }
+        }
+
+        return true;
+    }
+
+    createAPWirelessWave(x: number, y: number, itemType: string): void {
+        if (!this.scene.bloomEnabled) return;
+        if (this.activeAPWaves >= MAX_ACTIVE_AP_WAVES) {
+            this.scene.performanceStats?.increment('apWaveSkipped');
+            return;
+        }
+        this.activeAPWaves++;
+
+        const color = getItemColor(itemType);
+        const range = CONFIG.ACCESS_POINT.RANGE || 5;
+        const ring = this.acquireCircle(x, y, 4, color, 1);
+        ring.setDepth(14);
+        ring.setStrokeStyle(2, color, 0.72);
+
+        this.scene.tweens.add({
+            targets: ring,
+            radius: CONFIG.GRID_SIZE * range,
+            alpha: 0,
+            duration: CONFIG.TIMING.DATA_PULSE_DURATION_MS * 1.5,
+            ease: 'Quad.easeOut',
+            onComplete: () => {
+                this.releaseCircle(ring);
+                this.activeAPWaves = Math.max(0, this.activeAPWaves - 1);
+            }
+        });
+    }
+
+    private acquireCircle(x: number, y: number, radius: number, color: number, alpha = 1): Phaser.GameObjects.Arc {
+        const circle = this.circlePool.pop() || this.scene.add.circle(x, y, radius, color, alpha);
+        circle.setActive(true);
+        circle.setVisible(true);
+        circle.setPosition(x, y);
+        circle.setRadius(radius);
+        circle.setFillStyle(color, alpha);
+        circle.setStrokeStyle();
+        circle.setAlpha(1);
+        circle.setScale(1, 1);
+        return circle;
+    }
+
+    private releaseCircle(circle: Phaser.GameObjects.Arc): void {
+        this.scene.tweens.killTweensOf(circle);
+        circle.setVisible(false);
+        circle.setActive(false);
+        circle.setAlpha(1);
+        circle.setScale(1, 1);
+        if (this.circlePool.length < MAX_POOLED_CIRCLES) {
+            this.circlePool.push(circle);
+        } else {
+            circle.destroy();
+        }
+    }
+
+    private acquireGraphics(): Phaser.GameObjects.Graphics {
+        const graphics = this.graphicsPool.pop() || this.scene.add.graphics();
+        graphics.setActive(true);
+        graphics.setVisible(true);
+        graphics.setAlpha(1);
+        graphics.clear();
+        return graphics;
+    }
+
+    private releaseGraphics(graphics: Phaser.GameObjects.Graphics): void {
+        this.scene.tweens.killTweensOf(graphics);
+        graphics.clear();
+        graphics.setVisible(false);
+        graphics.setActive(false);
+        graphics.setAlpha(1);
+        if (this.graphicsPool.length < MAX_POOLED_GRAPHICS) {
+            this.graphicsPool.push(graphics);
+        } else {
+            graphics.destroy();
         }
     }
 }

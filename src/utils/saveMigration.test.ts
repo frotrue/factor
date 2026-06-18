@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../config';
+import { getRestoredEnemyHp } from './enemyRestore';
 import { CURRENT_SAVE_VERSION, migrateSaveData } from './saveMigration';
 
 describe('migrateSaveData', () => {
@@ -18,6 +19,9 @@ describe('migrateSaveData', () => {
         expect(migrated.research).toEqual([]);
         expect(migrated.settings.difficulty).toBe('HARD');
         expect(migrated.settings.language).toBe('ko');
+        expect(migrated.settings.mapType).toBe('random');
+        expect(migrated.settings.mapPresetId).toBe('standard');
+        expect(migrated.settings.mapSeed).toBeUndefined();
     });
 
     it('normalizes building buffers and rotations', () => {
@@ -52,7 +56,10 @@ describe('migrateSaveData', () => {
                 showPowerGrid: true,
                 difficulty: 'EASY',
                 language: 'en',
-                muted: true
+                muted: true,
+                mapType: 'tutorial',
+                mapPresetId: 'tutorial',
+                mapSeed: 98765
             }
         });
 
@@ -64,5 +71,16 @@ describe('migrateSaveData', () => {
         expect(migrated.settings.language).toBe('en');
         expect(migrated.settings.masterVolume).toBe(0.6);
         expect(migrated.settings.muted).toBe(true);
+        expect(migrated.settings.mapType).toBe('tutorial');
+        expect(migrated.settings.mapPresetId).toBe('tutorial');
+        expect(migrated.settings.mapSeed).toBe(98765);
     });
+
+    it('restores enemy max HP with effective wave and difficulty scaling', () => {
+        const restored = getRestoredEnemyHp('NOISE', 9999, 1.5);
+
+        expect(restored.maxHp).toBe(CONFIG.ENEMIES.NOISE.BASE_HP * 1.5);
+        expect(restored.hp).toBe(restored.maxHp);
+    });
+
 });

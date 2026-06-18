@@ -1,26 +1,57 @@
+import Phaser from 'phaser';
+import { CONFIG } from '../config';
 import type { IMainScene } from '../types';
 import {
     applyTutorialProgress,
     completeTutorialStep,
     createTutorialSteps,
     getTutorialProgressIndex,
-    TutorialStep,
     TutorialStepId
 } from '../utils/tutorialFlow';
+import type { TutorialAreaHint, TutorialGhostHint, TutorialStep } from '../utils/tutorialFlow';
 import { t } from '../i18n';
 import EventBus from './EventBus';
+import { getItemColor } from '../visuals/visualTheme';
+import {
+    bindLegacyTutorialSkip,
+    ensureLegacyTutorialPanel,
+    hideLegacyTutorialPanel,
+    renderLegacyTutorialPanel,
+    showLegacyTutorialPanel,
+    startLegacyTutorialTypewriter,
+    updateLegacyTutorialProgress
+} from '../ui/legacyTutorialPanel';
+import {
+    createTutorialPanelDisplayPayload,
+    type TutorialPanelDisplayPayload
+} from '../ui/tutorialPanelDisplay';
 
-const STORAGE_COMPLETED = 'neural_factory_tutorial_completed';
-const STORAGE_STEP = 'neural_factory_tutorial_step';
+const STORAGE_COMPLETED = 'gradium_tutorial_completed';
+const STORAGE_STEP = 'gradium_tutorial_step';
+
+export interface TutorialBuildGuidance {
+    activeStepId: string;
+    allowedBuildings: string[] | null;
+    recommendedTool?: string;
+}
 
 export default class TutorialManager {
     private scene: IMainScene;
     private panel: HTMLElement;
     private steps: TutorialStep[];
     private completed = false;
+    private typingInterval?: number;
+    private lastRenderedStepId: string | null = null;
+    private activeStepStartedAt = 0;
+    private cableConnectedForStep = false;
+    private waveEndedForStep = false;
+    private completionDetailKey: 'tutorial.completeDetail' | 'tutorial.skipDetail' = 'tutorial.completeDetail';
+    private guideGraphics: Phaser.GameObjects.Graphics;
+    private languageChangeHandler = () => this.refreshLanguage();
 
     constructor(scene: IMainScene) {
         this.scene = scene;
+        this.scene.tutorialManager = this;
         this.panel = this.ensurePanel();
         this.steps = createTutorialSteps();
 
@@ -28,9 +59,16 @@ export default class TutorialManager {
         const savedStep = Number(localStorage.getItem(STORAGE_STEP) ?? 0);
         this.steps = applyTutorialProgress(this.steps, this.completed, savedStep);
 
+        this.guideGraphics = this.scene.add.graphics();
+        this.guideGraphics.setDepth(5);
+
         this.bindEvents();
-        this.checkResourceStep();
         this.render();
+
+        this.scene.events.on('update', this.checkActiveStepCompletion, this);
+        this.scene.events.on('update', this.drawGuideHighlights, this);
+        this.scene.events.on('shutdown', this.cleanup, this);
+        this.scene.events.on('destroy', this.cleanup, this);
     }
 
     isCompleted(): boolean {
@@ -41,20 +79,47 @@ export default class TutorialManager {
         return getTutorialProgressIndex(this.steps);
     }
 
+    getAllowedBuildings(): string[] | null {
+        if (this.completed) return null;
+        const activeStep = this.steps.find(step => !step.completed);
+        return activeStep?.allowedBuildings ?? null;
+    }
+
+    getBuildGuidance(): TutorialBuildGuidance | null {
+        if (this.completed) return null;
+        const activeStep = this.getActiveStep();
+        if (!activeStep) return null;
+        return {
+            activeStepId: activeStep.id,
+            allowedBuildings: activeStep.allowedBuildings ?? null,
+            recommendedTool: activeStep.recommendedTool
+        };
+    }
+
     reset(): void {
         this.completed = false;
+        this.lastRenderedStepId = null;
+        this.activeStepStartedAt = 0;
+        this.cableConnectedForStep = false;
+        this.waveEndedForStep = false;
+        this.completionDetailKey = 'tutorial.completeDetail';
+        if (this.typingInterval) clearInterval(this.typingInterval);
         this.steps = createTutorialSteps();
         localStorage.setItem(STORAGE_COMPLETED, 'false');
         localStorage.setItem(STORAGE_STEP, '0');
-        this.checkResourceStep();
         this.render();
     }
 
-    completeAll(): void {
+    completeAll(options: { skipped?: boolean } = {}): void {
         this.completed = true;
+        this.completionDetailKey = options.skipped ? 'tutorial.skipDetail' : 'tutorial.completeDetail';
+        if (this.typingInterval) clearInterval(this.typingInterval);
         this.steps = applyTutorialProgress(this.steps, true, this.steps.length);
         localStorage.setItem(STORAGE_COMPLETED, 'true');
         localStorage.setItem(STORAGE_STEP, String(this.steps.length));
+
+        // Sync build controls when tutorial is skipped/completed.
+        this.requestBuildConsoleRefresh();
         this.render();
     }
 
@@ -68,38 +133,114 @@ export default class TutorialManager {
     }
 
     private bindEvents(): void {
-        EventBus.on('BUILDING_PLACED', ({ type }) => {
-            if (['POWER_NODE', 'POWER_PLANT', 'SOLAR_PANEL'].includes(type)) this.completeStep('POWER');
-            if (type === 'DATA_DOWNLOADER') this.completeStep('DATA_SOURCE');
-            if (['PROCESSOR', 'WEIGHT_TRAINER', 'NEURAL_TRAINER', 'MODEL_TRAINING_LAB'].includes(type)) {
-                this.completeStep('PROCESSING');
+        EventBus.on('BUILDING_PLACED', ({ type }: { key: string; building: any; type: string }) => {
+            if (this.completed) return;
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'place-building' && activeStep.completion.buildingType === type) {
+                this.completeStep(activeStep.id);
             }
-            if (['CONVEYOR', 'FAST_LINK', 'ACCESS_POINT'].includes(type)) this.completeStep('CONNECTION');
-            if (['CLASSIFIER', 'FILTER', 'FIREWALL'].includes(type)) this.completeStep('DEFENSE');
         }, 'TutorialManager');
-        EventBus.on('CABLE_CONNECTED', () => this.completeStep('CONNECTION'), 'TutorialManager');
-        EventBus.on('WAVE_STARTED', () => this.completeStep('WAVE'), 'TutorialManager');
-        EventBus.on('RESEARCH_OPENED', () => this.completeStep('RESEARCH'), 'TutorialManager');
-        EventBus.on('RESEARCH_UNLOCKED', () => this.completeStep('RESEARCH'), 'TutorialManager');
+
+        EventBus.on('CABLE_START_SELECTED', ({ fromKey, cableType }) => {
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'cable-start' && this.matchesCableStart(activeStep, fromKey, cableType)) {
+                this.completeStep(activeStep.id);
+            }
+        }, 'TutorialManager');
+
+        EventBus.on('CABLE_CONNECTED', ({ fromKey, toKey, cableType }) => {
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'connect-cable' && this.matchesCableConnection(activeStep, fromKey, toKey, cableType)) {
+                this.cableConnectedForStep = true;
+                this.completeStep(activeStep.id);
+            }
+        }, 'TutorialManager');
+
+        EventBus.on('WAVE_ENDED', () => {
+            const activeStep = this.getActiveStep();
+            if (activeStep?.completion.kind === 'wave-ended') {
+                this.waveEndedForStep = true;
+                this.completeStep(activeStep.id);
+            }
+        }, 'TutorialManager');
+
         EventBus.on('TUTORIAL_RESET', () => this.reset(), 'TutorialManager');
-        window.addEventListener('languagechange', () => this.refreshLanguage());
+        EventBus.on('TUTORIAL_SKIP_REQUESTED', () => this.completeAll({ skipped: true }), 'TutorialManager');
+        EventBus.on('TUTORIAL_CAMPAIGN_START_REQUESTED', () => this.transitionToCampaign(), 'TutorialManager');
+        window.addEventListener('languagechange', this.languageChangeHandler);
+    }
+
+    private matchesCableStart(activeStep: TutorialStep, fromKey: string, cableType: string): boolean {
+        const completion = activeStep.completion;
+        if (completion.kind !== 'cable-start') return false;
+        if (completion.fromKey !== fromKey) return false;
+        return !completion.cableType || completion.cableType === cableType;
+    }
+
+    private matchesCableConnection(activeStep: TutorialStep, fromKey: string, toKey: string, cableType: string): boolean {
+        const completion = activeStep.completion;
+        if (completion.kind !== 'connect-cable') return false;
+        if (completion.cableType && completion.cableType !== cableType) return false;
+        if (completion.fromKey && completion.toKey) {
+            const forward = completion.fromKey === fromKey && completion.toKey === toKey;
+            const reverse = completion.fromKey === toKey && completion.toKey === fromKey;
+            return forward || reverse;
+        }
+        return true;
     }
 
     private ensurePanel(): HTMLElement {
-        let panel = document.getElementById('tutorial-panel');
-        if (!panel) {
-            panel = document.createElement('div');
-            panel.id = 'tutorial-panel';
-            panel.className = 'glass-panel';
-            document.body.appendChild(panel);
-        }
-        return panel;
+        return ensureLegacyTutorialPanel();
     }
 
-    private checkResourceStep(): void {
-        const hasResource = Array.from(this.scene.mapManager.getResourceMap().values())
-            .some(type => type === 'SILICON' || type === 'ENERGY');
-        if (hasResource) this.completeStep('RESOURCE');
+    private getActiveStep(): TutorialStep | undefined {
+        if (this.completed) return undefined;
+        return this.steps.find(step => !step.completed);
+    }
+
+    private checkActiveStepCompletion(): void {
+        const activeStep = this.getActiveStep();
+        if (!activeStep) return;
+
+        const completion = activeStep.completion;
+        if (completion.kind === 'auto') {
+            if (this.scene.time.now - this.activeStepStartedAt >= completion.delayMs) {
+                this.completeStep(activeStep.id);
+            }
+        } else if (completion.kind === 'produce-item') {
+            if (this.hasBuildingItem(completion.buildingType, completion.itemType)) {
+                this.completeStep(activeStep.id);
+            }
+        } else if (completion.kind === 'power-online') {
+            if (this.hasPoweredBuilding(completion.buildingType)) {
+                this.completeStep(activeStep.id);
+            }
+        } else if (completion.kind === 'cable-start') {
+            return;
+        } else if (completion.kind === 'connect-cable' && this.cableConnectedForStep) {
+            this.completeStep(activeStep.id);
+        } else if (completion.kind === 'wave-ended' && this.waveEndedForStep) {
+            this.completeStep(activeStep.id);
+        }
+    }
+
+    private hasBuildingItem(buildingType: string, itemType: string): boolean {
+        let found = false;
+        this.scene.buildingManager.forEach(building => {
+            if (found || building.type !== buildingType) return;
+            found = building.inputBuffer.includes(itemType) || building.outputBuffer.includes(itemType);
+        });
+        return found;
+    }
+
+    private hasPoweredBuilding(buildingType: string): boolean {
+        let found = false;
+        this.scene.powerManager?.updatePowerGrid?.();
+        this.scene.buildingManager.forEach(building => {
+            if (found || building.type !== buildingType) return;
+            found = building.hasPower === true;
+        });
+        return found;
     }
 
     private completeStep(id: TutorialStepId): void {
@@ -109,13 +250,33 @@ export default class TutorialManager {
 
         this.steps = completeTutorialStep(this.steps, id);
         this.persistProgress();
+        this.logMessage(t('tutorial.stepComplete' as any, { title: step.title }));
 
         if (this.steps.every(item => item.completed)) {
             this.completed = true;
+            this.completionDetailKey = 'tutorial.completeDetail';
             this.persistProgress();
-            this.scene.uiManager.logMessage(t('tutorial.completeDetail'));
+            this.logMessage(t('tutorial.completeDetail'));
+            this.requestBuildConsoleRefresh();
         }
         this.render();
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
+    }
+
+    private requestBuildConsoleRefresh(): void {
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
+    }
+
+    private transitionToCampaign(): void {
+        window.setTimeout(() => {
+            this.scene.scene.start('MainScene', {
+                mode: 'campaign',
+                difficulty: this.scene.difficultyId
+            });
+        }, 500);
     }
 
     private refreshLanguage(): void {
@@ -124,6 +285,7 @@ export default class TutorialManager {
             ...step,
             completed: this.completed || completedById.has(step.id)
         }));
+        this.lastRenderedStepId = null;
         this.render();
     }
 
@@ -132,38 +294,280 @@ export default class TutorialManager {
         localStorage.setItem(STORAGE_STEP, String(this.getSavedStep()));
     }
 
+    private typeText(text: string, elementId: string): void {
+        if (elementId !== 'tutorial-typewriter') return;
+        this.typingInterval = startLegacyTutorialTypewriter(
+            text,
+            this.typingInterval,
+            () => this.scene.soundManager?.play?.('shot')
+        );
+    }
+
     private render(): void {
         if (this.completed) {
-            this.panel.style.display = 'none';
+            const display = createTutorialPanelDisplayPayload({
+                activeIndex: -1,
+                activeStep: null,
+                completeCount: this.steps.length,
+                completed: this.completed,
+                completionDetail: t(this.completionDetailKey as any),
+                steps: this.steps
+            });
+            hideLegacyTutorialPanel(this.panel);
+            this.publishPanelSnapshot(display);
             return;
         }
 
         const activeIndex = this.steps.findIndex(step => !step.completed);
         const activeStep = this.steps[activeIndex] ?? this.steps[this.steps.length - 1];
         const completeCount = this.steps.filter(step => step.completed).length;
+        const display = createTutorialPanelDisplayPayload({
+            activeIndex,
+            activeStep,
+            completeCount,
+            completed: this.completed,
+            steps: this.steps
+        });
+        this.publishPanelSnapshot(display);
 
-        this.panel.style.display = 'block';
-        this.panel.dataset.activeStep = activeStep.id;
-        this.panel.innerHTML = `
-            <div class="tutorial-header">
-                <div>
-                    <div class="tutorial-kicker">${t('tutorial.kicker', { current: completeCount, total: this.steps.length })}</div>
-                    <div class="tutorial-title">${activeStep.title}</div>
-                </div>
-                <button id="btn-skip-tutorial" class="tutorial-skip">${t('tutorial.skip')}</button>
-            </div>
-            <div class="tutorial-detail">${activeStep.detail}</div>
-            <div class="tutorial-steps">
-                ${this.steps.map((step, index) => `
-                    <div class="tutorial-step ${step.completed ? 'complete' : index === activeIndex ? 'active' : ''}" data-step-id="${step.id}">
-                        <span class="tutorial-check">${step.completed ? t('tutorial.ok') : index + 1}</span>
-                        <span>${step.title}</span>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        showLegacyTutorialPanel(this.panel, display.legacyPanel.activeStepId);
 
-        const skip = document.getElementById('btn-skip-tutorial');
-        if (skip) skip.onclick = () => this.completeAll();
+        if (this.lastRenderedStepId !== activeStep.id) {
+            this.lastRenderedStepId = activeStep.id;
+            this.activeStepStartedAt = this.scene.time.now;
+            this.cableConnectedForStep = false;
+            this.waveEndedForStep = false;
+
+            renderLegacyTutorialPanel(
+                this.panel,
+                display.legacyPanel.steps,
+                display.legacyPanel.activeIndex,
+                display.legacyPanel.completeCount,
+                () => this.completeAll({ skipped: true })
+            );
+
+            // Sync build controls whenever active step locks change.
+            this.requestBuildConsoleRefresh();
+
+            // Run retro console terminal typing simulation
+            this.typeText(display.legacyPanel.detail, 'tutorial-typewriter');
+        } else {
+            updateLegacyTutorialProgress(
+                this.panel,
+                display.legacyPanel.steps,
+                display.legacyPanel.activeIndex,
+                display.legacyPanel.completeCount
+            );
+        }
+
+        bindLegacyTutorialSkip(() => this.completeAll({ skipped: true }));
+    }
+
+    private publishPanelSnapshot(display: TutorialPanelDisplayPayload): void {
+        EventBus.emit('TUTORIAL_PANEL_UPDATED', display.snapshot);
+    }
+
+    private clearPanelSnapshot(): void {
+        EventBus.emit('TUTORIAL_PANEL_UPDATED', {
+            open: false,
+            mode: 'step',
+            kicker: '',
+            title: '',
+            completedTitle: '',
+            continueLabel: '',
+            labels: {
+                skip: '',
+                progress: '',
+                currentObjective: '',
+                steps: '',
+                ok: '',
+                moreSteps: ''
+            },
+            detail: '',
+            activeStepId: '',
+            completeCount: 0,
+            totalCount: 0,
+            steps: []
+        });
+    }
+
+    private drawGuideHighlights(): void {
+        this.guideGraphics.clear();
+        if (this.completed) return;
+
+        const activeStep = this.steps.find(step => !step.completed);
+        if (!activeStep) return;
+
+        const time = this.scene.time.now;
+        const pulse = 0.5 + 0.2 * Math.sin(time / 200);
+        const glowPulse = 0.2 + 0.1 * Math.sin(time / 200);
+
+        const hints = activeStep.visualHints;
+        if (!hints) return;
+
+        const isExplicit = hints.mode === 'explicit';
+        const ghostAlpha = isExplicit ? pulse : pulse * 0.72;
+        const glowAlpha = isExplicit ? glowPulse : glowPulse * 0.68;
+
+        hints.areas?.forEach(area => this.drawAreaHint(area.x, area.y, area.radius, area.color ?? 0x59e0ff, area.kind, pulse, time));
+        hints.ghosts?.forEach(ghost => this.drawGhostHint(ghost, ghostAlpha, glowAlpha));
+        hints.flows?.forEach(flow => {
+            const color = flow.color ?? (flow.itemType ? getItemColor(flow.itemType) : 0x52f7ff);
+            this.drawNeonLine(flow.from.x, flow.from.y, flow.to.x, flow.to.y, color, pulse, time, flow.dotted ?? false);
+        });
+    }
+
+    private drawGhostHint(ghost: TutorialGhostHint, pulse: number, glowPulse: number): void {
+        const colorValid = ghost.exact ? 0x64ff9f : 0x59e0ff;
+        const colorGlow = ghost.type === 'RESEARCH_CENTER' ? 0x64ffcf : 0x59e0ff;
+        const width = ghost.width ?? 1;
+        const height = ghost.height ?? 1;
+
+        this.drawNeonBox(ghost.x, ghost.y, width, height, colorValid, colorGlow, pulse, glowPulse);
+        this.drawSymbol(ghost.x, ghost.y, ghost);
+    }
+
+    private drawNeonBox(x: number, y: number, w: number, h: number, color: number, glowColor: number, pulse: number, glowPulse: number): void {
+        const sizeX = w * CONFIG.GRID_SIZE;
+        const sizeY = h * CONFIG.GRID_SIZE;
+
+        this.guideGraphics.lineStyle(6, glowColor, glowPulse);
+        this.guideGraphics.strokeRect(x, y, sizeX, sizeY);
+
+        this.guideGraphics.fillStyle(glowColor, glowPulse * 0.35);
+        this.guideGraphics.fillRect(x, y, sizeX, sizeY);
+
+        this.guideGraphics.lineStyle(2, color, pulse);
+        this.guideGraphics.strokeRect(x, y, sizeX, sizeY);
+    }
+
+    private drawSymbol(x: number, y: number, ghost: TutorialGhostHint): void {
+        const cx = x + (ghost.width ?? 1) * CONFIG.GRID_SIZE / 2;
+        const cy = y + (ghost.height ?? 1) * CONFIG.GRID_SIZE / 2;
+        const type = ghost.type;
+
+        this.guideGraphics.lineStyle(2, 0xffffff, 0.4);
+
+        if (type === 'POWER') {
+            // Lightning symbol
+            this.guideGraphics.beginPath();
+            this.guideGraphics.moveTo(cx + 2, cy - 8);
+            this.guideGraphics.lineTo(cx - 4, cy + 2);
+            this.guideGraphics.lineTo(cx + 1, cy + 2);
+            this.guideGraphics.lineTo(cx - 2, cy + 8);
+            this.guideGraphics.lineTo(cx + 4, cy - 2);
+            this.guideGraphics.lineTo(cx - 1, cy - 2);
+            this.guideGraphics.closePath();
+            this.guideGraphics.strokePath();
+        } else if (type === 'MINER') {
+            // Diamond resource shape
+            this.guideGraphics.beginPath();
+            this.guideGraphics.moveTo(cx, cy - 7);
+            this.guideGraphics.lineTo(cx + 7, cy);
+            this.guideGraphics.lineTo(cx, cy + 7);
+            this.guideGraphics.lineTo(cx - 7, cy);
+            this.guideGraphics.closePath();
+            this.guideGraphics.strokePath();
+        } else if (type === 'DOWNLOAD') {
+            this.guideGraphics.beginPath();
+            this.guideGraphics.moveTo(cx, cy + 6);
+            this.guideGraphics.lineTo(cx, cy - 6);
+            this.guideGraphics.strokePath();
+
+            this.guideGraphics.beginPath();
+            this.guideGraphics.moveTo(cx - 4, cy + 2);
+            this.guideGraphics.lineTo(cx, cy + 6);
+            this.guideGraphics.lineTo(cx + 4, cy + 2);
+            this.guideGraphics.strokePath();
+        } else if (type === 'PROCESSOR') {
+            this.guideGraphics.strokeRect(cx - 5, cy - 5, 10, 10);
+
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
+            this.guideGraphics.lineBetween(cx - 7, cy - 3, cx - 5, cy - 3);
+            this.guideGraphics.lineBetween(cx - 7, cy + 3, cx - 5, cy + 3);
+            this.guideGraphics.lineBetween(cx + 5, cy - 3, cx + 7, cy - 3);
+            this.guideGraphics.lineBetween(cx + 5, cy + 3, cx + 7, cy + 3);
+            this.guideGraphics.lineBetween(cx - 3, cy - 7, cx - 3, cy - 5);
+            this.guideGraphics.lineBetween(cx + 3, cy - 7, cx + 3, cy - 5);
+            this.guideGraphics.lineBetween(cx - 3, cy + 5, cx - 3, cy + 7);
+            this.guideGraphics.lineBetween(cx + 3, cy + 5, cx + 3, cy + 7);
+        } else if (type === 'TRAINER') {
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.32);
+            [-7, 0, 7].forEach(iy => {
+                [-5, 5].forEach(oy => this.guideGraphics.lineBetween(cx - 8, cy + iy, cx + 8, cy + oy));
+            });
+            this.guideGraphics.fillStyle(0xa970ff, 0.78);
+            [-7, 0, 7].forEach(iy => this.guideGraphics.fillCircle(cx - 8, cy + iy, 2.5));
+            [-5, 5].forEach(oy => this.guideGraphics.fillCircle(cx + 8, cy + oy, 2.5));
+        } else if (type === 'DEFENSE') {
+            this.guideGraphics.strokeCircle(cx, cy, 6);
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
+            this.guideGraphics.lineBetween(cx - 9, cy, cx + 9, cy);
+            this.guideGraphics.lineBetween(cx, cy - 9, cx, cy + 9);
+        } else if (type === 'STORAGE') {
+            this.guideGraphics.strokeRect(cx - 8, cy - 8, 16, 16);
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
+            this.guideGraphics.lineBetween(cx, cy - 8, cx, cy + 8);
+            this.guideGraphics.lineBetween(cx - 8, cy, cx + 8, cy);
+        } else if (type === 'RESEARCH_CENTER') {
+            this.guideGraphics.strokeCircle(cx, cy, 12);
+            this.guideGraphics.lineStyle(1.5, 0x64ffcf, 0.72);
+            this.guideGraphics.strokeCircle(cx, cy, 5);
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.38);
+            this.guideGraphics.lineBetween(cx - 13, cy, cx + 13, cy);
+            this.guideGraphics.lineBetween(cx, cy - 13, cx, cy + 13);
+        }
+    }
+
+    private drawAreaHint(x: number, y: number, radius: number, color: number, kind: TutorialAreaHint['kind'], pulse: number, time: number): void {
+        const alpha = kind === 'resource' ? 0.18 : 0.12;
+        const wave = 0.85 + 0.08 * Math.sin(time / 260);
+
+        this.guideGraphics.lineStyle(kind === 'route' ? 3 : 2, color, alpha + pulse * 0.12);
+        this.guideGraphics.strokeCircle(x, y, radius * wave);
+
+        if (kind === 'model-growth') {
+            this.guideGraphics.lineStyle(1, 0xffffff, 0.35);
+            this.guideGraphics.strokeCircle(x, y, radius * 0.45);
+        }
+    }
+
+    private drawNeonLine(fromX: number, fromY: number, toX: number, toY: number, color: number, pulse: number, time: number, dotted = false): void {
+        this.guideGraphics.lineStyle(5, color, 0.15);
+        this.guideGraphics.lineBetween(fromX, fromY, toX, toY);
+
+        if (!dotted) {
+            this.guideGraphics.lineStyle(1, color, 0.45);
+            this.guideGraphics.lineBetween(fromX, fromY, toX, toY);
+        }
+
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length === 0) return;
+
+        const numDots = Math.floor(length / 16);
+        const speed = 0.05;
+        const offsetRatio = ((time * speed) % 16) / 16;
+
+        this.guideGraphics.fillStyle(0xffffff, pulse);
+        for (let i = 0; i <= numDots; i++) {
+            const ratio = (i + offsetRatio) / (numDots + 1);
+            if (ratio > 1) continue;
+            const px = fromX + dx * ratio;
+            const py = fromY + dy * ratio;
+            this.guideGraphics.fillCircle(px, py, 2.5);
+        }
+    }
+
+    private cleanup(): void {
+        this.scene.events.off('update', this.checkActiveStepCompletion, this);
+        this.scene.events.off('update', this.drawGuideHighlights, this);
+        window.removeEventListener('languagechange', this.languageChangeHandler);
+        hideLegacyTutorialPanel(this.panel);
+        this.clearPanelSnapshot();
+        if (this.guideGraphics) {
+            this.guideGraphics.destroy();
+        }
     }
 }

@@ -1,5 +1,7 @@
 # ⚙️ Logistics & Resource System Overhaul
 
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
 This plan addresses the user's feedback regarding the realism of the current system. We will differentiate between **Physical Resources** (Silicon) and **Virtual Data**, implementing appropriate logistics for each.
 
 ## User Review Required

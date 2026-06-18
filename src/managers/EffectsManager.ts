@@ -4,6 +4,8 @@ import type MainScene from '../scenes/MainScene';
 import BaseBuilding from '../buildings/BaseBuilding';
 import BaseEnemy from '../enemies/BaseEnemy';
 import { getSpawnPointForRoute, type IntrusionRouteId } from '../utils/waveSimulation';
+import { getFootprintCenter } from '../utils/geometry';
+import { VISUAL_THEME } from '../visuals/visualTheme';
 
 interface InferenceLockMarker {
     target: BaseEnemy;
@@ -13,15 +15,45 @@ interface InferenceLockMarker {
     label: Phaser.GameObjects.Text;
 }
 
+const POWER_CONSUMER_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => (CONFIG.BUILDINGS[type]?.POWER?.CONSUMPTION || 0) > 0);
+const BUFFER_BUILDING_TYPES = Object.keys(CONFIG.BUILDINGS).filter(type => (CONFIG.BUILDINGS[type]?.MAX_BUFFER || 0) > 0);
+
 export default class EffectsManager {
     private scene: MainScene;
     private outageMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
     private bufferMarkers = new Map<BaseBuilding, Phaser.GameObjects.Graphics>();
     private inferenceLocks = new Map<string, InferenceLockMarker>();
     private routeHintObjects: Phaser.GameObjects.GameObject[] = [];
+    private _circlePool: Phaser.GameObjects.Arc[] = [];
+    private _graphicsPool: Phaser.GameObjects.Graphics[] = [];
 
     constructor(scene: MainScene) {
         this.scene = scene;
+    }
+
+    private getPooledCircle(x: number, y: number, radius: number, color: number, alpha: number = 1): Phaser.GameObjects.Arc {
+        const c = this._circlePool.pop();
+        if (c) {
+            c.setPosition(x, y);
+            c.setRadius(radius);
+            c.setFillStyle(color, alpha);
+            c.setVisible(true);
+            c.setActive(true);
+            c.setAlpha(1);
+            c.setScale(1);
+            return c;
+        }
+        return this.scene.add.circle(x, y, radius, color, alpha);
+    }
+
+    private returnCircle(c: Phaser.GameObjects.Arc): void {
+        if (this._circlePool.length < 30) {
+            c.setVisible(false);
+            c.setActive(false);
+            this._circlePool.push(c);
+        } else {
+            c.destroy();
+        }
     }
 
     playBuildOnline(building: BaseBuilding, type: string): void {
@@ -36,7 +68,7 @@ export default class EffectsManager {
             ease: 'Back.easeOut'
         });
 
-        const color = CONFIG.BUILDINGS[type]?.COLOR ?? 0x00f3ff;
+        const color = VISUAL_THEME.categories[CONFIG.BUILDINGS[type]?.CATEGORY as keyof typeof VISUAL_THEME.categories] ?? CONFIG.BUILDINGS[type]?.COLOR ?? 0x00f3ff;
         const ring = this.scene.add.circle(building.x + CONFIG.GRID_SIZE / 2, building.y + CONFIG.GRID_SIZE / 2, 8, color, 0);
         ring.setDepth(28);
         ring.setStrokeStyle(2, color, 0.9);
@@ -51,7 +83,7 @@ export default class EffectsManager {
     }
 
     playBuildingRemoved(x: number, y: number): void {
-        const effect = this.scene.add.rectangle(x + CONFIG.GRID_SIZE / 2, y + CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, 0xff4444);
+        const effect = this.scene.add.rectangle(x + CONFIG.GRID_SIZE / 2, y + CONFIG.GRID_SIZE / 2, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE, VISUAL_THEME.buildings.danger);
         effect.setDepth(28);
         this.scene.tweens.add({
             targets: effect,
@@ -82,7 +114,7 @@ export default class EffectsManager {
             this.scene.cameras.main.midPoint.y,
             this.scene.scale.width / this.scene.cameras.main.zoom,
             this.scene.scale.height / this.scene.cameras.main.zoom,
-            0xff4444,
+            VISUAL_THEME.buildings.danger,
             0.12
         );
         flash.setDepth(90);
@@ -140,15 +172,13 @@ export default class EffectsManager {
         if (!this.isRouteId(route)) return;
 
         const spawn = getSpawnPointForRoute(route, 0.5);
-        const core = {
-            x: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE * 2,
-            y: CONFIG.GRID_SIZE * 2 + CONFIG.GRID_SIZE * 2
-        };
+        const coreConfig = CONFIG.BUILDINGS.CORE;
+        const core = getFootprintCenter(0, 0, coreConfig.WIDTH || 1, coreConfig.HEIGHT || 1, CONFIG.GRID_SIZE);
         const graphics = this.scene.add.graphics();
         graphics.setDepth(18);
-        graphics.lineStyle(3, 0xff4444, 0.45);
+        graphics.lineStyle(3, VISUAL_THEME.buildings.danger, 0.45);
         graphics.lineBetween(spawn.x, spawn.y, core.x, core.y);
-        graphics.lineStyle(18, 0xff4444, 0.08);
+        graphics.lineStyle(18, VISUAL_THEME.buildings.danger, 0.08);
         graphics.lineBetween(spawn.x, spawn.y, core.x, core.y);
 
         const portLabel = this.scene.add.text(spawn.x, spawn.y, `${route} PORT`, {
@@ -169,25 +199,28 @@ export default class EffectsManager {
     }
 
     playEnemyKilled(x: number, y: number): void {
-        const burst = this.scene.add.circle(x, y, 6, 0x39ff14, 0);
+        const burst = this.getPooledCircle(x, y, 6, VISUAL_THEME.buildings.online, 0);
         burst.setDepth(41);
-        burst.setStrokeStyle(2, 0x39ff14, 0.8);
+        burst.setStrokeStyle(2, VISUAL_THEME.buildings.online, 0.8);
         this.scene.tweens.add({
             targets: burst,
             radius: 22,
             alpha: 0,
             duration: 240,
-            onComplete: () => burst.destroy()
+            onComplete: () => this.returnCircle(burst)
         });
     }
 
     playDefenseShot(x: number, y: number, targetX: number, targetY: number, onHit: () => void): void {
         const trail = this.scene.add.graphics();
         trail.setDepth(39);
-        trail.lineStyle(2, 0xffffff, 0.55);
+        trail.lineStyle(5, 0x69e7ff, 0.12);
+        trail.strokeLineShape(new Phaser.Geom.Line(x, y, targetX, targetY));
+        trail.lineStyle(2, 0xffffff, 0.68);
         trail.strokeLineShape(new Phaser.Geom.Line(x, y, targetX, targetY));
 
-        const proj = this.scene.add.circle(x, y, 3, 0xffffff);
+        const proj = this.getPooledCircle(x, y, 3, 0xffffff);
+        proj.setStrokeStyle(2, 0x69e7ff, 0.8);
         proj.setDepth(40);
 
         this.scene.tweens.add({
@@ -203,16 +236,16 @@ export default class EffectsManager {
             y: targetY,
             duration: 100,
             onComplete: () => {
-                proj.destroy();
-                const impact = this.scene.add.circle(targetX, targetY, 4, 0xffffff, 0);
+                this.returnCircle(proj);
+                const impact = this.getPooledCircle(targetX, targetY, 4, 0xffffff, 0);
                 impact.setDepth(41);
-                impact.setStrokeStyle(2, 0xffffff, 0.8);
+                impact.setStrokeStyle(2, 0x69e7ff, 0.88);
                 this.scene.tweens.add({
                     targets: impact,
                     radius: 14,
                     alpha: 0,
                     duration: 160,
-                    onComplete: () => impact.destroy()
+                    onComplete: () => this.returnCircle(impact)
                 });
                 onHit();
             }
@@ -447,52 +480,32 @@ export default class EffectsManager {
         marker.label.setAlpha(0.9);
     }
 
-    playModelTrainingPulse(building: BaseBuilding, itemType: string): void {
-        const color = itemType === 'TRAINED_MODEL' ? 0xa855f7 : itemType === 'INFERENCE_UNIT' ? 0xec4899 : 0x14b8a6;
-        const x = building.x + CONFIG.GRID_SIZE / 2;
-        const y = building.y + CONFIG.GRID_SIZE / 2;
-        const ring = this.scene.add.circle(x, y, 6, color, 0);
-        ring.setDepth(44);
-        ring.setStrokeStyle(2, color, 0.9);
-
-        const label = this.scene.add.text(x, y - 22, itemType === 'WEIGHT_UPDATE' ? 'MODEL +2%' : itemType === 'TRAINED_MODEL' ? 'MODEL +10%' : 'CHARGE +5', {
-            fontFamily: 'Share Tech Mono, monospace',
-            fontSize: '9px',
-            color: '#ffffff',
-            backgroundColor: 'rgba(2, 6, 23, 0.76)',
-            padding: { x: 3, y: 2 }
-        }).setOrigin(0.5);
-        label.setDepth(45);
-
-        this.scene.tweens.add({
-            targets: ring,
-            radius: CONFIG.GRID_SIZE * 0.9,
-            alpha: 0,
-            duration: 420,
-            onComplete: () => ring.destroy()
-        });
-        this.scene.tweens.add({
-            targets: label,
-            y: label.y - 12,
-            alpha: 0,
-            duration: 650,
-            onComplete: () => label.destroy()
-        });
-    }
-
     updatePowerWarnings(): void {
         this.updateInferenceLocks();
 
-        const activeOutages = new Set<BaseBuilding>();
-        const activeBuffers = new Set<BaseBuilding>();
-        this.scene.buildingManager.forEach(building => {
+        // Track which buildings still have markers to clean up stale ones
+        const stillHasOutage = new Set<BaseBuilding>();
+        const stillHasBuffer = new Set<BaseBuilding>();
+
+        const indexedLookup = this.scene.buildingManager.getByTypes?.bind(this.scene.buildingManager);
+        const candidates = new Set<BaseBuilding>();
+        if (indexedLookup) {
+            indexedLookup(POWER_CONSUMER_TYPES).forEach(building => candidates.add(building));
+            indexedLookup(BUFFER_BUILDING_TYPES).forEach(building => candidates.add(building));
+        } else {
+            this.scene.buildingManager.forEach(building => candidates.add(building));
+        }
+        this.outageMarkers.forEach((_marker, building) => candidates.add(building));
+        this.bufferMarkers.forEach((_marker, building) => candidates.add(building));
+
+        candidates.forEach(building => {
             const pConfig = CONFIG.BUILDINGS[building.type]?.POWER;
             const hasOutage = Boolean(pConfig && pConfig.CONSUMPTION > 0 && !building.hasPower);
 
             building.container.setAlpha(hasOutage ? 0.62 : 1);
 
             if (hasOutage) {
-                activeOutages.add(building);
+                stillHasOutage.add(building);
                 let marker = this.outageMarkers.get(building);
                 if (!marker) {
                     marker = this.scene.add.graphics();
@@ -512,7 +525,7 @@ export default class EffectsManager {
             const inputFull = building.maxBufferSize > 0 && building.inputBuffer?.length >= building.maxBufferSize;
             const outputFull = building.maxBufferSize > 0 && building.outputBuffer?.length >= building.maxBufferSize;
             if (inputFull || outputFull) {
-                activeBuffers.add(building);
+                stillHasBuffer.add(building);
                 let marker = this.bufferMarkers.get(building);
                 if (!marker) {
                     marker = this.scene.add.graphics();
@@ -532,13 +545,13 @@ export default class EffectsManager {
         });
 
         this.outageMarkers.forEach((marker, building) => {
-            if (!activeOutages.has(building)) {
+            if (!stillHasOutage.has(building)) {
                 marker.destroy();
                 this.outageMarkers.delete(building);
             }
         });
         this.bufferMarkers.forEach((marker, building) => {
-            if (!activeBuffers.has(building)) {
+            if (!stillHasBuffer.has(building)) {
                 marker.destroy();
                 this.bufferMarkers.delete(building);
             }

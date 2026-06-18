@@ -1,0 +1,678 @@
+[
+  {
+    "label": "1920-gameplay-default",
+    "bodyClass": "",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1296,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 580,
+        "y": 686,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": {
+        "display": "flex",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 648,
+        "width": 340,
+        "height": 140
+      },
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  {
+    "label": "1920-settings-game",
+    "bodyClass": "",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1296,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 580,
+        "y": 686,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": {
+        "display": "flex",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 648,
+        "width": 340,
+        "height": 140
+      },
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 25,
+        "y": 387,
+        "width": 418,
+        "height": 306
+      },
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  {
+    "label": "1920-research-panel",
+    "bodyClass": "",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1296,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 580,
+        "y": 686,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": {
+        "display": "flex",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 648,
+        "width": 340,
+        "height": 140
+      },
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1082,
+        "y": 72,
+        "width": 820,
+        "height": 984
+      },
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  {
+    "label": "1920-training-lab",
+    "bodyClass": "",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1296,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 580,
+        "y": 686,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": {
+        "display": "flex",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 532,
+        "width": 340,
+        "height": 256
+      },
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 230,
+        "width": 320,
+        "height": 620
+      },
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  {
+    "label": "1920-tutorial-mode",
+    "bodyClass": "",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1296,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 580,
+        "y": 686,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1510,
+        "y": 214,
+        "width": 394,
+        "height": 574
+      },
+      "activityLog": {
+        "display": "flex",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 661,
+        "width": 340,
+        "height": 127
+      },
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  {
+    "label": "1280x720-gameplay",
+    "bodyClass": "",
+    "innerWidth": 1280,
+    "innerHeight": 720,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 656,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 340,
+        "y": 326,
+        "width": 600,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": null,
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1280,
+        "height": 720
+      }
+    }
+  },
+  {
+    "label": "1366x768-gameplay",
+    "bodyClass": "",
+    "innerWidth": 1366,
+    "innerHeight": 768,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 742,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 340,
+        "y": 374,
+        "width": 686,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": null,
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1366,
+        "height": 768
+      }
+    }
+  },
+  {
+    "label": "1600x900-gameplay",
+    "bodyClass": "",
+    "innerWidth": 1600,
+    "innerHeight": 900,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 976,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 420,
+        "y": 506,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": null,
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 900
+      }
+    }
+  },
+  {
+    "label": "2560x1440-gameplay",
+    "bodyClass": "",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 16,
+        "y": 16,
+        "width": 540,
+        "height": 176
+      },
+      "rightRail": {
+        "display": "grid",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 1936,
+        "y": 108,
+        "width": 280,
+        "height": 490
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 900,
+        "y": 1046,
+        "width": 760,
+        "height": 210
+      },
+      "tutorialPanel": null,
+      "activityLog": null,
+      "mobileSummary": null,
+      "mobileActionBar": null,
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 2560,
+        "height": 1440
+      }
+    }
+  },
+  {
+    "label": "390x844-gameplay",
+    "bodyClass": "mobile-layout",
+    "innerWidth": 390,
+    "innerHeight": 844,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rightRail": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "buildConsole": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 8,
+        "y": 720,
+        "width": 374,
+        "height": 124
+      },
+      "tutorialPanel": null,
+      "activityLog": null,
+      "mobileSummary": {
+        "display": "block",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 12,
+        "y": 566,
+        "width": 366,
+        "height": 80
+      },
+      "mobileActionBar": {
+        "display": "flex",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 10,
+        "y": 662,
+        "width": 370,
+        "height": 56
+      },
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      }
+    }
+  },
+  {
+    "label": "844x390-gameplay",
+    "bodyClass": "mobile-layout",
+    "innerWidth": 844,
+    "innerHeight": 390,
+    "devicePixelRatio": 1,
+    "rects": {
+      "topBar": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "rightRail": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "buildConsole": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "tutorialPanel": null,
+      "activityLog": null,
+      "mobileSummary": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "mobileActionBar": {
+        "display": "none",
+        "visibility": "visible",
+        "pointerEvents": "none",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "settingsModal": null,
+      "researchPanel": null,
+      "trainingLab": null,
+      "canvas": {
+        "display": "inline",
+        "visibility": "visible",
+        "pointerEvents": "auto",
+        "x": 0,
+        "y": 0,
+        "width": 844,
+        "height": 390
+      }
+    }
+  }
+]

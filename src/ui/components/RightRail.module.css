@@ -1,0 +1,170 @@
+.rail {
+    position: absolute;
+    top: var(--hud-rail-top, 108px);
+    right: var(--hud-edge, 24px);
+    display: grid;
+    width: var(--hud-right-rail-width, 308px);
+    max-height: calc(var(--hud-stage-height, 100vh) - var(--hud-rail-top, 108px) - var(--hud-build-clearance, 208px));
+    gap: var(--space-2);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(77, 216, 255, 0.28) transparent;
+    pointer-events: none;
+    z-index: 1365;
+}
+
+.section {
+    min-width: 0;
+}
+
+.panel {
+    padding: var(--space-3);
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.panelBody {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.collapseButton {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 1px solid rgba(77, 216, 255, 0.22);
+    border-radius: var(--radius-sm);
+    background: rgba(77, 216, 255, 0.06);
+    color: var(--holo-cyan);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: 1;
+    pointer-events: auto;
+}
+
+.collapseButton:hover {
+    border-color: rgba(77, 216, 255, 0.5);
+    background: rgba(77, 216, 255, 0.12);
+}
+
+.kicker {
+    color: var(--holo-cyan);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+.title {
+    margin-bottom: var(--space-1);
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.detail {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: 1.35;
+    white-space: pre-line;
+}
+
+.chip {
+    display: inline-flex;
+    max-width: 100%;
+    margin-top: var(--space-2);
+    padding: 5px var(--space-2);
+    border: 1px solid rgba(77, 216, 255, 0.2);
+    border-radius: var(--radius-sm);
+    background: rgba(77, 216, 255, 0.07);
+    color: #dff7ff;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.2;
+    box-sizing: border-box;
+}
+
+.threatRows {
+    display: grid;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.threatMeter {
+    height: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+}
+
+.threatMeter span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--holo-cyan);
+    box-shadow: 0 0 12px rgba(77, 216, 255, 0.42);
+}
+
+.threatMeter[data-tone="warning"] span {
+    background: var(--holo-amber);
+    box-shadow: 0 0 12px rgba(246, 196, 83, 0.45);
+}
+
+.threatMeter[data-tone="danger"] span {
+    background: var(--holo-red);
+    box-shadow: 0 0 12px rgba(255, 102, 118, 0.45);
+}
+
+.threatMeta,
+.routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.threatMeta span,
+.routes span {
+    min-width: 0;
+    max-width: 100%;
+    padding: 2px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.18);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.warning {
+    border-color: rgba(246, 196, 83, 0.32);
+    background: rgba(246, 196, 83, 0.09);
+    color: #ffe8a8;
+}
+
+.danger {
+    border-color: rgba(255, 102, 118, 0.35);
+    background: rgba(255, 102, 118, 0.1);
+    color: #ffd4d9;
+}
+
+@media (max-width: 1180px), (max-width: 768px), (pointer: coarse), (max-height: 560px) {
+    .rail {
+        display: none;
+    }
+}

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import AbstractProcessor from './AbstractProcessor';
 import { BuildingOptions } from '../types';
 
-const DATA_ITEM_TYPES = ['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'TRAINED_MODEL', 'INFERENCE_UNIT'];
+const DATA_ITEM_TYPES = ['RAW_DATA', 'LABELED_DATA', 'WEIGHT_UPDATE', 'MATERIAL_SAMPLE'];
 
 export default class Recycler extends AbstractProcessor {
     constructor(scene: Phaser.Scene, x: number, y: number, config: BuildingOptions = {}) {

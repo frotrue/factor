@@ -5,11 +5,28 @@ import BaseBuilding from '../buildings/BaseBuilding';
 import BuildingManager from '../managers/BuildingManager';
 import { IMainScene } from '../types';
 import { selectEnemyBuildingTarget } from '../utils/enemyBuildingInteraction';
+import { findGridPath, type GridPoint } from '../utils/gridPath';
+import { getEnemyColor, VISUAL_THEME } from '../visuals/visualTheme';
 
-interface GridPoint {
-    x: number;
-    y: number;
-}
+const ENEMY_PATH_DIRECTIONS = [
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+    { x: 1, y: -1 },
+    { x: -1, y: -1 }
+];
+const PATH_RECALC_INTERVAL_MS = 700;
+const INITIAL_PATH_STAGGER_MS = 700;
+const MAX_PATH_CACHE_ENTRIES = 512;
+const MAX_ANIMATED_ENEMIES = 120;
+
+type CachedPath = {
+    version: number;
+    path: GridPoint[];
+};
 
 export default class BaseEnemy {
     scene: Phaser.Scene;
@@ -32,8 +49,16 @@ export default class BaseEnemy {
     specialTimer: number;
     attackTimer: number;
     auraSpeedMultiplier: number;
+    private animatedStatusVisual: boolean;
+    private _hpDirty: boolean = true;
+    private _statusDrawn: boolean = false;
+    private static pathCache = new Map<string, CachedPath>();
+    private static pathCacheVersion = 0;
+    private static pathCacheEventsBound = false;
+    private static animatedEnemyVisuals = 0;
 
     constructor(scene: Phaser.Scene, type: string, x: number, y: number, hpMultiplier: number = 1, id: string, buildingManager: BuildingManager) {
+        BaseEnemy.bindPathCacheInvalidation();
         this.scene = scene;
         this.type = type;
         this.x = x;
@@ -48,13 +73,16 @@ export default class BaseEnemy {
         this.damage = config.DAMAGE;
         this.active = true;
         this.path = [];
-        this.pathTimer = 0;
+        this.pathTimer = BaseEnemy.getInitialPathStagger(id);
         this.specialTimer = 0;
         this.attackTimer = 0;
         this.auraSpeedMultiplier = 1;
+        this.animatedStatusVisual = BaseEnemy.animatedEnemyVisuals < MAX_ANIMATED_ENEMIES;
+        if (this.animatedStatusVisual) BaseEnemy.animatedEnemyVisuals++;
 
-        this.sprite = scene.add.circle(x, y, config.RADIUS, config.COLOR);
-        this.sprite.setStrokeStyle(1, 0xffffff);
+        const color = getEnemyColor(type);
+        this.sprite = scene.add.circle(x, y, config.RADIUS, color);
+        this.sprite.setStrokeStyle(2, 0x060914, 0.95);
         this.sprite.setDepth(30);
 
         this.hpBar = scene.add.graphics();
@@ -72,13 +100,20 @@ export default class BaseEnemy {
             this.hp = 0;
             this.die();
         } else {
-            this.drawHpBar();
+            this._hpDirty = true;
         }
     }
 
     die(): void {
         if (!this.active) return;
         this.active = false;
+        if (this.animatedStatusVisual) {
+            BaseEnemy.animatedEnemyVisuals = Math.max(0, BaseEnemy.animatedEnemyVisuals - 1);
+            this.animatedStatusVisual = false;
+        }
+        this.scene.tweens.killTweensOf(this.sprite);
+        this.scene.tweens.killTweensOf(this.statusGraphics);
+        if (this.auraGraphics) this.scene.tweens.killTweensOf(this.auraGraphics);
         if (this.sprite && this.sprite.active) this.sprite.destroy();
         if (this.hpBar && this.hpBar.active) this.hpBar.destroy();
         if (this.statusGraphics && this.statusGraphics.active) this.statusGraphics.destroy();
@@ -99,11 +134,14 @@ export default class BaseEnemy {
         const height = 3;
         const percent = Math.max(0, this.hp / this.maxHp);
 
-        this.hpBar.fillStyle(0xff0000, 1);
-        this.hpBar.fillRect(this.x - width / 2, this.y - 12, width, height);
+        this.hpBar.fillStyle(0x270914, 0.92);
+        this.hpBar.fillRect(-width / 2, -12, width, height);
 
-        this.hpBar.fillStyle(0x00ff00, 1);
-        this.hpBar.fillRect(this.x - width / 2, this.y - 12, width * percent, height);
+        const hpColor = percent > 0.5 ? VISUAL_THEME.buildings.online : percent > 0.25 ? VISUAL_THEME.buildings.warning : VISUAL_THEME.buildings.danger;
+        this.hpBar.fillStyle(hpColor, 1);
+        this.hpBar.fillRect(-width / 2, -12, width * percent, height);
+        this.hpBar.setPosition(this.x, this.y);
+        this._hpDirty = false;
     }
 
     update(deltaMs: number, targetX: number, targetY: number): void {
@@ -144,8 +182,12 @@ export default class BaseEnemy {
         }
 
         this.sprite.setPosition(this.x, this.y);
-        this.drawHpBar();
-        this.updateStatusVisuals();
+        if (this._hpDirty) {
+            this.drawHpBar();
+        } else {
+            this.hpBar.setPosition(this.x, this.y);
+        }
+        this.repositionStatusVisuals();
 
 
         const inCoreBounds = (this.x >= 0 && this.x <= 128 && this.y >= 0 && this.y <= 128);
@@ -180,6 +222,15 @@ export default class BaseEnemy {
     }
 
     createStatusVisuals(): void {
+        if (!this.animatedStatusVisual) {
+            if (this.type === 'OVERFITTED_MODEL') {
+                this.auraGraphics = this.scene.add.graphics();
+                this.auraGraphics.setDepth(24);
+            }
+            this.drawStatusVisualsOnce();
+            return;
+        }
+
         if (this.type === 'DDOS_BOT') {
             this.scene.tweens.add({
                 targets: this.sprite,
@@ -208,35 +259,51 @@ export default class BaseEnemy {
                 duration: this.type === 'ADVERSARIAL' ? 350 : 550
             });
         }
-        this.updateStatusVisuals();
+        this.drawStatusVisualsOnce();
     }
 
-    updateStatusVisuals(): void {
+    /** Draw status visuals once relative to origin (0,0). Only called once per enemy. */
+    private drawStatusVisualsOnce(): void {
         this.statusGraphics.clear();
         if (this.auraGraphics) this.auraGraphics.clear();
         if (!this.active) return;
 
         if (this.type === 'DDOS_BOT') {
-            this.statusGraphics.lineStyle(1, 0x00ff88, 0.75);
-            this.statusGraphics.lineBetween(this.x - 8, this.y, this.x + 8, this.y);
-            this.statusGraphics.lineBetween(this.x, this.y - 8, this.x, this.y + 8);
+            this.statusGraphics.lineStyle(1, VISUAL_THEME.enemies.DDOS_BOT, 0.85);
+            this.statusGraphics.lineBetween(-8, 0, 8, 0);
+            this.statusGraphics.lineBetween(0, -8, 0, 8);
+            this.statusGraphics.strokeCircle(0, 0, 9);
         } else if (this.type === 'MALWARE') {
-            this.statusGraphics.lineStyle(2, 0xff00aa, 0.9);
-            this.statusGraphics.strokeCircle(this.x, this.y, 14);
-            this.statusGraphics.fillStyle(0xff00aa, 0.9);
-            this.statusGraphics.fillCircle(this.x + 10, this.y - 10, 3);
+            this.statusGraphics.lineStyle(2, VISUAL_THEME.enemies.MALWARE, 0.92);
+            this.statusGraphics.strokeCircle(0, 0, 14);
+            this.statusGraphics.fillStyle(VISUAL_THEME.enemies.MALWARE, 0.9);
+            this.statusGraphics.fillCircle(10, -10, 3);
         } else if (this.type === 'ADVERSARIAL') {
-            this.statusGraphics.lineStyle(2, 0x22d3ee, 0.9);
-            this.statusGraphics.strokeCircle(this.x, this.y, 12);
-            this.statusGraphics.lineBetween(this.x - 8, this.y - 8, this.x + 8, this.y + 8);
+            this.statusGraphics.lineStyle(2, VISUAL_THEME.enemies.ADVERSARIAL, 0.92);
+            this.statusGraphics.strokeCircle(0, 0, 12);
+            this.statusGraphics.lineBetween(-8, -8, 8, 8);
+            this.statusGraphics.lineBetween(8, -8, -8, 8);
         } else if (this.type === 'OVERFITTED_MODEL' && this.auraGraphics) {
-            this.auraGraphics.fillStyle(0x7c3aed, 0.08);
-            this.auraGraphics.lineStyle(2, 0x7c3aed, 0.35);
-            this.auraGraphics.fillCircle(this.x, this.y, CONFIG.GRID_SIZE * 8);
-            this.auraGraphics.strokeCircle(this.x, this.y, CONFIG.GRID_SIZE * 8);
+            this.auraGraphics.fillStyle(VISUAL_THEME.enemies.OVERFITTED_MODEL, 0.08);
+            this.auraGraphics.lineStyle(2, VISUAL_THEME.enemies.OVERFITTED_MODEL, 0.36);
+            this.auraGraphics.fillCircle(0, 0, CONFIG.GRID_SIZE * 8);
+            this.auraGraphics.strokeCircle(0, 0, CONFIG.GRID_SIZE * 8);
             this.statusGraphics.fillStyle(0xffffff, 0.9);
-            this.statusGraphics.fillCircle(this.x, this.y - 20, 4);
+            this.statusGraphics.fillCircle(0, -20, 4);
+        } else {
+            this.statusGraphics.lineStyle(1, VISUAL_THEME.enemies.NOISE, 0.72);
+            this.statusGraphics.strokeCircle(0, 0, (CONFIG.ENEMIES[this.type]?.RADIUS ?? 8) + 4);
         }
+        this._statusDrawn = true;
+    }
+
+    /** Reposition status visuals without redrawing. Draws once if not yet drawn. */
+    repositionStatusVisuals(): void {
+        if (!this._statusDrawn) {
+            this.drawStatusVisualsOnce();
+        }
+        this.statusGraphics.setPosition(this.x, this.y);
+        if (this.auraGraphics) this.auraGraphics.setPosition(this.x, this.y);
     }
 
     getHitChanceMultiplier(): number {
@@ -244,63 +311,84 @@ export default class BaseEnemy {
     }
 
     getMoveTarget(targetX: number, targetY: number): GridPoint {
+        if (this.path.length === 0 && this.pathTimer > 0) {
+            return { x: this.x, y: this.y };
+        }
+
         if (this.pathTimer <= 0 || this.path.length === 0) {
             this.path = this.findPath(targetX, targetY);
-            this.pathTimer = 700;
+            this.pathTimer = PATH_RECALC_INTERVAL_MS;
         }
-        return this.path[0] || { x: targetX, y: targetY };
+        return this.path[0] || { x: this.x, y: this.y };
     }
 
     findPath(targetX: number, targetY: number): GridPoint[] {
         const gridSize = CONFIG.GRID_SIZE;
-        const start = { x: Math.floor(this.x / gridSize), y: Math.floor(this.y / gridSize) };
-        const target = { x: Math.floor(targetX / gridSize), y: Math.floor(targetY / gridSize) };
-        const startKey = `${start.x},${start.y}`;
-        const targetKey = `${target.x},${target.y}`;
-        const queue = [start];
-        const visited = new Set<string>([startKey]);
-        const cameFrom = new Map<string, string>();
-        const dirs = CONFIG.DIRECTIONS.map(d => ({ x: d.x, y: d.y }));
+        const cacheKey = BaseEnemy.getPathCacheKey(this.x, this.y, targetX, targetY, gridSize);
+        const cached = BaseEnemy.pathCache.get(cacheKey);
+        if (cached && cached.version === BaseEnemy.pathCacheVersion) {
+            (this.scene as IMainScene).performanceStats?.increment('pathCacheHits');
+            return cached.path.map(point => ({ ...point }));
+        }
 
-        while (queue.length > 0 && visited.size < 900) {
-            const current = queue.shift()!;
-            if (`${current.x},${current.y}` === targetKey) break;
-
-            const sortedDirs = dirs.slice().sort((a, b) => {
-                const da = Math.abs(target.x - (current.x + a.x)) + Math.abs(target.y - (current.y + a.y));
-                const db = Math.abs(target.x - (current.x + b.x)) + Math.abs(target.y - (current.y + b.y));
-                return da - db;
-            });
-
-            for (const dir of sortedDirs) {
-                const next = { x: current.x + dir.x, y: current.y + dir.y };
-                const key = `${next.x},${next.y}`;
-                if (visited.has(key)) continue;
-                if (Math.abs(next.x - start.x) > 35 || Math.abs(next.y - start.y) > 35) continue;
-
-                const worldKey = `${next.x * gridSize},${next.y * gridSize}`;
+        (this.scene as IMainScene).performanceStats?.increment('pathCacheMisses');
+        const path = findGridPath({
+            startWorld: { x: this.x, y: this.y },
+            targetWorld: { x: targetX, y: targetY },
+            gridSize,
+            directions: ENEMY_PATH_DIRECTIONS,
+            preventDiagonalCornerCutting: true,
+            isBlocked: (worldX, worldY, isTarget) => {
+                const worldKey = `${worldX},${worldY}`;
                 const blockingBuilding = this.buildingManager.get(worldKey) as BaseBuilding | null;
-                const blocksEnemy = (this.scene as IMainScene).mapManager?.blocksEnemyAt(next.x * gridSize, next.y * gridSize);
-                const isTarget = key === targetKey;
-                if (blocksEnemy && !isTarget) continue;
-                if (blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget) continue;
-
-                visited.add(key);
-                cameFrom.set(key, `${current.x},${current.y}`);
-                queue.push(next);
+                const blocksEnemy = (this.scene as IMainScene).mapManager?.blocksEnemyAt(worldX, worldY);
+                if (blocksEnemy && !isTarget) return true;
+                return Boolean(blockingBuilding && blockingBuilding.type !== 'FIREWALL' && blockingBuilding.type !== 'CORE' && !isTarget);
             }
-        }
+        });
+        BaseEnemy.cachePath(cacheKey, path);
+        return path.map(point => ({ ...point }));
+    }
 
-        if (!cameFrom.has(targetKey)) return [];
+    private static getPathCacheKey(startX: number, startY: number, targetX: number, targetY: number, gridSize: number): string {
+        const sx = Math.floor(startX / gridSize);
+        const sy = Math.floor(startY / gridSize);
+        const tx = Math.floor(targetX / gridSize);
+        const ty = Math.floor(targetY / gridSize);
+        return `${sx},${sy}->${tx},${ty}`;
+    }
 
-        const path: GridPoint[] = [];
-        let currentKey = targetKey;
-        while (currentKey !== startKey) {
-            const [gx, gy] = currentKey.split(',').map(Number);
-            path.unshift({ x: gx * gridSize + gridSize / 2, y: gy * gridSize + gridSize / 2 });
-            currentKey = cameFrom.get(currentKey)!;
+    private static cachePath(key: string, path: GridPoint[]): void {
+        if (BaseEnemy.pathCache.size >= MAX_PATH_CACHE_ENTRIES) {
+            const oldestKey = BaseEnemy.pathCache.keys().next().value;
+            if (oldestKey) BaseEnemy.pathCache.delete(oldestKey);
         }
-        return path.slice(0, 8);
+        BaseEnemy.pathCache.set(key, {
+            version: BaseEnemy.pathCacheVersion,
+            path: path.map(point => ({ ...point }))
+        });
+    }
+
+    private static getInitialPathStagger(id: string): number {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) {
+            hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+        }
+        return Math.abs(hash) % INITIAL_PATH_STAGGER_MS;
+    }
+
+    private static bindPathCacheInvalidation(): void {
+        if (BaseEnemy.pathCacheEventsBound) return;
+        BaseEnemy.pathCacheEventsBound = true;
+        const invalidate = () => BaseEnemy.invalidatePathCache();
+        EventBus.on('BUILDING_PLACED', invalidate, 'BaseEnemyPathCache');
+        EventBus.on('BUILDING_REMOVED', invalidate, 'BaseEnemyPathCache');
+        EventBus.on('BUILDING_DESTROYED', invalidate, 'BaseEnemyPathCache');
+    }
+
+    private static invalidatePathCache(): void {
+        BaseEnemy.pathCacheVersion++;
+        BaseEnemy.pathCache.clear();
     }
 
     tryInfectBuilding(): void {

@@ -2,13 +2,13 @@ import { CONFIG } from '../config';
 import { DEFAULT_LANGUAGE, isLanguage } from '../i18n';
 import { SaveData } from '../types';
 
-export const CURRENT_SAVE_VERSION = '1.1.0';
+export const CURRENT_SAVE_VERSION = '1.2.0';
 
 export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = 'NORMAL'): SaveData {
     const data = (rawData && typeof rawData === 'object') ? rawData as Record<string, any> : {};
     const version = data.version || '1.0.0';
 
-    if (version === '1.0.0') {
+    if (version === '1.0.0' || version === '1.1.0') {
         data.version = CURRENT_SAVE_VERSION;
     }
 
@@ -24,8 +24,7 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
     };
     data.core = {
         hp: data.core?.hp ?? CONFIG.BUILDINGS.CORE.HP ?? 1000,
-        totalDataReceived: data.core?.totalDataReceived ?? 0,
-        confidenceScore: data.core?.confidenceScore ?? 0
+        totalDataReceived: data.core?.totalDataReceived ?? 0
     };
     data.buildings = (data.buildings || []).map((building: any) => ({
         ...building,
@@ -34,7 +33,6 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         outputBuffer: building.outputBuffer || [],
         hp: typeof building.hp === 'number' ? building.hp : undefined
     }));
-    data.defenseModelStates = data.defenseModelStates || {};
     data.items = data.items || [];
     data.cables = data.cables || [];
     data.settings = {
@@ -46,11 +44,27 @@ export function migrateSaveData(rawData: unknown, fallbackDifficulty: string = '
         masterVolume: data.settings?.masterVolume ?? 0.6,
         muted: data.settings?.muted ?? false,
         tutorialCompleted: data.settings?.tutorialCompleted ?? false,
-        tutorialStep: data.settings?.tutorialStep ?? 0
+        tutorialStep: data.settings?.tutorialStep ?? 0,
+        mapType: data.settings?.mapType === 'tutorial' ? 'tutorial' : 'random',
+        mapPresetId: data.settings?.mapPresetId === 'tutorial' ? 'tutorial' : 'standard',
+        mapSeed: typeof data.settings?.mapSeed === 'number' ? data.settings.mapSeed : undefined
     };
     data.resourceMap = data.resourceMap || [];
     data.terrainMap = data.terrainMap || [];
     data.research = data.research || [];
 
-    return data as SaveData;
+    return {
+        version: data.version,
+        timestamp: data.timestamp,
+        wave: data.wave,
+        core: data.core,
+        buildings: data.buildings,
+        researchState: data.researchState,
+        items: data.items,
+        cables: data.cables,
+        settings: data.settings,
+        resourceMap: data.resourceMap,
+        terrainMap: data.terrainMap,
+        research: data.research
+    } as SaveData;
 }

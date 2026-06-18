@@ -1,0 +1,51 @@
+.hudRoot {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+}
+
+.hudStage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform-origin: top left;
+    --hud-edge: 24px;
+    --hud-rail-top: 108px;
+    --hud-right-rail-width: 308px;
+    --hud-tutorial-width: 360px;
+    --hud-build-dock-height: 164px;
+    --hud-build-clearance: 208px;
+    --hud-frame-width: 1920px;
+}
+
+.hudStage[data-hud-profile="qhd"] {
+    --hud-edge: 28px;
+    --hud-right-rail-width: 320px;
+    --hud-tutorial-width: 384px;
+    --hud-build-dock-height: 172px;
+    --hud-build-clearance: 224px;
+    --hud-frame-width: 2560px;
+}
+
+.hudStage[data-hud-profile="uhd"] {
+    --hud-edge: 32px;
+    --hud-right-rail-width: 336px;
+    --hud-tutorial-width: 400px;
+    --hud-build-dock-height: 180px;
+    --hud-build-clearance: 236px;
+    --hud-frame-width: 2560px;
+}
+
+.gameplayFrame {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: min(100%, var(--hud-frame-width));
+    pointer-events: none;
+    transform: translateX(-50%);
+}

@@ -4,12 +4,18 @@ import type MainScene from '../scenes/MainScene';
 import AbstractProcessor from '../buildings/AbstractProcessor';
 import AccessPoint from '../buildings/AccessPoint';
 import DefenseTower from '../buildings/DefenseTower';
-import ModelTrainingLab from '../buildings/ModelTrainingLab';
-import NeuralTrainer from '../buildings/NeuralTrainer';
 import { getBuildingName, getCableName, getItemName, t, textForKey } from '../i18n';
 import { getSquareCoverageOffsets } from '../utils/powerPreview';
+import { VISUAL_THEME } from '../visuals/visualTheme';
+import EventBus from '../managers/EventBus';
+
+const TOOLTIP_REFRESH_INTERVAL_MS = 250;
 
 export default class InputController {
+    private lastGhostSignature = '';
+    private lastTooltipSignature = '';
+    private lastTooltipRefreshAt = Number.NEGATIVE_INFINITY;
+
     constructor(private scene: MainScene) {}
 
     setup(): void {
@@ -65,20 +71,23 @@ export default class InputController {
         scene.input.keyboard!.on('keydown-R', () => this.rotateCursor());
         scene.input.keyboard!.on('keydown-F2', () => scene.togglePowerGrid());
         scene.input.keyboard!.on('keydown-F1', () => scene.toggleDefenseRange());
+
+        EventBus.on('BUILDING_PLACED', () => this.invalidateCursorCache(), 'InputController');
+        EventBus.on('BUILDING_REMOVED', () => this.invalidateCursorCache(), 'InputController');
+        EventBus.on('BUILDING_DESTROYED', () => this.invalidateCursorCache(), 'InputController');
+        EventBus.on('RESEARCH_UNLOCKED', () => this.invalidateCursorCache(), 'InputController');
     }
 
     isPointerOverDomUI(pointer: Phaser.Input.Pointer): boolean {
         const element = document.elementFromPoint(pointer.x, pointer.y);
         if (!element) return false;
 
-        return Boolean(element.closest([
+        const uiElement = element.closest<HTMLElement>([
             '#bottom-ui-container',
             '#ui-overlay',
             '#ui-tabs',
             '#top-actions',
             '#settings-modal',
-            '#research-modal',
-            '#training-lab-modal',
             '#game-over-screen',
             '#mobile-action-bar',
             '#mobile-cable-menu',
@@ -89,9 +98,11 @@ export default class InputController {
             '.build-btn',
             '.tab-btn',
             '.mobile-action-btn',
-            '.mobile-cable-option',
-            '.training-target-row'
-        ].join(',')));
+            '.mobile-cable-option'
+        ].join(','));
+        if (!uiElement) return false;
+
+        return !Boolean(uiElement.closest('[data-preact-shadow="true"][aria-hidden="true"]'));
     }
 
     setupCursor(): void {
@@ -116,6 +127,7 @@ export default class InputController {
     rotateCursor(): void {
         const { scene } = this;
         scene.currentRotation = (scene.currentRotation + 1) % 4;
+        this.invalidateCursorCache();
         scene.updateCursorGraphics();
     }
 
@@ -126,10 +138,23 @@ export default class InputController {
         scene.cableStartKey = null;
         scene.cableDraftGraphics?.clear();
         if (wasCablePending) {
-            scene.uiManager.logMessage('System: Cable connection cancelled.');
+            this.logMessage('System: Cable connection cancelled.');
         }
-        scene.uiManager.setMobileActionStatus(null);
-        scene.uiManager.cancelMobileAction();
+        EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+        EventBus.emit('MOBILE_ACTION_CANCEL_REQUESTED');
+        this.invalidateCursorCache();
+    }
+
+    private logMessage(message: string, isAlert: boolean = false): void {
+        EventBus.emit('ACTIVITY_LOG_ENTRY_REQUESTED', { message, isAlert });
+    }
+
+    private showTooltip(x: number, y: number, title: string, content: string): void {
+        EventBus.emit('TOOLTIP_SHOW_REQUESTED', { x, y, title, content });
+    }
+
+    private hideTooltip(): void {
+        EventBus.emit('TOOLTIP_CLOSE_REQUESTED');
     }
 
     updateCursorPosition(): void {
@@ -141,34 +166,29 @@ export default class InputController {
         scene.cursorContainer.setPosition(snappedX, snappedY);
 
         const key = `${snappedX},${snappedY}`;
-        const mode = scene.uiManager.getSelectedBuildingType();
-
-        if (
-            !scene.isMobileLayout &&
-            pointer.leftButtonDown() &&
-            !this.isPointerOverDomUI(pointer) &&
-            (mode === 'CONVEYOR' || mode === 'FAST_LINK')
-        ) {
-            const bConfig = CONFIG.BUILDINGS[mode];
-            const w = bConfig?.WIDTH || 1;
-            const h = bConfig?.HEIGHT || 1;
-            const isUnlocked = !bConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
-
-            if (isUnlocked && !scene.isBlocked(snappedX, snappedY, w, h)) {
-                scene.buildingManager.place(snappedX, snappedY, mode, scene.currentRotation);
-            }
-        }
+        const mode = scene.selectedBuildingType;
 
         const existingBuilding = scene.buildingManager.get(key);
+        const ghostSignature = [
+            snappedX,
+            snappedY,
+            mode,
+            scene.currentRotation,
+            scene.cableState,
+            scene.cableStartKey || '',
+            existingBuilding?.type || ''
+        ].join('|');
 
-        if (mode !== 'REMOVE') {
+        if (mode !== 'REMOVE' && this.shouldRenderCursorGhost(ghostSignature)) {
             if (mode === 'BASIC' || mode === 'FIBER') {
                 const cConfig = CONFIG.CABLES[mode];
                 const isUnlocked = !cConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(cConfig.UNLOCK_REQUIRED);
                 if (!isUnlocked) {
                     scene.ghostGraphics.clear();
-                    scene.ghostGraphics.fillStyle(0xff0000, 0.5);
+                    scene.ghostGraphics.fillStyle(VISUAL_THEME.overlays.invalid, 0.34);
                     scene.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
+                    scene.ghostGraphics.lineStyle(2, VISUAL_THEME.overlays.invalid, 0.9);
+                    scene.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE, CONFIG.GRID_SIZE);
                 } else {
                     scene.updateCursorGraphics();
                 }
@@ -181,8 +201,10 @@ export default class InputController {
 
                     if (!isUnlocked || scene.isBlocked(snappedX, snappedY, w, h)) {
                         scene.ghostGraphics.clear();
-                        scene.ghostGraphics.fillStyle(0xff0000, 0.5);
+                        scene.ghostGraphics.fillStyle(VISUAL_THEME.overlays.invalid, 0.28);
                         scene.ghostGraphics.fillRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
+                        scene.ghostGraphics.lineStyle(2, VISUAL_THEME.overlays.invalid, 0.9);
+                        scene.ghostGraphics.strokeRect(0, 0, CONFIG.GRID_SIZE * w, CONFIG.GRID_SIZE * h);
                     } else {
                         scene.updateCursorGraphics();
                         this.drawPlacementRangePreview(mode, w, h);
@@ -190,6 +212,9 @@ export default class InputController {
                 }
             }
         }
+
+        const tooltipSignature = this.getTooltipSignature(snappedX, snappedY, mode, existingBuilding);
+        if (!this.shouldRenderTooltip(tooltipSignature)) return;
 
         if (existingBuilding) {
             const bConfig = CONFIG.BUILDINGS[existingBuilding.type];
@@ -217,20 +242,8 @@ export default class InputController {
                 content += `\n${textForKey('tooltip.status')}: ${existingBuilding.isProcessing ? textForKey('tooltip.processing') : textForKey('tooltip.idle')}`;
                 content += `\n${textForKey('tooltip.recipe')}: ${existingBuilding.recipe?.OUTPUT}`;
             }
-            if (existingBuilding instanceof NeuralTrainer) {
-                content += `\n${textForKey('tooltip.leftClickCycleRecipe')}`;
-            }
-            if (existingBuilding instanceof ModelTrainingLab) {
-                const targetType = existingBuilding.targetType;
-                const targetState = targetType ? scene.getDefenseModelState(targetType) : null;
-                const targetName = targetType ? getBuildingName(targetType) : textForKey('tooltip.none');
-                content += `\n${textForKey('tooltip.trainingTarget')}: ${targetName}`;
-                if (targetState) {
-                    content += `\n${textForKey('tooltip.sharedConfidence')}: ${Math.round(targetState.modelConfidence)}%`;
-                    content += `\n${textForKey('tooltip.sharedVersion')}: v${targetState.modelVersion}`;
-                }
-                content += `\n${textForKey('tooltip.autoTrain')}: ${existingBuilding.autoTrain ? textForKey('tooltip.on') : textForKey('tooltip.off')}`;
-                content += `\n${textForKey('tooltip.leftClickSelectModel')}`;
+            if (existingBuilding.type === 'RESEARCH_OPERATIONS_CENTER') {
+                content += `\n${textForKey('tooltip.status')}: ${existingBuilding.hasPower === false ? textForKey('tooltip.powerOutage') : textForKey('tooltip.researchOperations')}`;
             }
             if (existingBuilding instanceof AccessPoint) {
                 const rangeBonus = scene.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
@@ -248,31 +261,79 @@ export default class InputController {
                 const damageMultiplier = scene.researchManager.getEffectValue('TOWER_DAMAGE_MULTIPLIER', 1);
                 const rangeBonus = scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
                 const fireRateMultiplier = scene.researchManager.getEffectValue('TOWER_FIRE_RATE_MULTIPLIER', 1);
+                const accuracyBonus = scene.researchManager.getEffectValue('TOWER_ACCURACY_BONUS', 0);
                 const effectiveDamage = bConfig.DEFENSE.DAMAGE * damageMultiplier;
                 const effectiveRange = bConfig.DEFENSE.RANGE + rangeBonus;
                 const effectiveFireRate = Math.max(1, Math.round(bConfig.DEFENSE.FIRE_RATE * fireRateMultiplier));
                 const tower = existingBuilding instanceof DefenseTower ? existingBuilding : null;
-                const modelConfidence = tower?.modelConfidence ?? 35;
-                const confidenceFactor = 0.6 + modelConfidence / 125;
-                content += `\n${textForKey('tooltip.modelConfidence')}: ${Math.round(modelConfidence)}%`;
-                content += `\n${textForKey('tooltip.modelVersion')}: v${tower?.modelVersion ?? 1}`;
-                content += `\n${textForKey('tooltip.inferenceCharge')}: ${tower?.inferenceCharge ?? 0}`;
-                content += `\n${textForKey('tooltip.damage')}: ${(effectiveDamage * confidenceFactor).toFixed(1)}`;
+                const hitChance = tower?.getHitChance() ?? Phaser.Math.Clamp(0.65 + accuracyBonus, 0.05, 0.95);
+                content += `\n${textForKey('tooltip.hitChance')}: ${Math.round(hitChance * 100)}%`;
+                content += `\n${textForKey('tooltip.damage')}: ${effectiveDamage.toFixed(1)}`;
                 content += `\n${textForKey('tooltip.range')}: ${effectiveRange} tiles`;
                 content += `\n${textForKey('tooltip.fireRate')}: ${effectiveFireRate} ticks`;
-                content += `\n${textForKey('tooltip.attackInput')}: ${textForKey('tooltip.modelConfidence')}`;
             }
 
-            scene.uiManager.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
+            this.showTooltip(pointer.x, pointer.y, getBuildingName(existingBuilding.type), content);
         } else {
             const resourceType = scene.mapManager.getResourceAt(snappedX, snappedY);
+            const terrainType = scene.mapManager.getTerrainAt(snappedX, snappedY);
             if (resourceType) {
                 const resourceName = getItemName(resourceType);
-                scene.uiManager.showTooltip(pointer.x, pointer.y, resourceName, `${textForKey('tooltip.type')}: ${resourceType}`);
+                this.showTooltip(pointer.x, pointer.y, resourceName, `${textForKey('tooltip.type')}: ${resourceType}`);
+            } else if (terrainType === 'BLOCKER') {
+                const title = textForKey('terrain.BLOCKER.name');
+                const content = `${textForKey('tooltip.type')}: ${textForKey('tooltip.terrain')}\n${textForKey('tooltip.blockerDescription')}`;
+                this.showTooltip(pointer.x, pointer.y, title, content);
             } else {
-                scene.uiManager.hideTooltip();
+                this.hideTooltip();
             }
         }
+    }
+
+    private invalidateCursorCache(): void {
+        this.lastGhostSignature = '';
+        this.lastTooltipSignature = '';
+        this.lastTooltipRefreshAt = Number.NEGATIVE_INFINITY;
+    }
+
+    private shouldRenderCursorGhost(signature: string): boolean {
+        if (signature === this.lastGhostSignature) return false;
+        this.lastGhostSignature = signature;
+        return true;
+    }
+
+    private shouldRenderTooltip(signature: string): boolean {
+        const now = this.scene.time.now;
+        if (signature === this.lastTooltipSignature && now - this.lastTooltipRefreshAt < TOOLTIP_REFRESH_INTERVAL_MS) {
+            return false;
+        }
+        this.lastTooltipSignature = signature;
+        this.lastTooltipRefreshAt = now;
+        return true;
+    }
+
+    private getTooltipSignature(snappedX: number, snappedY: number, mode: string, existingBuilding: any): string {
+        if (!existingBuilding) {
+            const resource = this.scene.mapManager.getResourceAt(snappedX, snappedY) || '';
+            const terrain = this.scene.mapManager.getTerrainAt(snappedX, snappedY) || '';
+            return `${snappedX},${snappedY}|${mode}|${resource}|${terrain}`;
+        }
+
+        const network = this.scene.powerManager.getNetworkForBuilding(`${existingBuilding.x},${existingBuilding.y}`);
+        return [
+            snappedX,
+            snappedY,
+            mode,
+            existingBuilding.type,
+            existingBuilding.hasPower,
+            existingBuilding.hp,
+            existingBuilding.inputBuffer?.length ?? 0,
+            existingBuilding.outputBuffer?.length ?? 0,
+            network?.id ?? '',
+            network?.production ?? '',
+            network?.consumption ?? '',
+            Math.floor(this.scene.time.now / TOOLTIP_REFRESH_INTERVAL_MS)
+        ].join('|');
     }
 
     private drawPlacementRangePreview(type: string, width: number, height: number): void {
@@ -281,18 +342,18 @@ export default class InputController {
         if (!bConfig) return;
 
         let range = 0;
-        let color = 0x00f3ff;
+        let color: number = VISUAL_THEME.overlays.valid;
         if (bConfig.DEFENSE?.RANGE) {
             range = bConfig.DEFENSE.RANGE + scene.researchManager.getEffectValue('TOWER_RANGE_BONUS', 0);
-            color = 0xff4444;
+            color = VISUAL_THEME.overlays.defense;
         } else if ((bConfig.POWER?.RANGE || 0) > 0) {
             range = bConfig.POWER.RANGE || 0;
-            color = 0xfde047;
+            color = VISUAL_THEME.overlays.power;
             this.drawSquareCoveragePreview(range, color);
             return;
         } else if (type === 'ACCESS_POINT') {
             range = CONFIG.ACCESS_POINT.RANGE + scene.researchManager.getEffectValue('AP_RANGE_BONUS', 0);
-            color = 0x38bdf8;
+            color = VISUAL_THEME.cables.wireless;
         }
 
         if (range <= 0) return;
@@ -302,7 +363,7 @@ export default class InputController {
         const radius = range * CONFIG.GRID_SIZE;
         scene.ghostGraphics.fillStyle(color, 0.08);
         scene.ghostGraphics.fillCircle(centerX, centerY, radius);
-        scene.ghostGraphics.lineStyle(2, color, 0.45);
+        scene.ghostGraphics.lineStyle(2, color, 0.52);
         scene.ghostGraphics.strokeCircle(centerX, centerY, radius);
     }
 
@@ -326,15 +387,15 @@ export default class InputController {
         const snappedY = Math.floor(worldPoint.y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
         const key = `${snappedX},${snappedY}`;
         const normalizedKey = scene.cableManager.normalizeKey(key, scene.buildingManager);
-        const mode = scene.uiManager.getSelectedBuildingType();
+        const mode = scene.selectedBuildingType;
 
         if (button === 'primary') {
             if (mode === 'REMOVE') {
                 if (scene.buildingManager.has(key)) {
                     const cables = scene.cableManager.getCablesForBuilding(normalizedKey);
                     if (cables.length > 0) {
-                        cables.forEach(c => scene.cableManager.disconnect(c.id));
-                        scene.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
+                        cables.forEach(c => scene.cableManager.disconnect(c.id, true));
+                        this.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                     } else {
                         scene.buildingManager.remove(key);
                     }
@@ -347,87 +408,154 @@ export default class InputController {
                     if (scene.cableState === 'IDLE') {
                         scene.cableState = 'CABLE_START';
                         scene.cableStartKey = normalizedKey;
-                        scene.uiManager.setMobileActionStatus(t('action.cableEndpoint'));
-                        scene.uiManager.logMessage('System: Cable start selected. Choose an endpoint.');
+                        EventBus.emit('CABLE_START_SELECTED', { fromKey: normalizedKey, cableType: mode });
+                        EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: t('action.cableEndpoint') });
+                        this.logMessage('System: Cable start selected. Choose an endpoint.');
                     } else if (scene.cableState === 'CABLE_START') {
                         if (scene.cableStartKey === normalizedKey) {
-                            scene.uiManager.logMessage('System: Select a different building for the cable endpoint.', true);
+                            this.logMessage('System: Select a different building for the cable endpoint.', true);
                             return;
                         }
                         if (scene.cableStartKey !== normalizedKey) {
-                            const costPerTile = cConfig.COST_PER_TILE || 0;
-                            if (costPerTile > 0) {
-                                const canAfford = scene.inventoryManager.canAfford([{ resource: 'SILICON', amount: costPerTile }]);
+                            const validation = scene.cableManager.canConnect(scene.cableStartKey!, normalizedKey, mode);
+                            if (!validation.ok) {
+                                this.logMessage(this.getCableValidationMessage(validation), true);
+                                scene.cableState = 'IDLE';
+                                scene.cableStartKey = null;
+                                EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+                                return;
+                            }
+                            if (validation.cost > 0) {
+                                const canAfford = scene.inventoryManager.canAfford([{ resource: 'SILICON', amount: validation.cost }]);
                                 if (!canAfford) {
                                     scene.cableState = 'IDLE';
                                     scene.cableStartKey = null;
-                                    scene.uiManager.setMobileActionStatus(null);
-                                    scene.uiManager.logMessage(`System: Not enough Silicon for cable. Need: ${costPerTile}`, true);
+                                    EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+                                    this.logMessage(`System: Not enough Silicon for cable. Need: ${validation.cost}`, true);
                                     return;
                                 }
                             }
-                            if (scene.cableManager.connect(scene.cableStartKey!, normalizedKey, mode)) {
-                                if (costPerTile > 0) {
-                                    scene.inventoryManager.spend([{ resource: 'SILICON', amount: costPerTile }]);
+                            if (scene.cableManager.connect(scene.cableStartKey!, normalizedKey, mode, { costPaid: validation.cost })) {
+                                if (validation.cost > 0) {
+                                    scene.inventoryManager.spend([{ resource: 'SILICON', amount: validation.cost }]);
                                 }
-                                scene.uiManager.logMessage(`System: Cable connected.`);
+                                this.logMessage(`System: Cable connected. Cost: ${validation.cost} Silicon.`);
                             } else {
-                                scene.uiManager.logMessage(`System: Cable connection already exists.`, true);
+                                this.logMessage(`System: Cable connection failed.`, true);
                             }
                         }
                         scene.cableState = 'IDLE';
                         scene.cableStartKey = null;
-                        scene.uiManager.setMobileActionStatus(null);
+                        EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
                     }
                 } else if (scene.cableState === 'CABLE_START') {
                     scene.cableState = 'IDLE';
                     scene.cableStartKey = null;
-                    scene.uiManager.setMobileActionStatus(null);
-                    scene.uiManager.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
+                    EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
+                    this.logMessage('System: Cable cancelled. Endpoint must be a building.', true);
                 } else if (!isUnlocked) {
-                    scene.uiManager.logMessage(t('log.cableLocked', { name: getCableName(mode) }), true);
+                    this.logMessage(t('log.cableLocked', { name: getCableName(mode) }), true);
                 } else {
-                    scene.uiManager.logMessage('System: Select a building to start the cable.', true);
+                    this.logMessage('System: Select a building to start the cable.', true);
                 }
             } else {
                 scene.cableState = 'IDLE';
                 scene.cableStartKey = null;
-                scene.uiManager.setMobileActionStatus(null);
+                EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
 
                 const existingBuilding = scene.buildingManager.get(key);
-                if (existingBuilding instanceof ModelTrainingLab) {
-                    scene.uiManager.openTrainingLab(existingBuilding);
+                if (existingBuilding?.type === 'RESEARCH_OPERATIONS_CENTER') {
+                    EventBus.emit('RESEARCH_OPEN_REQUESTED');
                     return;
                 }
-                if (existingBuilding instanceof NeuralTrainer) {
-                    existingBuilding.cycleRecipe();
-                    return;
-                }
-
                 const bConfig = CONFIG.BUILDINGS[mode];
                 if (!bConfig) return;
                 const w = bConfig.WIDTH || 1;
                 const h = bConfig.HEIGHT || 1;
                 const isUnlocked = !bConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
 
-                if (isUnlocked && !scene.isBlocked(snappedX, snappedY, w, h)) {
-                    scene.buildingManager.place(snappedX, snappedY, mode, scene.currentRotation);
+                if (!isUnlocked) {
+                    this.logPlacementFailure(mode, 'locked');
+                    return;
+                }
+
+                const blockReason = this.getPlacementBlockReason(snappedX, snappedY, w, h);
+                if (blockReason) {
+                    this.logPlacementFailure(mode, blockReason);
+                    return;
+                }
+
+                const lacksResources = Boolean(
+                    bConfig.COST?.length
+                    && scene.inventoryManager
+                    && !scene.inventoryManager.canAfford(bConfig.COST)
+                );
+                const placed = scene.buildingManager.place(snappedX, snappedY, mode, scene.currentRotation);
+                if (!placed && !lacksResources) {
+                    this.logPlacementFailure(mode, 'failed');
                 }
             }
         } else if (button === 'secondary') {
             scene.cableState = 'IDLE';
             scene.cableStartKey = null;
-            scene.uiManager.setMobileActionStatus(null);
+            EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: null });
 
             if ((mode === 'BASIC' || mode === 'FIBER') && scene.buildingManager.has(key)) {
                 const cables = scene.cableManager.getCablesForBuilding(normalizedKey);
                 if (cables.length > 0) {
-                    cables.forEach(c => scene.cableManager.disconnect(c.id));
-                    scene.uiManager.logMessage(`System: ${cables.length} cable(s) disconnected.`);
+                    cables.forEach(c => scene.cableManager.disconnect(c.id, true));
+                    this.logMessage(`System: ${cables.length} cable(s) disconnected.`);
                 }
             } else if (scene.buildingManager.has(key)) {
                 scene.buildingManager.remove(key);
             }
         }
+    }
+
+    private getPlacementBlockReason(x: number, y: number, w: number, h: number): 'outOfBounds' | 'occupied' | 'terrain' | null {
+        const { scene } = this;
+        for (let dx = 0; dx < w; dx++) {
+            for (let dy = 0; dy < h; dy++) {
+                const tileX = x + dx * CONFIG.GRID_SIZE;
+                const tileY = y + dy * CONFIG.GRID_SIZE;
+                if (!scene.mapManager.isAreaWithinBuildBounds(tileX, tileY, 1, 1)) {
+                    return 'outOfBounds';
+                }
+                if (scene.buildingManager.has(`${tileX},${tileY}`)) {
+                    return 'occupied';
+                }
+                if (scene.mapManager.isTerrainBlocked(tileX, tileY)) {
+                    return 'terrain';
+                }
+            }
+        }
+        return null;
+    }
+
+    private logPlacementFailure(type: string, reason: 'locked' | 'outOfBounds' | 'occupied' | 'terrain' | 'failed'): void {
+        const keyByReason = {
+            locked: 'placement.blocked.locked',
+            outOfBounds: 'placement.blocked.outOfBounds',
+            occupied: 'placement.blocked.occupied',
+            terrain: 'placement.blocked.terrain',
+            failed: 'placement.blocked.failed'
+        } as const;
+        this.logMessage(t(keyByReason[reason] as any, { name: getBuildingName(type) }), true);
+    }
+
+    private getCableValidationMessage(validation: { reason?: string; distanceTiles: number; maxLengthTiles: number; blockedTile?: { x: number; y: number } }): string {
+        if (validation.reason === 'too-far') {
+            return `System: Cable too far (${validation.distanceTiles}/${validation.maxLengthTiles} tiles). Add a Repeater.`;
+        }
+        if (validation.reason === 'blocked') {
+            const tile = validation.blockedTile;
+            return tile
+                ? `System: Cable blocked by terrain at [${tile.x}, ${tile.y}].`
+                : 'System: Cable blocked by terrain.';
+        }
+        if (validation.reason === 'out-of-bounds') return 'System: Cable endpoint is outside the operation area.';
+        if (validation.reason === 'duplicate') return 'System: Cable connection already exists.';
+        if (validation.reason === 'same-endpoint') return 'System: Select a different building for the cable endpoint.';
+        return 'System: Cable endpoint is invalid.';
     }
 }

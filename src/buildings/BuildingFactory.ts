@@ -7,16 +7,18 @@ import Core from './Core';
 import PowerPlant from './PowerPlant';
 import PowerNode from './PowerNode';
 import Storage from './Storage';
-import Unloader from './Unloader';
 import DefenseTower, { Classifier, Filter, Firewall } from './DefenseTower';
 import SolarPanel from './SolarPanel';
 import NeuralTrainer from './NeuralTrainer';
 import AccessPoint from './AccessPoint';
-import Conveyor, { FastLink } from './Conveyor';
 import DataDownloader from './DataDownloader';
 import Recycler from './Recycler';
 import DataCache from './DataCache';
-import ModelTrainingLab from './ModelTrainingLab';
+import ResearchOperationsCenter from './ResearchOperationsCenter';
+import ResearchLab from './ResearchLab';
+import DataCenter from './DataCenter';
+import GpuCluster from './GpuCluster';
+import Repeater from './Repeater';
 import { BuildingOptions } from '../types';
 
 type BuildingClass = new (scene: Phaser.Scene, x: number, y: number, config?: BuildingOptions) => BaseBuilding;
@@ -29,18 +31,19 @@ const REGISTRY: Record<string, BuildingClass> = {
     POWER_PLANT: PowerPlant,
     POWER_NODE: PowerNode,
     STORAGE: Storage,
-    UNLOADER: Unloader,
     CLASSIFIER: Classifier,
     FILTER: Filter,
     FIREWALL: Firewall,
     SOLAR_PANEL: SolarPanel,
     NEURAL_TRAINER: NeuralTrainer,
     WEIGHT_TRAINER: WeightTrainer,
-    MODEL_TRAINING_LAB: ModelTrainingLab,
+    RESEARCH_OPERATIONS_CENTER: ResearchOperationsCenter,
+    RESEARCH_LAB: ResearchLab,
+    DATA_CENTER: DataCenter,
+    GPU_CLUSTER: GpuCluster,
     RECYCLER: Recycler,
     ACCESS_POINT: AccessPoint,
-    CONVEYOR: Conveyor,
-    FAST_LINK: FastLink,
+    REPEATER: Repeater,
     DATA_CACHE: DataCache
 };
 

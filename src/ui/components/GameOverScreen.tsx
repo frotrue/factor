@@ -1,0 +1,104 @@
+import EventBus from '../../managers/EventBus';
+import { gameOverScreen } from '../signals/modalState';
+import Button from '../shared/Button';
+import styles from './GameOverScreen.module.css';
+
+function stopGameOverEvent(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+}
+
+export default function GameOverScreen() {
+    const snapshot = gameOverScreen.value;
+    if (!snapshot.open) return null;
+
+    const titleId = 'preact-game-over-title';
+    const failureId = 'preact-game-over-failure-code';
+    const panelId = 'preact-game-over-panel';
+    const actionsId = 'preact-game-over-actions';
+    const toneClass = {
+        cyan: styles.cyan,
+        danger: styles.danger,
+        green: styles.green,
+        warn: styles.warn
+    };
+
+    return (
+        <section
+            aria-describedby={failureId}
+            aria-labelledby={titleId}
+            aria-modal="true"
+            class={styles.screen}
+            data-testid="preact-game-over-screen"
+            role="dialog"
+        >
+            <div class={styles.panel} data-testid="preact-game-over-panel" id={panelId}>
+                <div class={styles.header}>
+                    <div>
+                        <div class={styles.kicker}>{snapshot.kicker}</div>
+                        <h2 class={styles.title} data-testid="preact-game-over-title" id={titleId}>{snapshot.title}</h2>
+                    </div>
+                    <div class={styles.failureCode} data-testid="preact-game-over-failure-code" id={failureId}>
+                        {snapshot.failureCode}
+                    </div>
+                </div>
+                <div class={styles.integrity}>
+                    <span>{snapshot.integrityLabel}</span>
+                    <strong>{snapshot.coreHpPercent}%</strong>
+                    <div
+                        aria-label={snapshot.integrityLabel}
+                        aria-valuemax={100}
+                        aria-valuemin={0}
+                        aria-valuenow={snapshot.coreHpPercent}
+                        aria-valuetext={`${snapshot.coreHpPercent}%`}
+                        class={styles.track}
+                        data-testid="preact-game-over-integrity"
+                        role="progressbar"
+                    >
+                        <span style={{ width: `${snapshot.coreHpPercent}%` }} />
+                    </div>
+                </div>
+                <div aria-label={snapshot.title} class={styles.grid} data-testid="preact-game-over-stats" role="list">
+                    {snapshot.stats.map(stat => (
+                        <div class={styles.stat} data-testid={`preact-game-over-stat-${stat.id}`} key={stat.id} role="listitem">
+                            <span>{stat.label}</span>
+                            <strong class={toneClass[stat.tone]}>{stat.value}</strong>
+                        </div>
+                    ))}
+                </div>
+                <div
+                    aria-label={snapshot.title}
+                    class={styles.actions}
+                    data-testid="preact-game-over-actions"
+                    id={actionsId}
+                    role="group"
+                >
+                    <Button
+                        ariaControls={panelId}
+                        className={styles.action}
+                        dataTestId="preact-game-over-restart"
+                        onClick={event => {
+                            stopGameOverEvent(event);
+                            EventBus.emit('GAME_OVER_ACTION_REQUESTED', { action: 'restart' });
+                        }}
+                        tabIndex={0}
+                    >
+                        {snapshot.restartLabel}
+                    </Button>
+                    <Button
+                        ariaControls={panelId}
+                        className={styles.action}
+                        dataTestId="preact-game-over-main-menu"
+                        onClick={event => {
+                            stopGameOverEvent(event);
+                            EventBus.emit('GAME_OVER_ACTION_REQUESTED', { action: 'main-menu' });
+                        }}
+                        tabIndex={0}
+                    >
+                        {snapshot.mainMenuLabel}
+                    </Button>
+                </div>
+            </div>
+        </section>
+    );
+}

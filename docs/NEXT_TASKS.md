@@ -1,20 +1,27 @@
 # Next Tasks
 
-Updated: 2026-05-21
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
+Updated: 2026-06-16
 
 ## Immediate Priority
 
-### 1. Playtest Building Damage Balance
+### 1. Playtest First 15 Waves
 
-Goal: confirm that enemy building attacks add tension without making the early game frustrating.
+Goal: verify realigned onboarding, tactical panels, research timing, enemy building attacks create tension without early frustration.
 
 Checklist:
 
-- [ ] Normal Wave 1~5: one North Port defense line is enough for a new player.
-- [ ] Normal Wave 6~10: damaged buildings are noticeable but recoverable.
-- [ ] Normal Wave 11: East Port introduction is understandable.
-- [ ] Firewall feels useful as a front-line blocker.
-- [ ] Conveyor/Power Node destruction does not feel random or unfair.
+- [ ] Normal Wave 1~5: one North Port defense line enough for new player.
+- [ ] Normal Wave 6~10: damaged buildings visible but recoverable.
+- [ ] Normal Wave 11: East Port intro understandable.
+- [ ] Research reveal after first defense feels rewarding.
+- [ ] Delayed AP/Fiber clarifies early build choices.
+- [ ] Wave summaries connect factory growth to defense outcomes.
+- [ ] Post-first-defense objectives clarify expand-vs-defend tradeoff.
+- [x] Research Operations Center copy explains global research throughput.
+- [ ] Firewall useful as front-line blocker.
+- [ ] Power Node destruction feels fair, not random.
 
 Suggested tuning files:
 
@@ -24,14 +31,14 @@ Suggested tuning files:
 
 ### 2. Improve Damage Feedback
 
-Goal: make "what is being attacked" obvious.
+Goal: make attacked targets obvious.
 
 Tasks:
 
-- [ ] Add a small building status chip for `UNDER ATTACK`.
+- [ ] Add small building status chip for `UNDER ATTACK`.
 - [ ] Add stronger destroyed-building feedback.
-- [ ] Add log copy using localized building names.
-- [ ] Consider a short pause/flash when a critical building is destroyed.
+- [ ] Add log copy with localized building names.
+- [ ] Consider short pause/flash when critical building destroyed.
 
 Suggested files:
 
@@ -39,16 +46,16 @@ Suggested files:
 - `src/managers/UIManager.ts`
 - `src/i18n.ts`
 
-### 3. Wave Briefing Panel
+### 3. Tune Tactical Panels
 
-Goal: move route/threat/recommendation text out of the cramped wave timer.
+Goal: keep objective/wave/defense/power panels useful in real play, not noisy.
 
 Tasks:
 
-- [ ] Add a compact "Next Wave" panel.
-- [ ] Show port, threat level, special threat, recommended defense.
-- [ ] Keep current timer display short.
-- [ ] Add Playwright smoke coverage for the panel.
+- [ ] Confirm panel placement does not hide critical desktop tiles.
+- [ ] Confirm mobile HUD readable with systems panel hidden.
+- [ ] Add stronger alert state when active wave threatens buildings.
+- [ ] Consider extracting panel rendering from `UIManager` if it grows.
 
 Suggested files:
 
@@ -56,16 +63,16 @@ Suggested files:
 - `src/styles/main.css`
 - `tests/e2e/app-smoke.spec.ts`
 
-### 4. Terrain UX
+### 4. Terrain UX Follow-Up
 
 Goal: make BLOCKER terrain understandable.
 
 Tasks:
 
-- [ ] Add tooltip or hover text for BLOCKER terrain.
-- [ ] Make BLOCKER visual distinct from resource patches and grid.
+- [x] Add tooltip/hover text for BLOCKER terrain.
+- [x] Make BLOCKER distinct from resources + grid.
 - [ ] Confirm generated blockers do not hide important early placement tiles.
-- [ ] Consider a future research unlock for debris removal.
+- [ ] Consider future research unlock for debris removal.
 
 Suggested files:
 
@@ -77,30 +84,29 @@ Suggested files:
 
 ### 5. Enemy Role Differentiation
 
-Current enemies already have distinct stats and some special behavior. Next pass should make building interaction roles clearer.
+Enemies have distinct stats + some specials. Next pass: clearer building-interaction roles.
 
 - [ ] Noise: mostly Core pressure
 - [ ] Malware: infection priority
 - [ ] Adversarial: disrupt defense buildings
 - [ ] DDoS: stress buffers/AP/data flow
-- [ ] Overfitted Model: lane pressure and aura
+- [ ] Overfitted Model: lane pressure + aura
 
 ### 6. Save Compatibility Tests
 
 - [ ] Test old saves without `terrainMap`.
 - [ ] Test old saves without building `hp`.
-- [ ] Test damaged buildings round-trip through save/load.
-- [ ] Test terrain blockers round-trip through save/load.
+- [ ] Test damaged buildings save/load round-trip.
+- [ ] Test terrain blockers save/load round-trip.
 
 ### 7. Code Structure Cleanup
 
 - [ ] Consider extracting wave briefing DOM rendering from `UIManager`.
 - [ ] Consider extracting route guidance drawing from `EffectsManager`.
-- [ ] Keep `MainScene` as orchestration only when adding new systems.
+- [ ] Keep `MainScene` orchestration-only when adding systems.
 
 ## Lower Priority
 
-- [ ] Game-over stats screen
 - [ ] Save reset UI
 - [ ] Itch.io/PWA packaging review
 - [ ] Real device mobile QA
@@ -108,9 +114,19 @@ Current enemies already have distinct stats and some special behavior. Next pass
 
 ## Recently Done
 
-- [x] Fixed onboarding ports and wave route briefing.
-- [x] Added BLOCKER terrain and early lane shaping.
-- [x] Added building HP, damage, destruction, and cable cleanup.
+- [x] Fixed onboarding ports + wave route briefing.
+- [x] Added BLOCKER terrain + early lane shaping.
+- [x] Added building HP, damage, destruction, cable cleanup.
 - [x] Added enemy building attack priority.
-- [x] Saved/loaded terrain and damaged building HP.
-- [x] Removed arrows from installed buildings while keeping placement ghost arrows.
+- [x] Saved/loaded terrain + damaged building HP.
+- [x] Removed installed-building arrows, kept placement ghost arrows.
+- [x] Added tactical objective, wave, defense, power panels.
+- [x] Delayed research + advanced logistics until first defense success.
+- [x] Updated high-impact building names toward cyber/data terms.
+- [x] Added BLOCKER data-debris visual treatment.
+- [x] Added wave result summary with factory-growth feedback.
+- [x] Added expand-vs-defend objective states after first defense.
+- [x] Reframed model growth as permanent Research Tree effects.
+- [x] Cleaned active ROC docs/copy after `RESEARCH_OPERATIONS_CENTER` rename and documented desktop research economy targets.
+- [x] Added game-over run stats.
+- [x] Reduced early DDoS pressure + added building category accents.
