@@ -79,7 +79,7 @@ export default function RightRail() {
     const [collapsed, setCollapsed] = useState<Record<RailPanelId, boolean>>({
         objective: false,
         threat: false,
-        systems: false
+        systems: true
     });
     if (tutorialPanel.value.open) return null;
     const powerLoad = powerProduction.value > 0

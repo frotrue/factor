@@ -31,17 +31,24 @@ const buildConsoleSnapshotMock = vi.hoisted(() => ({
     })),
     createBuildConsoleDisplayState: vi.fn((input: any) => ({
         buildableData: {
+            BASIC: { CATEGORY: 'LOGISTICS' },
             DATA_DOWNLOADER: { CATEGORY: input.activeCategory },
+            POWER_NODE: { CATEGORY: 'POWER' },
             PROCESSOR: { CATEGORY: input.activeCategory },
             REMOVE: { CATEGORY: 'ALL' }
         },
         categories: [
             { active: input.activeCategory === 'EXTRACTION', id: 'EXTRACTION', label: 'Extraction' },
-            { active: input.activeCategory === 'LOGISTICS', id: 'LOGISTICS', label: 'Logistics' }
+            { active: input.activeCategory === 'LOGISTICS', id: 'LOGISTICS', label: 'Logistics' },
+            { active: input.activeCategory === 'PRODUCTION', id: 'PRODUCTION', label: 'Production' },
+            { active: input.activeCategory === 'POWER', id: 'POWER', label: 'Power' },
+            { active: input.activeCategory === 'DEFENSE', id: 'DEFENSE', label: 'Defense' }
         ],
         currentTabBuildings: input.activeCategory === 'LOGISTICS'
-            ? ['PROCESSOR']
-            : ['DATA_DOWNLOADER', 'PROCESSOR']
+            ? ['BASIC', 'PROCESSOR']
+            : input.activeCategory === 'POWER'
+                ? ['POWER_NODE']
+                : ['DATA_DOWNLOADER', 'PROCESSOR']
     }))
 }));
 
@@ -49,7 +56,9 @@ const legacyBuildConsoleMock = vi.hoisted(() => ({
     renderLegacyBuildConsole: vi.fn((options: any) => ({
         buildableData: options.displayState.buildableData,
         buttons: {
+            BASIC: { id: 'btn-basic' },
             DATA_DOWNLOADER: { id: 'btn-data_downloader' },
+            POWER_NODE: { id: 'btn-power_node' },
             PROCESSOR: { id: 'btn-processor' },
             REMOVE: { id: 'btn-remove' }
         },
@@ -84,13 +93,20 @@ class FakeSceneEvents {
 
 const owner = 'BuildConsoleController.test';
 
-function createController() {
+function createController(options: { tutorialCompleted?: boolean; tutorialGuidance?: any } = {}) {
     const events = new FakeSceneEvents();
+    const getBuildGuidance = vi.fn(() => options.tutorialGuidance ?? null);
     const scene = {
         events,
         researchManager: {
             isUnlocked: vi.fn(() => true)
         },
+        tutorialManager: options.tutorialCompleted === undefined && !options.tutorialGuidance
+            ? undefined
+            : {
+                getBuildGuidance,
+                isCompleted: vi.fn(() => Boolean(options.tutorialCompleted))
+            },
         waveManager: {
             currentWave: 2,
             waveActive: false
@@ -100,7 +116,8 @@ function createController() {
     return {
         controller: new BuildConsoleController(scene as any),
         events,
-        scene
+        scene,
+        getBuildGuidance
     };
 }
 
@@ -187,6 +204,59 @@ describe('BuildConsoleController', () => {
         expect(legacyBuildConsoleMock.updateLegacyBuildSelection).toHaveBeenCalledWith(expect.any(Object), 'DATA_DOWNLOADER');
         expect(legacyBuildConsoleMock.updateLegacyBuildSelection).toHaveBeenCalledWith(expect.any(Object), 'REMOVE');
         expect(events.snapshots.at(-1)?.selectedTool.key).toBe('REMOVE');
+    });
+
+    it('auto-selects the tutorial recommended tool and category once per change', () => {
+        const events = collectEvents();
+        const { controller, getBuildGuidance } = createController({
+            tutorialGuidance: {
+                activeStepId: 'POWER',
+                allowedBuildings: ['POWER_NODE', 'REMOVE'],
+                recommendedTool: 'POWER_NODE'
+            }
+        });
+
+        controller.setupEvents();
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
+
+        expect(buildConsoleSnapshotMock.createBuildConsoleDisplayState).toHaveBeenLastCalledWith(expect.objectContaining({
+            activeCategory: 'POWER'
+        }));
+        expect(events.buildSelections).toEqual(['POWER_NODE']);
+        expect(events.snapshots.at(-1)?.selectedTool.key).toBe('POWER_NODE');
+
+        getBuildGuidance.mockReturnValue({
+            activeStepId: 'CABLE_START',
+            allowedBuildings: ['BASIC', 'REMOVE'],
+            recommendedTool: 'BASIC'
+        });
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
+
+        expect(buildConsoleSnapshotMock.createBuildConsoleDisplayState).toHaveBeenLastCalledWith(expect.objectContaining({
+            activeCategory: 'LOGISTICS'
+        }));
+        expect(events.buildSelections).toEqual(['POWER_NODE', 'BASIC']);
+        expect(events.snapshots.at(-1)?.selectedTool.key).toBe('BASIC');
+    });
+
+    it('keeps the current selection when the tutorial is completed', () => {
+        const events = collectEvents();
+        const { controller } = createController({
+            tutorialCompleted: true,
+            tutorialGuidance: {
+                activeStepId: 'POWER',
+                allowedBuildings: ['POWER_NODE', 'REMOVE'],
+                recommendedTool: 'POWER_NODE'
+            }
+        });
+
+        controller.setupEvents();
+        EventBus.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
+
+        expect(events.buildSelections).toEqual([]);
+        expect(events.snapshots.at(-1)?.activeCategory).toBe('EXTRACTION');
+        expect(events.snapshots.at(-1)?.selectedTool.key).toBe('DATA_DOWNLOADER');
     });
 
     it('returns false for unavailable numeric hotkeys without changing selection', () => {

@@ -477,6 +477,11 @@ test('desktop starts the game and opens settings', async ({ page }, testInfo) =>
     await expect(page.getByTestId('preact-right-rail-threat-meter')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-right-rail-threat-meter')).toHaveAttribute('aria-valuenow', '24');
     await expect(page.getByTestId('preact-right-rail-threat-routes')).toHaveAttribute('role', 'list');
+    await expect(page.getByTestId('preact-right-rail-panel-systems')).toHaveAttribute('data-collapsed', 'true');
+    await expect(page.getByTestId('preact-right-rail-toggle-systems')).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('preact-right-rail-body-systems')).toHaveCount(0);
+    await page.getByTestId('preact-right-rail-toggle-systems').click();
+    await expect(page.getByTestId('preact-right-rail-toggle-systems')).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByTestId('preact-right-rail-power-load')).toHaveAttribute('role', 'progressbar');
     await expect(page.getByTestId('preact-right-rail-power-load')).toHaveAttribute('aria-valuetext', /^\d+%$/);
     await selectBuildCategory(page, 'LOGISTICS');

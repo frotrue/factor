@@ -1,5 +1,7 @@
 # 아키텍처
 
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
 ## 전체 구조 개요
 
 Gradium은 Phaser Scene이 캔버스 런타임을 담당하고, DOM 기반 HUD/모달이 그 위에 겹쳐지는 구조입니다. `MainScene`은 public scene state, Phaser lifecycle, 입력/cursor proxy, frame update를 소유하고, `MainSceneBootstrap`이 매니저/맵/Core/초기 Storage bootstrap을, `MainSceneRuntimeEvents`가 EventBus runtime wiring과 wave result summary/shutdown cleanup을 담당합니다. 하위 시스템은 `EventBus`와 Scene 참조를 통해 느슨하게 연결됩니다. Preact는 DOM HUD overlay 이전용으로만 도입되었고, Phaser canvas와 게임 simulation 렌더링은 계속 Phaser가 담당합니다.
@@ -176,7 +178,7 @@ flowchart TD
 - `UIManager` -> legacy DOM 보장, `TopHudController`/`TacticalPanelController`/`BuildConsoleController`/`SettingsController`/`ResearchPanelController`/`MobileActionController`/`NotificationController`/`GameOverController` 조립
 - `ResearchManager` -> `CONFIG.RESEARCH`, 단일 활성 연구, queue, research data store, ROC/GPU throughput 보너스, 완료 효과 facade
 - `SaveManager` -> 거의 모든 manager + `saveMigration`, `enemyRestore`
-- `tutorialFlow` -> 건물 역할 튜토리얼 단계/허용 건물/완료 메타/월드 시각 힌트 데이터, `TutorialManager`가 이를 렌더링하고 생산/전력/케이블/웨이브/ROC 배치 조건을 확인한 뒤 완료/스킵 시 새 캠페인 랜덤 맵으로 전환
+- `tutorialFlow` -> 건물 역할 튜토리얼 단계/허용 건물/추천 도구/완료 메타/월드 시각 힌트 데이터, `TutorialManager`가 이를 렌더링하고 생산/전력/케이블 시작점/정확한 케이블 연결/웨이브/ROC 배치 조건을 확인합니다. 완료/스킵 시에는 완료 패널 snapshot을 발행하고, `TUTORIAL_CAMPAIGN_START_REQUESTED` 후 새 캠페인 랜덤 맵으로 전환합니다.
 - `ResearchOperationsCenter` -> internal building ID `RESEARCH_OPERATIONS_CENTER`, player-facing Research Operations Center로 동작하며, powered 상태에서 전역 research throughput을 올림
 - `GPU_CLUSTER` -> powered adjacent Research Operations Center의 throughput 기여도를 강화
 

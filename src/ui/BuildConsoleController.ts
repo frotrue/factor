@@ -1,3 +1,4 @@
+import { CONFIG } from '../config';
 import EventBus from '../managers/EventBus';
 import type MainScene from '../scenes/MainScene';
 import type { BuildConsoleSnapshot } from '../types';
@@ -14,6 +15,11 @@ import {
 } from './legacyBuildConsole';
 
 const OWNER = 'BuildConsoleController';
+
+function getBuildCategoryForTool(type: string): string | null {
+    if (CONFIG.CABLES[type]) return 'LOGISTICS';
+    return CONFIG.BUILDINGS[type]?.CATEGORY ?? null;
+}
 
 export default class BuildConsoleController {
     private selectedBuildingType = 'DATA_DOWNLOADER';
@@ -72,9 +78,24 @@ export default class BuildConsoleController {
     }
 
     private render(): void {
-        const allowed = this.scene.tutorialManager && !this.scene.tutorialManager.isCompleted()
-            ? this.scene.tutorialManager.getAllowedBuildings()
+        const guidance = this.scene.tutorialManager && !this.scene.tutorialManager.isCompleted()
+            ? this.scene.tutorialManager.getBuildGuidance()
             : null;
+        const allowed = guidance?.allowedBuildings ?? null;
+        const recommendedTool = guidance?.recommendedTool;
+        let shouldEmitAutoSelection = false;
+
+        if (recommendedTool) {
+            const recommendedCategory = getBuildCategoryForTool(recommendedTool);
+            if (recommendedCategory) {
+                this.activeCategory = recommendedCategory;
+            }
+            if (this.selectedBuildingType !== recommendedTool) {
+                this.selectedBuildingType = recommendedTool;
+                shouldEmitAutoSelection = true;
+            }
+        }
+
         const hasFirstDefenseSuccess = this.hasFirstDefenseSuccess();
         const displayState = createBuildConsoleDisplayState({
             activeCategory: this.activeCategory,
@@ -108,6 +129,9 @@ export default class BuildConsoleController {
 
         this.buttons = renderResult?.buttons ?? {};
         this.publish(display);
+        if (shouldEmitAutoSelection) {
+            EventBus.emit('BUILDING_SELECTED', { type: this.selectedBuildingType });
+        }
         this.requestDependentRefresh();
     }
 

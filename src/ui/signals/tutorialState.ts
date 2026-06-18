@@ -3,8 +3,11 @@ import type { TutorialPanelSnapshot } from '../../types';
 
 export const tutorialPanel = signal<TutorialPanelSnapshot>({
     open: false,
+    mode: 'step',
     kicker: '',
     title: '',
+    completedTitle: '',
+    continueLabel: '',
     labels: {
         skip: '',
         progress: '',

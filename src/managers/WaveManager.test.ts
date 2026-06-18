@@ -75,10 +75,11 @@ function createBuildingManager(options: { defenseCount?: number; storage?: any }
     } as any;
 }
 
-function createScene(options: { tutorialStep?: number; tutorialCompleted?: boolean; defenseCount?: number; storage?: any } = {}) {
+function createScene(options: { mode?: 'tutorial' | 'campaign'; tutorialStep?: number; tutorialCompleted?: boolean; defenseCount?: number; storage?: any } = {}) {
     const buildingManager = createBuildingManager(options);
     return {
         buildingManager,
+        mode: options.mode ?? 'campaign',
         tutorialManager: typeof options.tutorialStep === 'number'
             ? {
                 isCompleted: () => options.tutorialCompleted ?? false,
@@ -99,8 +100,19 @@ describe('WaveManager', () => {
         EventBus.offAll('WaveManager');
     });
 
+    it('uses a longer initial wave delay for fresh campaign starts only', () => {
+        const campaignScene = createScene({ mode: 'campaign' });
+        const tutorialScene = createScene({ mode: 'tutorial' });
+
+        const campaignManager = new WaveManager(campaignScene, campaignScene.buildingManager);
+        const tutorialManager = new WaveManager(tutorialScene, tutorialScene.buildingManager);
+
+        expect(campaignManager.waveTimer).toBe(CONFIG.TIMING.CAMPAIGN_INITIAL_WAVE_DELAY_MS);
+        expect(tutorialManager.waveTimer).toBe(CONFIG.TIMING.INITIAL_WAVE_DELAY_MS);
+    });
+
     it('freezes the wave timer during early tutorial setup steps', () => {
-        const scene = createScene({ tutorialStep: 0 });
+        const scene = createScene({ mode: 'tutorial', tutorialStep: 0 });
         const manager = new WaveManager(scene, scene.buildingManager);
         manager.waveTimer = 1234;
 

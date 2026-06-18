@@ -1,5 +1,7 @@
 # 프로젝트 맵
 
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
 다음 AI 세션이 전체 파일을 다시 훑지 않고도 빠르게 시작하기 위한 코드베이스 지도입니다. 파일별 세부 역할은 [FILE_ROLE_MAP.md](./FILE_ROLE_MAP.md), 런타임 관계는 [ARCHITECTURE.md](./ARCHITECTURE.md), 테스트 범위는 [TEST_MAP.md](./TEST_MAP.md), 밸런스 수치는 [GAME_BALANCE_MAP.md](./GAME_BALANCE_MAP.md)를 먼저 함께 보세요.
 
 ## 프로젝트 목적과 현재 게임 개요
@@ -56,7 +58,7 @@ Gradium은 Phaser 3 + TypeScript + Vite 기반의 2D 공장 자동화/타워 디
    `src/ui/BuildConsoleController.ts`는 BuildConsole refresh/category/tool/hotkey 이벤트를 받아 `BUILD_CONSOLE_UPDATED` snapshot과 legacy build console/selected-tool mirror를 동기화합니다.
    `src/ui/HudShellController.ts`는 shell sync/speed/keyboard 이벤트를 받아 legacy HUD shell shadow와 modal fallback close를 동기화합니다.
 
-튜토리얼 흐름은 `CORE -> RESOURCE -> POWER -> MINER -> STORAGE -> DOWNLOADER -> CABLE -> PROCESSOR -> TRAINER -> DEFENSE -> FIRST_WAVE -> RESEARCH_CENTER`입니다. 고정 튜토리얼 맵의 실제 Silicon 패치를 먼저 보여주고, PowerNode로 그 패치에 전력을 연결한 뒤 Miner 생산을 확인합니다. 각 단계는 배치만이 아니라 Silicon/RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 생산, 전력 온라인, 웨이브 종료, Research Operations Center(`RESEARCH_OPERATIONS_CENTER`) 배치 같은 상태 변화로 완료됩니다. 완료 또는 스킵 시 튜토리얼 진행 상태만 완료로 저장하고, 튜토리얼 공장을 이어받지 않는 새 캠페인 랜덤 맵으로 전환합니다. 튜토리얼 실행 중에는 일반 캠페인 저장 슬롯을 자동 저장하지 않습니다.
+튜토리얼 흐름은 `CORE -> RESOURCE -> POWER -> MINER -> STORAGE -> DOWNLOADER -> PROCESSOR_PLACE -> CABLE_START -> CABLE_CONNECT -> PROCESSOR -> TRAINER -> DEFENSE -> FIRST_WAVE -> RESEARCH_CENTER`입니다. 고정 튜토리얼 맵의 실제 Silicon 패치를 먼저 보여주고, PowerNode로 그 패치에 전력을 연결한 뒤 Miner 생산을 확인합니다. 각 단계는 추천 빌드 도구를 가질 수 있고, `BuildConsoleController`가 튜토리얼 중 해당 카테고리/도구를 자동 선택해 Phaser scene 선택 상태까지 동기화합니다. 케이블 학습은 Processor 배치, DataDownloader 시작점 클릭, Processor 끝점 클릭으로 나뉘며 지정된 `128,-32 -> 160,-32` Basic Cable 연결만 완료 처리합니다. 각 단계는 배치만이 아니라 Silicon/RAW_DATA/LABELED_DATA/WEIGHT_UPDATE 생산, 전력 온라인, 케이블 시작/연결, 웨이브 종료, Research Operations Center(`RESEARCH_OPERATIONS_CENTER`) 배치 같은 상태 변화로 완료됩니다. 완료 또는 스킵 시 바로 캠페인으로 넘어가지 않고 완료 패널을 표시하며, 플레이어가 “캠페인 시작”을 누르면 튜토리얼 공장을 이어받지 않는 새 캠페인 랜덤 맵으로 전환합니다. 튜토리얼 실행 중에는 일반 캠페인 저장 슬롯을 자동 저장하지 않습니다.
 
 ## 주요 엔트리포인트
 

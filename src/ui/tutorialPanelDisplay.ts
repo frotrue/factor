@@ -6,6 +6,7 @@ export interface TutorialPanelDisplayPayloadInput {
     activeIndex: number;
     activeStep: TutorialStep | null;
     completeCount: number;
+    completionDetail?: string;
     completed: boolean;
     steps: TutorialStep[];
 }
@@ -26,7 +27,7 @@ export interface TutorialPanelDisplayPayload {
 export type TutorialPanelStepSnapshot = TutorialPanelSnapshot['steps'][number];
 
 export function isTutorialPanelOpen(activeStep: TutorialStep | null, completed: boolean): boolean {
-    return Boolean(activeStep) && !completed;
+    return Boolean(activeStep) || completed;
 }
 
 export function createTutorialPanelStepSnapshots(
@@ -45,13 +46,18 @@ export function createTutorialPanelSnapshot({
     activeIndex,
     activeStep,
     completeCount,
+    completionDetail,
     completed,
     steps
 }: TutorialPanelDisplayPayloadInput): TutorialPanelSnapshot {
+    const mode = completed ? 'complete' : 'step';
     return {
         open: isTutorialPanelOpen(activeStep, completed),
+        mode,
         kicker: activeStep ? t('tutorial.kicker', { current: completeCount, total: steps.length }) : '',
         title: '[G.R.A.D.I.U.M. OS AI Assistant]',
+        completedTitle: t('tutorial.complete'),
+        continueLabel: t('tutorial.startCampaign' as any),
         labels: {
             skip: t('tutorial.skip'),
             progress: t('tutorial.progress'),
@@ -60,12 +66,18 @@ export function createTutorialPanelSnapshot({
             ok: t('tutorial.ok'),
             moreSteps: t('tutorial.moreSteps')
         },
-        detail: activeStep?.detail ?? '',
+        detail: inputDetailForCompleted(completed, activeStep, completionDetail),
         activeStepId: activeStep?.id ?? '',
         completeCount,
         totalCount: steps.length,
         steps: createTutorialPanelStepSnapshots(steps, activeIndex)
     };
+}
+
+function inputDetailForCompleted(completed: boolean, activeStep: TutorialStep | null, completionDetail?: string): string {
+    if (activeStep) return activeStep.detail;
+    if (completed) return completionDetail ?? t('tutorial.completeDetail');
+    return '';
 }
 
 export function createTutorialPanelDisplayPayload(input: TutorialPanelDisplayPayloadInput): TutorialPanelDisplayPayload {

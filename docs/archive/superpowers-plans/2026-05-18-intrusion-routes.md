@@ -1,5 +1,7 @@
 # Intrusion Routes Implementation Plan
 
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace fully random edge spawning with difficulty-based fixed intrusion routes: Easy 1, Normal 2, Hard 3, Nightmare 4.

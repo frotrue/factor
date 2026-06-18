@@ -23,6 +23,7 @@ export interface EventMap {
     'BUILDING_REMOVED': { key: string };
     'BUILDING_DAMAGED': { key: string; building: any; amount: number; hp: number; maxHp: number };
     'BUILDING_DESTROYED': { key: string; building: any; type: string };
+    'CABLE_START_SELECTED': { fromKey: string; cableType: string };
     'CABLE_CONNECTED': { fromKey: string; toKey: string; cableType: string };
     'POWER_UPDATED': PowerUpdateData;
     'CORE_DAMAGED': { amount: number };
@@ -79,6 +80,7 @@ export interface EventMap {
     'TOOLTIP_CLOSE_REQUESTED': void;
     'TUTORIAL_PANEL_UPDATED': TutorialPanelSnapshot;
     'TUTORIAL_SKIP_REQUESTED': void;
+    'TUTORIAL_CAMPAIGN_START_REQUESTED': void;
     'MOBILE_ACTION_UPDATED': MobileActionSnapshot;
     'MOBILE_ACTION_REQUESTED': { id: string };
     'MOBILE_ACTION_REFRESH_REQUESTED': void;

@@ -187,6 +187,7 @@ export interface GameConfig {
         TICK_RATE_MULTIPLIER: number;
         AUTO_SAVE_INTERVAL_MS: number;
         INITIAL_WAVE_DELAY_MS: number;
+        CAMPAIGN_INITIAL_WAVE_DELAY_MS: number;
         WAVE_COOLDOWN_MS: number;
         ENEMY_SPAWN_INTERVAL_MS: number;
         DATA_PULSE_DURATION_MS: number;
@@ -630,8 +631,11 @@ export interface TooltipSnapshot {
 
 export interface TutorialPanelSnapshot {
     open: boolean;
+    mode: 'step' | 'complete';
     kicker: string;
     title: string;
+    completedTitle: string;
+    continueLabel: string;
     labels: {
         skip: string;
         progress: string;

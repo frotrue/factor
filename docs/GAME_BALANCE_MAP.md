@@ -1,5 +1,7 @@
 # 게임 밸런스 맵
 
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
 이 문서는 밸런스 수치와 플레이 흐름을 빠르게 이해하기 위한 지도입니다. 실제 수치의 단일 원천은 대부분 `src/config.ts`이며, 웨이브 계산은 `src/utils/waveSimulation.ts`, 런타임 적용은 `src/managers/WaveManager.ts`, `src/buildings/*`, `src/enemies/BaseEnemy.ts`에 흩어져 있습니다.
 
 ## 핵심 자원 구조
@@ -19,10 +21,10 @@
 
 - 신규 튜토리얼은 캠페인 맵을 활용하지 않고, `MapManager.generateTutorialMap()`이 만드는 작은 독립 arena에서 진행됩니다.
 - 시작 자원은 코어 좌상단 3x3 `SILICON` 패치(`-5,-3`), 코어 우하단 3x3 `ENERGY` 패치(`2,2`), 북쪽 확장용 2x2 `SILICON` 패치(`-2,-6`)입니다. 튜토리얼은 랜덤 패치가 아니라 이 고정 패치를 기준으로 안내합니다.
-- 튜토리얼 단계는 Core/자원/PowerNode/Miner/Storage/Downloader/Cable/Processor/WeightTrainer/Classifier/첫 웨이브/Research Operations Center 순서로 건물 역할을 하나씩 분리합니다.
-- 완료 기준은 최소 생산/상태 변화 중심입니다. Miner는 `SILICON`, Downloader는 `RAW_DATA`, Processor는 `LABELED_DATA`, WeightTrainer는 `WEIGHT_UPDATE`, PowerNode는 온라인 상태, Research Operations Center는 배치를 확인합니다.
+- 튜토리얼 단계는 Core/자원/PowerNode/Miner/Storage/Downloader/Processor 배치/Cable 시작점/Cable 끝점/Processor 생산/WeightTrainer/Classifier/첫 웨이브/Research Operations Center 순서로 건물 역할과 케이블 조작을 하나씩 분리합니다.
+- 완료 기준은 최소 생산/상태 변화 중심입니다. Miner는 `SILICON`, Downloader는 `RAW_DATA`, Processor는 `LABELED_DATA`, WeightTrainer는 `WEIGHT_UPDATE`, PowerNode는 온라인 상태, Cable은 `128,-32 -> 160,-32` Basic 연결, Research Operations Center는 배치를 확인합니다.
 - arena 외곽은 `BLOCKER` 벽으로 둘러싸고, 북쪽에는 3타일 폭 게이트를 열어 첫 방어 위치를 명확히 보여줍니다.
-- 튜토리얼 완료/스킵 시 튜토리얼 맵과 공장은 폐기되고, 새 캠페인 랜덤 맵이 시작됩니다. 튜토리얼 실행 중 일반 캠페인 저장 슬롯은 덮어쓰지 않습니다.
+- 튜토리얼 완료/스킵 시 완료 패널을 거친 뒤 튜토리얼 맵과 공장은 폐기되고, 새 캠페인 랜덤 맵이 시작됩니다. 튜토리얼 실행 중 일반 캠페인 저장 슬롯은 덮어쓰지 않습니다.
 
 ## 캠페인 맵 생성 밸런스 정책
 
@@ -109,7 +111,8 @@ ResearchManager: research data store + throughput 소비 -> 전역 연구 완료
 
 ## 웨이브/난이도 흐름
 
-- 초기 웨이브 대기: `CONFIG.TIMING.INITIAL_WAVE_DELAY_MS = 30000`
+- 튜토리얼 초기 웨이브 대기: `CONFIG.TIMING.INITIAL_WAVE_DELAY_MS = 30000`
+- 캠페인 첫 웨이브 대기: `CONFIG.TIMING.CAMPAIGN_INITIAL_WAVE_DELAY_MS = 45000`
 - wave cooldown은 난이도별 `CONFIG.DIFFICULTY.*.WAVE_COOLDOWN_MS`
 - Normal은 Wave 1~10에서 North route만 사용하고, 이후 East route가 추가됩니다.
 - Hard는 초반 1 route, 중반 2 routes, 이후 3 routes까지 열립니다.

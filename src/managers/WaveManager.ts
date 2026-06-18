@@ -46,7 +46,9 @@ export default class WaveManager {
         this.enemies = new Map();
         this.currentWave = 0;
         this.waveActive = false;
-        this.waveTimer = CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
+        this.waveTimer = scene.mode === 'campaign'
+            ? CONFIG.TIMING.CAMPAIGN_INITIAL_WAVE_DELAY_MS
+            : CONFIG.TIMING.INITIAL_WAVE_DELAY_MS;
         this.spawnTimer = 0;
         this.enemiesToSpawn = 0;
         this.enemiesSpawned = 0;

@@ -408,6 +408,7 @@ export default class InputController {
                     if (scene.cableState === 'IDLE') {
                         scene.cableState = 'CABLE_START';
                         scene.cableStartKey = normalizedKey;
+                        EventBus.emit('CABLE_START_SELECTED', { fromKey: normalizedKey, cableType: mode });
                         EventBus.emit('MOBILE_ACTION_STATUS_REQUESTED', { status: t('action.cableEndpoint') });
                         this.logMessage('System: Cable start selected. Choose an endpoint.');
                     } else if (scene.cableState === 'CABLE_START') {
@@ -473,8 +474,25 @@ export default class InputController {
                 const h = bConfig.HEIGHT || 1;
                 const isUnlocked = !bConfig.UNLOCK_REQUIRED || scene.researchManager.isUnlocked(bConfig.UNLOCK_REQUIRED);
 
-                if (isUnlocked && !scene.isBlocked(snappedX, snappedY, w, h)) {
-                    scene.buildingManager.place(snappedX, snappedY, mode, scene.currentRotation);
+                if (!isUnlocked) {
+                    this.logPlacementFailure(mode, 'locked');
+                    return;
+                }
+
+                const blockReason = this.getPlacementBlockReason(snappedX, snappedY, w, h);
+                if (blockReason) {
+                    this.logPlacementFailure(mode, blockReason);
+                    return;
+                }
+
+                const lacksResources = Boolean(
+                    bConfig.COST?.length
+                    && scene.inventoryManager
+                    && !scene.inventoryManager.canAfford(bConfig.COST)
+                );
+                const placed = scene.buildingManager.place(snappedX, snappedY, mode, scene.currentRotation);
+                if (!placed && !lacksResources) {
+                    this.logPlacementFailure(mode, 'failed');
                 }
             }
         } else if (button === 'secondary') {
@@ -492,6 +510,37 @@ export default class InputController {
                 scene.buildingManager.remove(key);
             }
         }
+    }
+
+    private getPlacementBlockReason(x: number, y: number, w: number, h: number): 'outOfBounds' | 'occupied' | 'terrain' | null {
+        const { scene } = this;
+        for (let dx = 0; dx < w; dx++) {
+            for (let dy = 0; dy < h; dy++) {
+                const tileX = x + dx * CONFIG.GRID_SIZE;
+                const tileY = y + dy * CONFIG.GRID_SIZE;
+                if (!scene.mapManager.isAreaWithinBuildBounds(tileX, tileY, 1, 1)) {
+                    return 'outOfBounds';
+                }
+                if (scene.buildingManager.has(`${tileX},${tileY}`)) {
+                    return 'occupied';
+                }
+                if (scene.mapManager.isTerrainBlocked(tileX, tileY)) {
+                    return 'terrain';
+                }
+            }
+        }
+        return null;
+    }
+
+    private logPlacementFailure(type: string, reason: 'locked' | 'outOfBounds' | 'occupied' | 'terrain' | 'failed'): void {
+        const keyByReason = {
+            locked: 'placement.blocked.locked',
+            outOfBounds: 'placement.blocked.outOfBounds',
+            occupied: 'placement.blocked.occupied',
+            terrain: 'placement.blocked.terrain',
+            failed: 'placement.blocked.failed'
+        } as const;
+        this.logMessage(t(keyByReason[reason] as any, { name: getBuildingName(type) }), true);
     }
 
     private getCableValidationMessage(validation: { reason?: string; distanceTiles: number; maxLengthTiles: number; blockedTile?: { x: number; y: number } }): string {

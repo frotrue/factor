@@ -1,5 +1,7 @@
 # 테스트 맵
 
+> 모바일 개발 상태: 현재 모바일 개발은 일시 중단 상태입니다. 모바일 관련 구현, QA, 레이아웃 개선, 터치 조작 개선은 개발 재개 전까지 보류합니다.
+
 이 문서는 변경 종류별로 먼저 볼 테스트를 고르는 짧은 지도입니다.
 
 ## 기본 검증
@@ -19,7 +21,7 @@
 |---|---|
 | Preact HUD mount/bridge | `src/ui/HudApp.test.ts`, `src/ui/mountHud.test.ts`, `src/ui/signals/bridge.test.ts`, E2E startup |
 | 상단 HUD | `src/ui/TopHudController.test.ts`, E2E settings/language startup |
-| 빌드 콘솔 | `src/ui/BuildConsoleController.test.ts`, E2E build/placement/cable |
+| 빌드 콘솔 | `src/ui/BuildConsoleController.test.ts`의 튜토리얼 추천 도구 자동 선택/완료 후 유지 검증, E2E build/placement/cable, `tests/e2e/app-smoke.spec.ts`의 preview layout anchoring |
 | 우측 전술 패널 | `src/ui/TacticalPanelController.test.ts`, E2E startup/threat panel |
 | Settings | `src/ui/SettingsController.test.ts`, E2E settings/language |
 | 렌더 해상도/HUD 배치 | `src/ui/renderResolution.test.ts`, `tests/e2e/hud-layout.spec.ts`, `npm run test:e2e:desktop` |
@@ -38,8 +40,8 @@
 | 전력 효율 | `src/managers/PowerManager.test.ts`, `src/utils/powerPreview.test.ts`, 생산/케이블 관련 테스트 |
 | 케이블 물류 | `src/utils/apRelay.test.ts`, E2E build/placement/cable |
 | 독립 연구 | `src/managers/ResearchManager.test.ts`, `src/config.test.ts`, E2E research panel smoke |
-| 튜토리얼 | `src/utils/tutorialFlow.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
-| 웨이브/적/경로 | `src/managers/WaveManager.test.ts`, `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |
+| 튜토리얼 | `src/utils/tutorialFlow.test.ts`, `src/ui/tutorialPanelDisplay.test.ts`, `tests/e2e/tutorial-guidance.spec.ts` |
+| 웨이브/적/경로 | `src/managers/WaveManager.test.ts`의 campaign/tutorial 초기 타이머 검증, `src/utils/waveSimulation.test.ts`, `src/utils/gridPath.test.ts`, `src/utils/geometry.test.ts`, E2E threat panel |
 | MainScene 초기화 순서 | `src/managers/SaveManager.test.ts`, `src/managers/WaveManager.test.ts`, E2E startup/save/tutorial smoke |
 | ROC/GPU 연구 처리량 | `src/managers/ResearchManager.test.ts`, `src/config.test.ts`, E2E `RESEARCH_OPERATIONS_CENTER` throughput smoke |
 | 성능/대형 공장 | `npm test`, `npm run build`, `tests/e2e/performance.spec.ts` |

@@ -36,6 +36,7 @@ export default function TutorialPanel() {
     }, [snapshot.open, snapshot.detail, typewriterKey]);
 
     if (!snapshot.open) return null;
+    const isComplete = snapshot.mode === 'complete';
     const progressPercent = snapshot.totalCount > 0
         ? Math.round((snapshot.completeCount / snapshot.totalCount) * 100)
         : 0;
@@ -48,39 +49,43 @@ export default function TutorialPanel() {
     const detailId = 'preact-tutorial-detail';
     const currentLabelId = 'preact-tutorial-current-label';
     const currentTitleId = 'preact-tutorial-current-title';
+    const displayTitle = isComplete ? snapshot.completedTitle : snapshot.title;
 
     return (
         <section
-            aria-describedby={activeStep ? `${detailId} ${currentTitleId}` : detailId}
+            aria-describedby={!isComplete && activeStep ? `${detailId} ${currentTitleId}` : detailId}
             aria-labelledby={titleId}
             aria-live="polite"
             class={styles.panel}
             data-active-step={snapshot.activeStepId}
+            data-mode={snapshot.mode}
             data-testid="preact-tutorial-panel"
             role="status"
         >
             <div class={styles.header} data-testid="preact-tutorial-header">
                 <div>
                     <div class={styles.kicker} data-testid="preact-tutorial-kicker">{snapshot.kicker}</div>
-                    <div class={styles.title} data-testid="preact-tutorial-title" id={titleId}>{snapshot.title}</div>
+                    <div class={styles.title} data-testid="preact-tutorial-title" id={titleId}>{displayTitle}</div>
                 </div>
                 <div class={styles.headerActions}>
                     <div class={styles.progress} data-testid="preact-tutorial-progress-count">
                         {snapshot.completeCount}/{snapshot.totalCount}
                     </div>
-                    <Button
-                        ariaDescribedBy={detailId}
-                        className={styles.skip}
-                        dataTestId="preact-tutorial-skip"
-                        onClick={event => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            EventBus.emit('TUTORIAL_SKIP_REQUESTED');
-                        }}
-                        tabIndex={0}
-                    >
-                        {snapshot.labels.skip}
-                    </Button>
+                    {!isComplete ? (
+                        <Button
+                            ariaDescribedBy={detailId}
+                            className={styles.skip}
+                            dataTestId="preact-tutorial-skip"
+                            onClick={event => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                EventBus.emit('TUTORIAL_SKIP_REQUESTED');
+                            }}
+                            tabIndex={0}
+                        >
+                            {snapshot.labels.skip}
+                        </Button>
+                    ) : null}
                 </div>
             </div>
             <div
@@ -104,7 +109,7 @@ export default function TutorialPanel() {
                 {typedDetail}
                 {isTyping ? <span class={styles.caret} /> : null}
             </p>
-            {activeStep ? (
+            {!isComplete && activeStep ? (
                 <div
                     aria-labelledby={`${currentLabelId} ${currentTitleId}`}
                     class={styles.current}
@@ -143,6 +148,21 @@ export default function TutorialPanel() {
                     </div>
                 ) : null}
             </div>
+            {isComplete ? (
+                <Button
+                    ariaDescribedBy={detailId}
+                    className={styles.continue}
+                    dataTestId="preact-tutorial-continue"
+                    onClick={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        EventBus.emit('TUTORIAL_CAMPAIGN_START_REQUESTED');
+                    }}
+                    tabIndex={0}
+                >
+                    {snapshot.continueLabel}
+                </Button>
+            ) : null}
         </section>
     );
 }

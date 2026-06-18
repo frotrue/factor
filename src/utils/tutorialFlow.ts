@@ -7,7 +7,9 @@ export type TutorialStepId =
     | 'MINER'
     | 'STORAGE'
     | 'DOWNLOADER'
-    | 'CABLE'
+    | 'PROCESSOR_PLACE'
+    | 'CABLE_START'
+    | 'CABLE_CONNECT'
     | 'PROCESSOR'
     | 'TRAINER'
     | 'DEFENSE'
@@ -30,7 +32,8 @@ export type TutorialHintSymbol =
 export type TutorialCompletion =
     | { kind: 'auto'; delayMs: number }
     | { kind: 'place-building'; buildingType: string }
-    | { kind: 'connect-cable' }
+    | { kind: 'cable-start'; fromKey: string; cableType?: string }
+    | { kind: 'connect-cable'; fromKey?: string; toKey?: string; cableType?: string }
     | { kind: 'produce-item'; buildingType: string; itemType: string }
     | { kind: 'power-online'; buildingType: string }
     | { kind: 'wave-ended' };
@@ -77,6 +80,7 @@ export interface TutorialStepDefinition {
     title: string;
     detail: string;
     allowedBuildings?: string[] | null;
+    recommendedTool?: string;
     completion: TutorialCompletion;
     visualHints?: TutorialVisualHints;
 }
@@ -141,6 +145,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.POWER.title' as any),
         detail: t('tutorial.POWER.detail' as any),
         allowedBuildings: ['POWER_NODE', 'REMOVE'],
+        recommendedTool: 'POWER_NODE',
         completion: { kind: 'power-online', buildingType: 'POWER_NODE' },
         visualHints: {
             mode: 'explicit',
@@ -156,6 +161,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.MINER.title' as any),
         detail: t('tutorial.MINER.detail' as any),
         allowedBuildings: ['POWER_NODE', 'MINER', 'REMOVE'],
+        recommendedTool: 'MINER',
         completion: { kind: 'produce-item', buildingType: 'MINER', itemType: 'SILICON' },
         visualHints: {
             mode: 'explicit',
@@ -168,6 +174,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.STORAGE.title' as any),
         detail: t('tutorial.STORAGE.detail' as any),
         allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'REMOVE'],
+        recommendedTool: 'STORAGE',
         completion: { kind: 'place-building', buildingType: 'STORAGE' },
         visualHints: {
             mode: 'explicit',
@@ -179,6 +186,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.DOWNLOADER.title' as any),
         detail: t('tutorial.DOWNLOADER.detail' as any),
         allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'REMOVE'],
+        recommendedTool: 'DATA_DOWNLOADER',
         completion: { kind: 'produce-item', buildingType: 'DATA_DOWNLOADER', itemType: 'RAW_DATA' },
         visualHints: {
             mode: 'explicit',
@@ -187,14 +195,50 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         }
     },
     {
-        id: 'CABLE',
-        title: t('tutorial.CABLE.title' as any),
-        detail: t('tutorial.CABLE.detail' as any),
-        allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'BASIC', 'REMOVE'],
-        completion: { kind: 'connect-cable' },
+        id: 'PROCESSOR_PLACE',
+        title: t('tutorial.PROCESSOR_PLACE.title' as any),
+        detail: t('tutorial.PROCESSOR_PLACE.detail' as any),
+        allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'REMOVE'],
+        recommendedTool: 'PROCESSOR',
+        completion: { kind: 'place-building', buildingType: 'PROCESSOR' },
         visualHints: {
             mode: 'explicit',
-            ghosts: [{ type: 'PROCESSOR', ...TUTORIAL_HINT_POSITIONS.processor }],
+            ghosts: [{ type: 'PROCESSOR', ...TUTORIAL_HINT_POSITIONS.processor, exact: true }],
+            flows: [
+                { from: tileCenter(TUTORIAL_HINT_POSITIONS.downloader.x, TUTORIAL_HINT_POSITIONS.downloader.y), to: tileCenter(TUTORIAL_HINT_POSITIONS.processor.x, TUTORIAL_HINT_POSITIONS.processor.y), itemType: 'RAW_DATA' }
+            ]
+        }
+    },
+    {
+        id: 'CABLE_START',
+        title: t('tutorial.CABLE_START.title' as any),
+        detail: t('tutorial.CABLE_START.detail' as any),
+        allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'BASIC', 'REMOVE'],
+        recommendedTool: 'BASIC',
+        completion: { kind: 'cable-start', fromKey: `${TUTORIAL_HINT_POSITIONS.downloader.x},${TUTORIAL_HINT_POSITIONS.downloader.y}`, cableType: 'BASIC' },
+        visualHints: {
+            mode: 'explicit',
+            ghosts: [{ type: 'DOWNLOAD', ...TUTORIAL_HINT_POSITIONS.downloader, exact: true }],
+            flows: [
+                { from: tileCenter(TUTORIAL_HINT_POSITIONS.downloader.x, TUTORIAL_HINT_POSITIONS.downloader.y), to: tileCenter(TUTORIAL_HINT_POSITIONS.processor.x, TUTORIAL_HINT_POSITIONS.processor.y), itemType: 'RAW_DATA' }
+            ]
+        }
+    },
+    {
+        id: 'CABLE_CONNECT',
+        title: t('tutorial.CABLE_CONNECT.title' as any),
+        detail: t('tutorial.CABLE_CONNECT.detail' as any),
+        allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'BASIC', 'REMOVE'],
+        recommendedTool: 'BASIC',
+        completion: {
+            kind: 'connect-cable',
+            fromKey: `${TUTORIAL_HINT_POSITIONS.downloader.x},${TUTORIAL_HINT_POSITIONS.downloader.y}`,
+            toKey: `${TUTORIAL_HINT_POSITIONS.processor.x},${TUTORIAL_HINT_POSITIONS.processor.y}`,
+            cableType: 'BASIC'
+        },
+        visualHints: {
+            mode: 'explicit',
+            ghosts: [{ type: 'PROCESSOR', ...TUTORIAL_HINT_POSITIONS.processor, exact: true }],
             flows: [
                 { from: tileCenter(TUTORIAL_HINT_POSITIONS.downloader.x, TUTORIAL_HINT_POSITIONS.downloader.y), to: tileCenter(TUTORIAL_HINT_POSITIONS.processor.x, TUTORIAL_HINT_POSITIONS.processor.y), itemType: 'RAW_DATA' }
             ]
@@ -219,6 +263,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.TRAINER.title' as any),
         detail: t('tutorial.TRAINER.detail' as any),
         allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'BASIC', 'REMOVE'],
+        recommendedTool: 'WEIGHT_TRAINER',
         completion: { kind: 'produce-item', buildingType: 'WEIGHT_TRAINER', itemType: 'WEIGHT_UPDATE' },
         visualHints: {
             mode: 'explicit',
@@ -233,6 +278,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.DEFENSE.title' as any),
         detail: t('tutorial.DEFENSE.detail' as any),
         allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'CLASSIFIER', 'BASIC', 'REMOVE'],
+        recommendedTool: 'CLASSIFIER',
         completion: { kind: 'place-building', buildingType: 'CLASSIFIER' },
         visualHints: {
             mode: 'explicit',
@@ -259,6 +305,7 @@ export const TUTORIAL_STEP_DEFINITIONS: TutorialStepDefinition[] = [
         title: t('tutorial.RESEARCH_CENTER.title' as any),
         detail: t('tutorial.RESEARCH_CENTER.detail' as any),
         allowedBuildings: ['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'WEIGHT_TRAINER', 'CLASSIFIER', 'RESEARCH_OPERATIONS_CENTER', 'BASIC', 'REMOVE'],
+        recommendedTool: 'RESEARCH_OPERATIONS_CENTER',
         completion: { kind: 'place-building', buildingType: 'RESEARCH_OPERATIONS_CENTER' },
         visualHints: {
             mode: 'explicit',

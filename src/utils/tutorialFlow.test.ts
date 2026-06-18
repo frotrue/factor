@@ -18,7 +18,9 @@ describe('tutorial flow', () => {
             'MINER',
             'STORAGE',
             'DOWNLOADER',
-            'CABLE',
+            'PROCESSOR_PLACE',
+            'CABLE_START',
+            'CABLE_CONNECT',
             'PROCESSOR',
             'TRAINER',
             'DEFENSE',
@@ -52,9 +54,24 @@ describe('tutorial flow', () => {
 
         expect(byId.CORE.completion).toEqual({ kind: 'auto', delayMs: 1800 });
         expect(byId.RESOURCE.visualHints?.mode).toBe('explicit');
+        expect(byId.POWER.recommendedTool).toBe('POWER_NODE');
         expect(byId.MINER.completion).toEqual({ kind: 'produce-item', buildingType: 'MINER', itemType: 'SILICON' });
+        expect(byId.MINER.recommendedTool).toBe('MINER');
+        expect(byId.STORAGE.recommendedTool).toBe('STORAGE');
         expect(byId.DOWNLOADER.completion).toEqual({ kind: 'produce-item', buildingType: 'DATA_DOWNLOADER', itemType: 'RAW_DATA' });
-        expect(byId.CABLE.allowedBuildings).toEqual(['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'BASIC', 'REMOVE']);
+        expect(byId.DOWNLOADER.recommendedTool).toBe('DATA_DOWNLOADER');
+        expect(byId.PROCESSOR_PLACE.completion).toEqual({ kind: 'place-building', buildingType: 'PROCESSOR' });
+        expect(byId.PROCESSOR_PLACE.recommendedTool).toBe('PROCESSOR');
+        expect(byId.CABLE_START.completion).toEqual({ kind: 'cable-start', fromKey: '128,-32', cableType: 'BASIC' });
+        expect(byId.CABLE_START.recommendedTool).toBe('BASIC');
+        expect(byId.CABLE_CONNECT.completion).toEqual({
+            kind: 'connect-cable',
+            fromKey: '128,-32',
+            toKey: '160,-32',
+            cableType: 'BASIC'
+        });
+        expect(byId.CABLE_CONNECT.recommendedTool).toBe('BASIC');
+        expect(byId.CABLE_CONNECT.allowedBuildings).toEqual(['POWER_NODE', 'MINER', 'STORAGE', 'DATA_DOWNLOADER', 'PROCESSOR', 'BASIC', 'REMOVE']);
         expect(byId.POWER.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('POWER');
         expect(byId.PROCESSOR.visualHints?.mode).toBe('explicit');
         expect([
@@ -62,9 +79,12 @@ describe('tutorial flow', () => {
             ...(byId.TRAINER.visualHints?.ghosts?.map(ghost => ghost.type) ?? [])
         ]).toEqual(expect.arrayContaining(['PROCESSOR', 'TRAINER']));
         expect(byId.PROCESSOR.completion).toEqual({ kind: 'produce-item', buildingType: 'PROCESSOR', itemType: 'LABELED_DATA' });
+        expect(byId.TRAINER.recommendedTool).toBe('WEIGHT_TRAINER');
         expect(byId.TRAINER.completion).toEqual({ kind: 'produce-item', buildingType: 'WEIGHT_TRAINER', itemType: 'WEIGHT_UPDATE' });
+        expect(byId.DEFENSE.recommendedTool).toBe('CLASSIFIER');
         expect(byId.DEFENSE.visualHints?.areas?.some(area => area.kind === 'range')).toBe(true);
         expect(byId.FIRST_WAVE.allowedBuildings).toBeNull();
+        expect(byId.RESEARCH_CENTER.recommendedTool).toBe('RESEARCH_OPERATIONS_CENTER');
         expect(byId.RESEARCH_CENTER.visualHints?.ghosts?.map(ghost => ghost.type)).toContain('RESEARCH_CENTER');
         expect(byId.RESEARCH_CENTER.title).toBe('Research Operations Center 역할');
     });
@@ -88,6 +108,9 @@ describe('tutorial flow', () => {
         ]));
         expect(byId.DOWNLOADER.visualHints?.ghosts).toEqual(expect.arrayContaining([
             expect.objectContaining({ type: 'DOWNLOAD', x: 128, y: -32, exact: true })
+        ]));
+        expect(byId.PROCESSOR_PLACE.visualHints?.flows).toEqual(expect.arrayContaining([
+            expect.objectContaining({ itemType: 'RAW_DATA' })
         ]));
         expect(byId.PROCESSOR.visualHints?.flows).toEqual(expect.arrayContaining([
             expect.objectContaining({ itemType: 'RAW_DATA', dotted: true })

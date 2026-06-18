@@ -53,10 +53,12 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
         const resourceAt = (x: number, y: number) => scene.mapManager.getResourceAt(x, y);
 
         return {
+            stepIds: steps.map((step: any) => step.id),
+            recommendedTools: Object.fromEntries(steps.map((step: any) => [step.id, step.recommendedTool ?? null])),
             resourceAreas: byId.RESOURCE.visualHints.areas,
             minerGhosts: byId.MINER.visualHints.ghosts,
             downloaderGhosts: byId.DOWNLOADER.visualHints.ghosts,
-            processorGhosts: byId.PROCESSOR.visualHints.ghosts,
+            processorPlaceGhosts: byId.PROCESSOR_PLACE.visualHints.ghosts,
             trainerGhosts: byId.TRAINER.visualHints.ghosts,
             siliconResource: resourceAt(-128, -64),
             oldSiliconGuideTile: resourceAt(-32, -32),
@@ -67,6 +69,30 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
         };
     });
 
+    expect(guidance.stepIds).toEqual([
+        'CORE',
+        'RESOURCE',
+        'POWER',
+        'MINER',
+        'STORAGE',
+        'DOWNLOADER',
+        'PROCESSOR_PLACE',
+        'CABLE_START',
+        'CABLE_CONNECT',
+        'PROCESSOR',
+        'TRAINER',
+        'DEFENSE',
+        'FIRST_WAVE',
+        'RESEARCH_CENTER'
+    ]);
+    expect(guidance.recommendedTools).toEqual(expect.objectContaining({
+        POWER: 'POWER_NODE',
+        PROCESSOR_PLACE: 'PROCESSOR',
+        CABLE_START: 'BASIC',
+        CABLE_CONNECT: 'BASIC',
+        DEFENSE: 'CLASSIFIER',
+        RESEARCH_CENTER: 'RESEARCH_OPERATIONS_CENTER'
+    }));
     expect(guidance.resourceAreas).toEqual(expect.arrayContaining([
         expect.objectContaining({ x: -112, y: -48, kind: 'resource', radius: 52 }),
         expect.objectContaining({ x: 112, y: 112, kind: 'resource' })
@@ -83,7 +109,7 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
     expect(guidance.downloaderGhosts).toEqual(expect.arrayContaining([
         expect.objectContaining({ type: 'DOWNLOAD', x: 128, y: -32 })
     ]));
-    expect(guidance.processorGhosts).toEqual(expect.arrayContaining([
+    expect(guidance.processorPlaceGhosts).toEqual(expect.arrayContaining([
         expect.objectContaining({ type: 'PROCESSOR', x: 160, y: -32 })
     ]));
     expect(guidance.trainerGhosts).toEqual(expect.arrayContaining([
@@ -94,6 +120,8 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         const tutorialManager = scene.tutorialManager as any;
         tutorialManager.loadState(false, 2);
+        window.__GRADIUM_EVENT_BUS__?.emit('BUILD_CONSOLE_REFRESH_REQUESTED');
+        const selectedOnPowerStep = scene.selectedBuildingType;
 
         scene.buildingManager.place(-96, -128, 'POWER_NODE', 0, { skipCost: true });
         tutorialManager.checkActiveStepCompletion();
@@ -109,7 +137,15 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
         tutorialManager.checkActiveStepCompletion();
 
         const processor = scene.buildingManager.place(160, -32, 'PROCESSOR', 0, { skipCost: true });
+        const afterProcessorPlaceStep = tutorialManager.getSavedStep();
+        window.__GRADIUM_EVENT_BUS__?.emit('CABLE_START_SELECTED', { fromKey: '160,-32', cableType: 'BASIC' });
+        const afterWrongCableStartStep = tutorialManager.getSavedStep();
+        window.__GRADIUM_EVENT_BUS__?.emit('CABLE_START_SELECTED', { fromKey: '128,-32', cableType: 'BASIC' });
+        const afterCableStartStep = tutorialManager.getSavedStep();
+        window.__GRADIUM_EVENT_BUS__?.emit('CABLE_CONNECTED', { fromKey: '128,-32', toKey: '160,-32', cableType: 'FIBER' });
+        const afterWrongCableTypeStep = tutorialManager.getSavedStep();
         scene.cableManager.connect('128,-32', '160,-32', 'BASIC');
+        const afterCableConnectedStep = tutorialManager.getSavedStep();
         tutorialManager.checkActiveStepCompletion();
 
         processor.outputBuffer.push('LABELED_DATA');
@@ -128,7 +164,14 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
 
         return {
             completed: scene.tutorialManager.isCompleted(),
+            mode: scene.mode,
             step: scene.tutorialManager.getSavedStep(),
+            selectedOnPowerStep,
+            afterProcessorPlaceStep,
+            afterWrongCableStartStep,
+            afterCableStartStep,
+            afterWrongCableTypeStep,
+            afterCableConnectedStep,
             centerAcceptsWeightUpdate: center.canAcceptItem('WEIGHT_UPDATE'),
             hasTrainingTargetApi: typeof center.setTarget === 'function',
             baselineThroughput,
@@ -137,15 +180,28 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
     });
 
     expect(completion.completed).toBe(true);
-    expect(completion.step).toBe(12);
+    expect(completion.mode).toBe('tutorial');
+    expect(completion.step).toBe(14);
+    expect(completion.selectedOnPowerStep).toBe('POWER_NODE');
+    expect(completion.afterProcessorPlaceStep).toBe(7);
+    expect(completion.afterWrongCableStartStep).toBe(7);
+    expect(completion.afterCableStartStep).toBe(8);
+    expect(completion.afterWrongCableTypeStep).toBe(8);
+    expect(completion.afterCableConnectedStep).toBe(9);
     expect(completion.centerAcceptsWeightUpdate).toBe(false);
     expect(completion.hasTrainingTargetApi).toBe(false);
     expect(completion.throughputWithRoc).toBeGreaterThan(completion.baselineThroughput);
+
+    await expect(page.getByTestId('preact-tutorial-panel')).toBeVisible();
+    await expect(page.getByTestId('preact-tutorial-panel')).toHaveAttribute('data-mode', 'complete');
+    await expect(page.getByTestId('preact-tutorial-continue')).toBeVisible();
+    await page.getByTestId('preact-tutorial-continue').click();
 
     await page.waitForFunction(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
         return scene?.mode === 'campaign' && scene?.mapManager?.mapType === 'random' && !scene?.tutorialManager;
     });
+    await expect(page.getByTestId('preact-right-rail-panel-systems')).toHaveAttribute('data-collapsed', 'true');
 
     const campaignStart = await page.evaluate(() => {
         const scene = window.__GRADIUM_GAME__?.scene.getScene('MainScene') as any;
@@ -164,15 +220,18 @@ test('tutorial guidance points at valid tiles and can be completed through gamep
             mapType: scene.mapManager.mapType,
             hasTutorialFactory: tutorialBuildingKeys.some(key => Boolean(scene.buildingManager.get(key))),
             campaignSaveExists: Boolean(localStorage.getItem('gradium_save')),
-            tutorialCompleted: localStorage.getItem('gradium_tutorial_completed')
+            tutorialCompleted: localStorage.getItem('gradium_tutorial_completed'),
+            waveTimer: scene.waveManager.waveTimer
         };
     });
 
-    expect(campaignStart).toEqual({
+    expect(campaignStart).toMatchObject({
         mode: 'campaign',
         mapType: 'random',
         hasTutorialFactory: false,
         campaignSaveExists: false,
         tutorialCompleted: 'true'
     });
+    expect(campaignStart.waveTimer).toBeGreaterThan(40000);
+    expect(campaignStart.waveTimer).toBeLessThanOrEqual(45000);
 });
